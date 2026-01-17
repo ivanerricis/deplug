@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react"
 import { RowSelectionState } from "@tanstack/react-table"
 
-import { TauriOS } from "./core/os/TauriOS"
 import { PluginScanner } from "./core/plugin/PluginScanner"
 import { Plugin } from "./core/plugin/Plugin"
 import UpdatePage from "./LoadingComponent"
-import PluginToolbar from "./components/PluginToolbar"
+import Toolbar from "./components/Toolbar"
 import PluginTable from "./components/PluginTable"
+import { paths } from "./core/plugin/Path"
 
 export default function App() {
   const [plugins, setPlugins] = useState<Plugin[]>([])
@@ -15,20 +15,9 @@ export default function App() {
 
   const scanPlugins = async () => {
     setLoading(true)
-    const os = new TauriOS()
-    const scanner = new PluginScanner(os)
+    const scanner = new PluginScanner()
 
-    const paths = {
-      VST2: [
-        "C:/Program Files/Common Files/VST2",
-        "C:/Program Files/Steinberg/VSTPlugins",
-        "C:/Program Files (x86)/Steinberg/VstPlugins"
-      ],
-      VST3: ["C:/Program Files/Common Files/VST3"],
-      AUX: ["C:/Program Files/Common Files/Avid/Audio/Plug-Ins"],
-    }
-
-    const found = await scanner.scan(paths)
+    const found = await scanner.search(paths)
     setPlugins(found)
     setLoading(false)
   }
@@ -43,7 +32,7 @@ export default function App() {
 
   return (
     <div className="w-full h-full p-2 flex flex-col overflow-hidden">
-      <PluginToolbar
+      <Toolbar
         pluginsCount={plugins.length}
         selectedCount={selectedCount}
         onRefresh={scanPlugins}

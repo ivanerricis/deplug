@@ -9,15 +9,8 @@ import {
 } from "@tanstack/react-table"
 
 import { Plugin } from "../core/plugin/Plugin"
-import { Button } from "./ui/button"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "./ui/dropdown-menu"
+import RowDropdownMenu from "./RowDropdownMenu"
 import { Checkbox } from "./ui/checkbox"
-import { MoreVertical, Trash, Folder } from "lucide-react"
 
 type PluginTableProps = {
     plugins: Plugin[]
@@ -82,26 +75,7 @@ export default function PluginTable({
                 const plugin = row.original
 
                 return (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                                <MoreVertical className="w-4 h-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => console.log("Open folder", plugin.installPath)}>
-                                <Folder className="w-4 h-4 mr-2" />
-                                Apri cartella
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                variant="destructive"
-                                onClick={() => console.log("Delete", plugin.installPath)}
-                            >
-                                <Trash className="w-4 h-4 mr-2" />
-                                Disinstalla
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    <RowDropdownMenu plugin={plugin}></RowDropdownMenu>
                 )
             },
         },

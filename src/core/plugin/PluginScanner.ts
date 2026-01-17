@@ -1,56 +1,34 @@
-import { OSApi } from "../os/OSApi"
+import { DirEntry, readDir } from "@tauri-apps/plugin-fs"
 import { Plugin } from "./Plugin"
 
 export class PluginScanner {
-  constructor(private os: OSApi) {}
+  
 
-  async scan(pathsByType: Record<string, string[]>): Promise<Plugin[]> {
+  async search(paths: string[]): Promise<Plugin[]> {
     const result: Plugin[] = []
-
-    for (const [type, paths] of Object.entries(pathsByType)) {
-      for (const basePath of paths) {
-        if (!(await this.os.pathExists(basePath))) continue
-
-        // Per VST2, scansiona ricorsivamente le sottocartelle
-        if (type === 'VST2') {
-          await this.scanRecursive(basePath, type, result)
-        } else {
-          const entries = await this.os.readDir(basePath)
-
-          for (const e of entries) {
-            if (!e.isDirectory) continue
-
-            result.push({
-              name: e.name,
-              installPath: e.path,
-              type
-            })
-          }
-        }
+    for (const path of paths) {
+      const entries = await readDir(path)
+      for (const e of entries) {
+        const plugin: Plugin = await this.scanPath(e, path)
+        if (plugin.name !== "")
+          result.push(plugin)
       }
     }
-
     return result
   }
 
-  private async scanRecursive(
-    basePath: string, 
-    type: string, 
-    result: Plugin[]
-  ): Promise<void> {
-    const entries = await this.os.readDir(basePath)
+  async scanPath(entry: DirEntry, path: string): Promise<Plugin> {
+    let result: Plugin = {name: "", installPath: "", type: ""}
 
-    for (const e of entries) {
-      if (!e.isDirectory) continue
-
-      result.push({
-        name: e.name,
-        installPath: e.path,
-        type
-      })
-
-      // Scansiona ricorsivamente le sottocartelle
-      await this.scanRecursive(e.path, type, result)
+    if (entry.name.includes("dll"))
+      return result = { name: entry.name, installPath: path, type: "VST2" }
+    else if (entry.name.includes("vst3"))
+      return result = { name: entry.name, installPath: path, type: "VST3" }
+    else if (entry.name.includes("aax"))
+      return result = { name: entry.name, installPath: path, type: "AAX" }
+    else if (entry.isDirectory) {
+      this.scanPath(entry, path)
     }
+    return result
   }
 }
