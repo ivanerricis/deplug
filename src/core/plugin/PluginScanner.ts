@@ -1,10 +1,11 @@
 import { DirEntry, readDir } from "@tauri-apps/plugin-fs"
 import { Plugin } from "./Plugin"
+import { paths } from "./Path"
 
 export class PluginScanner {
   
 
-  async search(paths: string[]): Promise<Plugin[]> {
+  async search(): Promise<Plugin[]> {
     const result: Plugin[] = []
     for (const path of paths) {
       const entries = await readDir(path)
