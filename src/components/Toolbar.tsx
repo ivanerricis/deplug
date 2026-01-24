@@ -7,12 +7,24 @@ type ToolbarProps = {
   pluginsCount: number
   onRefresh: () => void
   onSettings?: () => void
+  showVST2: boolean
+  showVST3: boolean
+  showAAX: boolean
+  onToggleVST2: (value: boolean) => void
+  onToggleVST3: (value: boolean) => void
+  onToggleAAX: (value: boolean) => void
 }
 
 export default function Toolbar({
   pluginsCount,
   onRefresh,
   onSettings,
+  showVST2,
+  showVST3,
+  showAAX,
+  onToggleVST2,
+  onToggleVST3,
+  onToggleAAX,
 }: ToolbarProps) {
   return (
     <div className="flex items-center justify-between mb-2">
@@ -22,15 +34,15 @@ export default function Toolbar({
 
       <div className="flex items-center flex-1 space-x-6">
         <div className="flex items-center gap-1">
-          <Checkbox id="VST2" checked={true}/>
+          <Checkbox id="VST2" checked={showVST2} onCheckedChange={(value) => onToggleVST2(Boolean(value))} />
           <Label htmlFor="VST2" className="ml-1">VST2</Label>
         </div>
         <div className="flex items-center gap-1">
-          <Checkbox id="VST3" checked={true}/>
+          <Checkbox id="VST3" checked={showVST3} onCheckedChange={(value) => onToggleVST3(Boolean(value))} />
           <Label htmlFor="VST3" className="ml-1">VST3</Label>
         </div>
         <div className="flex items-center gap-1">
-          <Checkbox id="AAX" checked={true}/>
+          <Checkbox id="AAX" checked={showAAX} onCheckedChange={(value) => onToggleAAX(Boolean(value))} />
           <Label htmlFor="AAX" className="ml-1">AAX</Label>
         </div>
       </div>

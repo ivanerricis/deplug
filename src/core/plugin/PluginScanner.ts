@@ -3,19 +3,29 @@ import { Plugin } from "./Plugin"
 import { paths } from "./Path"
 
 export class PluginScanner {
-  
-
-  async search(): Promise<Plugin[]> {
+  async search(): Promise<{
+    all: Plugin[]
+    vst2: Plugin[]
+    vst3: Plugin[]
+    aax: Plugin[]
+  }> {
     const result: Plugin[] = []
+    const vst2: Plugin[] = []
+    const vst3: Plugin[] = []
+    const aax: Plugin[] = []
     for (const path of paths) {
       const entries = await readDir(path)
       for (const e of entries) {
         const plugin: Plugin = await this.scanPath(e, path)
-        if (plugin.name !== "")
+        if (plugin.name !== "") {
           result.push(plugin)
+          if (plugin.type === "VST2") vst2.push(plugin)
+          else if (plugin.type === "VST3") vst3.push(plugin)
+          else if (plugin.type === "AAX") aax.push(plugin)
+        }
       }
     }
-    return result
+    return { all: result, vst2, vst3, aax }
   }
 
   async scanPath(entry: DirEntry, path: string): Promise<Plugin> {

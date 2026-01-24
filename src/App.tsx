@@ -3,8 +3,8 @@ import { useEffect, useState } from "react"
 import { PluginScanner } from "./core/plugin/PluginScanner"
 import UpdatePage from "./LoadingComponent"
 import Toolbar from "./components/Toolbar"
-import Row from "./components/Row"
 import { Plugin } from "@/core/plugin/Plugin";
+import Section from "./components/Section"
 
 export default function App() {
   const [loading, setLoading] = useState(true)
@@ -12,21 +12,26 @@ export default function App() {
   const [pluginsVST2, setPluginsVST2] = useState<Plugin[]>([])
   const [pluginsVST3, setPluginsVST3] = useState<Plugin[]>([])
   const [pluginsAAX, setPluginsAAX] = useState<Plugin[]>([])
+  const [collapsedSections, setCollapsedSections] = useState({
+    VST2: false,
+    VST3: false,
+    AAX: false,
+  })
+  const [visibleSections, setVisibleSections] = useState({
+    VST2: true,
+    VST3: true,
+    AAX: true,
+  })
 
   const scanPlugins = async () => {
     setLoading(true)
     const scanner = new PluginScanner()
 
     const found = await scanner.search()
-    setPlugins(found)
-    plugins.forEach(plugin => {
-      if (plugin.type === "VST2")
-        pluginsVST2.push(plugin)
-      else if (plugin.type === "VST3")
-        pluginsVST3.push(plugin)
-      else if (plugin.type === "AAX3")
-        pluginsAAX.push(plugin)
-    });
+    setPlugins(found.all)
+    setPluginsVST2(found.vst2)
+    setPluginsVST3(found.vst3)
+    setPluginsAAX(found.aax)
     setLoading(false)
   }
 
@@ -41,18 +46,48 @@ export default function App() {
       <Toolbar
         pluginsCount={plugins.length}
         onRefresh={scanPlugins}
+        showVST2={visibleSections.VST2}
+        showVST3={visibleSections.VST3}
+        showAAX={visibleSections.AAX}
+        onToggleVST2={(value) => setVisibleSections(current => ({ ...current, VST2: value }))}
+        onToggleVST3={(value) => setVisibleSections(current => ({ ...current, VST3: value }))}
+        onToggleAAX={(value) => setVisibleSections(current => ({ ...current, AAX: value }))}
       />
 
       {plugins.length === 0 ? (
         <p className="shrink-0">Nessun plugin trovato</p>
       ) : (
-        <div className="flex flex-col">
-          <Row type="VST2" header={{ name: "Name", path: "Path" }}></Row>
-          {plugins.map(e => (
-            <div className="flex flex-col">
-              <Row plugin={e}></Row>
-            </div>
-          ))}
+        <div className="flex flex-col gap-2">
+          {visibleSections.VST2 && (
+            <Section
+              type="VST2"
+              items={pluginsVST2}
+              collapsed={collapsedSections.VST2}
+              onToggle={() =>
+                setCollapsedSections(current => ({ ...current, VST2: !current.VST2 }))
+              }
+            ></Section>
+          )}
+          {visibleSections.VST3 && (
+            <Section
+              type="VST3"
+              items={pluginsVST3}
+              collapsed={collapsedSections.VST3}
+              onToggle={() =>
+                setCollapsedSections(current => ({ ...current, VST3: !current.VST3 }))
+              }
+            ></Section>
+          )}
+          {visibleSections.AAX && (
+            <Section
+              type="AAX"
+              items={pluginsAAX}
+              collapsed={collapsedSections.AAX}
+              onToggle={() =>
+                setCollapsedSections(current => ({ ...current, AAX: !current.AAX }))
+              }
+            ></Section>
+          )}
         </div>
       )}
     </div>
