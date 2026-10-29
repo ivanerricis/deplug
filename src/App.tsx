@@ -11,6 +11,9 @@ import SelectionBar from "./components/SelectionBar"
 import UninstallDialog from "./components/UninstallDialog"
 import SettingsDialog from "./components/SettingsDialog"
 import { Button } from "./components/ui/button"
+import BrandMark from "./components/BrandMark"
+import { buildPluginPath } from "./core/plugin/Uninstall"
+import { fetchPluginMeta, type PluginMeta } from "./core/plugin/Meta"
 import { getAppInfo, type AppInfo } from "./core/settings/AppSettings"
 import { useSettings } from "./core/settings/SettingsContext"
 import { useI18n } from "./i18n/I18nProvider"
@@ -42,6 +45,8 @@ export default function App() {
   const [sorts, setSorts] = useState<Record<SectionType, SortState>>({
     VST2: DEFAULT_SORT, VST3: DEFAULT_SORT, AAX: DEFAULT_SORT, AU: DEFAULT_SORT,
   })
+  const [meta, setMeta] = useState<ReadonlyMap<string, PluginMeta>>(new Map())
+  const metaRun = useRef(0)
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [uninstallTargets, setUninstallTargets] = useState<Plugin[] | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -69,8 +74,21 @@ export default function App() {
         s.customScanPaths,
         { customDepth: s.customScanDepth, disabledPaths: s.disabledSystemPaths },
       )
-      setResult(await scanner.search())
+      const found = await scanner.search()
+      setResult(found)
       setScanned(true)
+      // Sizes and dates fill in afterwards; the list is already usable.
+      const run = ++metaRun.current
+      setMeta(new Map())
+      void fetchPluginMeta(
+        found.all.map(p => buildPluginPath(p.installPath, p.name)),
+        batch => setMeta(prev => {
+          const next = new Map(prev)
+          for (const m of batch) next.set(m.path, m)
+          return next
+        }),
+        { cancelled: () => metaRun.current !== run },
+      )
     } catch (e) {
       console.error(e)
     } finally {
@@ -105,10 +123,10 @@ export default function App() {
     for (const type of SECTION_ORDER) {
       let list = filterPlugins(byType[type], query)
       if (duplicatesOnly) list = list.filter(p => duplicates.has(pluginKey(p)))
-      out[type] = { shown: sortPlugins(list, sorts[type]), total: byType[type].length }
+      out[type] = { shown: sortPlugins(list, sorts[type], meta), total: byType[type].length }
     }
     return out
-  }, [result, query, duplicatesOnly, duplicates, sorts])
+  }, [result, query, duplicatesOnly, duplicates, sorts, meta])
 
   const visibleShown = useMemo(
     () => SECTION_ORDER.filter(type => visible[type]).flatMap(type => view[type].shown),
@@ -195,19 +213,14 @@ export default function App() {
   const noResults = result.all.length > 0 && visibleShown.length === 0
 
   return (
-    <div className="w-full h-full p-2 flex flex-col">
+    <div className="flex h-full w-full flex-col">
       <Toolbar
         pluginsCount={result.all.length}
+        counts={{ VST2: result.vst2.length, VST3: result.vst3.length, AAX: result.aax.length, AU: result.au.length }}
+        visible={visible}
+        onToggleType={(type, value) => setVisible(c => ({ ...c, [type]: value }))}
         onRefresh={() => void scanPlugins()}
         onSettings={() => setShowSettings(true)}
-        showAU={visible.AU}
-        showVST2={visible.VST2}
-        showVST3={visible.VST3}
-        showAAX={visible.AAX}
-        onToggleAU={value => setVisible(c => ({ ...c, AU: value }))}
-        onToggleVST2={value => setVisible(c => ({ ...c, VST2: value }))}
-        onToggleVST3={value => setVisible(c => ({ ...c, VST3: value }))}
-        onToggleAAX={value => setVisible(c => ({ ...c, AAX: value }))}
         query={queryInput}
         onQueryChange={setQueryInput}
         searchRef={searchRef}
@@ -221,10 +234,11 @@ export default function App() {
       )}
 
       {result.all.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
+          <BrandMark className="size-20 text-foreground/80" />
           <div className="max-w-md">
             <h1 className="text-lg font-semibold">{scanned ? t("empty.none.title") : t("empty.idle.title")}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1.5 text-sm text-muted-foreground">
               {scanned ? t("empty.none.body") : t("empty.idle.body")}
             </p>
           </div>
@@ -234,15 +248,16 @@ export default function App() {
           </div>
         </div>
       ) : noResults ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
+          <BrandMark className="size-14 text-foreground/60" accent={false} />
           <div className="max-w-md">
             <h1 className="text-lg font-semibold">{t("list.noResults.title")}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{t("list.noResults.body")}</p>
+            <p className="mt-1.5 text-sm text-muted-foreground">{t("list.noResults.body")}</p>
           </div>
           <Button variant="outline" onClick={clearFilters}>{t("list.noResults.clear")}</Button>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-24 pt-1">
           {SECTION_ORDER.filter(type => visible[type]).map(type => (
             <Section
               key={type}
@@ -256,6 +271,8 @@ export default function App() {
               selected={selected}
               onSelectKeys={selectKeys}
               duplicates={duplicates}
+              meta={meta}
+              home={home}
               onUninstall={plugin => setUninstallTargets([plugin])}
             />
           ))}

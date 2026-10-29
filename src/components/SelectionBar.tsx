@@ -8,25 +8,39 @@ type SelectionBarProps = {
   onClear: () => void
 }
 
-/** Pinned under the list while at least one plugin is selected. */
+/** Floats at the bottom of the window while at least one plugin is selected. */
 export default function SelectionBar({ count, onUninstall, onClear }: SelectionBarProps) {
   const { t } = useI18n()
   return (
-    <div
-      role="region"
-      aria-label={t("selection.bar")}
-      className="mt-2 flex flex-none items-center justify-between gap-3 border-2 border-foreground/50 border-t-signal bg-card px-3 py-2"
-    >
-      <span role="status" className="text-sm font-medium tabular-nums">{t("selection.count", { count })}</span>
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={onClear}>
-          <X aria-hidden />
-          {t("selection.clear")}
-        </Button>
-        <Button variant="destructive" size="sm" onClick={onUninstall}>
-          <Trash aria-hidden />
-          {t("selection.uninstall")}
-        </Button>
+    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-20 flex justify-center px-3">
+      <div
+        role="region"
+        aria-label={t("selection.bar")}
+        className="pointer-events-auto flex max-w-full items-center gap-3 rounded-xl bg-foreground py-1.5 pl-4 pr-1.5 text-background shadow-lg ring-1 ring-background/10 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-150"
+      >
+        <span role="status" className="flex items-center gap-2 whitespace-nowrap text-sm font-medium tabular-nums">
+          <span aria-hidden className="size-1.5 rounded-full bg-signal" />
+          {t("selection.count", { count })}
+        </span>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClear}
+            className="h-9 text-background hover:bg-background/15 hover:text-background dark:hover:bg-background/15"
+          >
+            <X aria-hidden />
+            {t("selection.clear")}
+          </Button>
+          <Button
+            size="sm"
+            onClick={onUninstall}
+            className="h-9 bg-background text-foreground hover:bg-background/90"
+          >
+            <Trash aria-hidden />
+            {t("selection.uninstall")}
+          </Button>
+        </div>
       </div>
     </div>
   )

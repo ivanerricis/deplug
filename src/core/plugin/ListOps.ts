@@ -1,6 +1,8 @@
 import type { Plugin } from "./Plugin"
+import type { MetaMap } from "./Meta"
+import { buildPluginPath } from "./Uninstall"
 
-export type SortKey = "name" | "path"
+export type SortKey = "name" | "path" | "size" | "modified"
 export type SortDir = "asc" | "desc"
 export interface SortState {
   key: SortKey
@@ -33,14 +35,26 @@ export function naturalCompare(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0
 }
 
-/** Returns a sorted copy; ties fall back to the other column so the order is deterministic. */
-export function sortPlugins(plugins: Plugin[], sort: SortState): Plugin[] {
+/**
+ * Returns a sorted copy; ties fall back to the other column so the order is deterministic.
+ * Size and date sorts read `meta` (keyed by the plugin full path); plugins without a value always go last.
+ */
+export function sortPlugins(plugins: Plugin[], sort: SortState, meta?: MetaMap): Plugin[] {
   const sign = sort.dir === "asc" ? 1 : -1
-  const first = (p: Plugin) => (sort.key === "name" ? p.name : p.installPath)
-  const second = (p: Plugin) => (sort.key === "name" ? p.installPath : p.name)
-  return [...plugins].sort(
-    (a, b) => sign * (naturalCompare(first(a), first(b)) || naturalCompare(second(a), second(b))),
-  )
+  const byName = (a: Plugin, b: Plugin) => naturalCompare(a.name, b.name) || naturalCompare(a.installPath, b.installPath)
+  if (sort.key === "size" || sort.key === "modified") {
+    const field = sort.key
+    const val = (p: Plugin) => meta?.get(buildPluginPath(p.installPath, p.name))?.[field] ?? null
+    return [...plugins].sort((a, b) => {
+      const va = val(a)
+      const vb = val(b)
+      if (va === null || vb === null) return va === vb ? byName(a, b) : va === null ? 1 : -1
+      return sign * (va - vb) || byName(a, b)
+    })
+  }
+  const byPath = (a: Plugin, b: Plugin) => naturalCompare(a.installPath, b.installPath) || naturalCompare(a.name, b.name)
+  const cmp = sort.key === "name" ? byName : byPath
+  return [...plugins].sort((a, b) => sign * cmp(a, b))
 }
 
 const KNOWN_EXTENSIONS = /\.(vst3|vst|dll|so|component|aaxplugin)$/i
@@ -75,4 +89,31 @@ export function findDuplicates(plugins: Plugin[]): Map<string, Plugin[]> {
     for (const p of group) result.set(pluginKey(p), group.filter(o => o !== p))
   }
   return result
+}
+
+export interface FolderRun {
+  folder: string
+  /** Index of the first item of this run in the source list. */
+  start: number
+  length: number
+}
+
+/** Splits an ordered list into runs of consecutive plugins that live in the same folder. */
+export function folderRuns(plugins: Plugin[]): FolderRun[] {
+  const runs: FolderRun[] = []
+  plugins.forEach((p, i) => {
+    const folder = p.installPath
+    const last = runs[runs.length - 1]
+    if (last && last.folder === folder) last.length++
+    else runs.push({ folder, start: i, length: 1 })
+  })
+  return runs
+}
+
+/**
+ * Whether to print each folder once as a group header (few, long runs) instead of
+ * repeating the folder under every name (many short runs).
+ */
+export function shouldGroupByFolder(runs: FolderRun[], count: number): boolean {
+  return runs.length <= Math.max(1, Math.floor(count / 3))
 }
