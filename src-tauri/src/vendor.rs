@@ -20,11 +20,12 @@ const RUN_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 const POLL_INTERVAL: Duration = Duration::from_millis(500);
 
 /// Directory names that are far too broad to identify a single product.
-const GENERIC_DIR_NAMES: [&str; 22] = [
+const GENERIC_DIR_NAMES: [&str; 23] = [
     "program files",
     "program files (x86)",
     "common files",
     "vst3",
+    "vst2",
     "vstplugins",
     "vstplugin",
     "vst",
@@ -388,7 +389,83 @@ pub fn entry_matches_plugin(entry: &UninstallEntry, plugin_path: &str) -> bool {
     entry_is_usable(entry) && match_score(entry, &normalize_path(plugin_path)).is_some()
 }
 
-/// Last-resort match: plugin stem or parent folder name equals the normalized DisplayName.
+/// True for a version-like token that may trail a product name: `3`, `v2.1`, `1.3.6`, `x64`...
+fn is_version_token(t: &str) -> bool {
+    let core = t
+        .trim_matches(|c| c == '(' || c == ')')
+        .trim_start_matches('v');
+    matches!(
+        core,
+        "x64" | "x86" | "64-bit" | "32-bit" | "64bit" | "32bit"
+    ) || (!core.is_empty()
+        && core.chars().all(|c| c.is_ascii_digit() || c == '.')
+        && core.chars().any(|c| c.is_ascii_digit()))
+}
+
+/// True when `rest` (the tokens that follow a product name) are all version-like.
+fn only_version_tokens(rest: &str) -> bool {
+    !rest.is_empty() && rest.split(' ').all(is_version_token)
+}
+
+/// `name` equals `stem`, or is `stem` followed only by version tokens ("serum 1.3.6" vs "serum").
+fn name_equals_or_versioned(name: &str, stem: &str) -> bool {
+    name == stem
+        || name
+            .strip_prefix(stem)
+            .and_then(|r| r.strip_prefix(' '))
+            .is_some_and(only_version_tokens)
+}
+
+/// Entries named "<Publisher> <Product> [version]" (for example "Voxengo SPAN" by "Voxengo")
+/// whose product is the plugin's name. Installers often register an install folder that does
+/// not contain the plugin (the VST3 lives in Common Files), so the name has to carry the match.
+/// Numbers that belong to the product name ("Pro-Q 3", "Kontakt 7") are kept: only a version-like
+/// suffix that the plugin's own name does not have is ignored, so "Pro-Q 2" never matches "Pro-Q 3".
+/// To avoid attributing another vendor's plugin of the same name, the plugin's own folder must be
+/// either generic (`VST3`, `Common Files`...) or named after the publisher; entries without a
+/// publisher are never matched this way.
+fn publisher_product_matches(e: &UninstallEntry, plugin_norm: &str) -> bool {
+    let Some(publisher) = e
+        .publisher
+        .as_deref()
+        .map(normalize_name)
+        .filter(|p| p.chars().count() >= 3)
+    else {
+        return false;
+    };
+    let file = last_segment(plugin_norm);
+    let stem = strip_arch_suffix(file.rsplit_once('.').map_or(file, |(s, _)| s));
+    if is_generic_name(&stem) {
+        return false;
+    }
+    let name = normalize_name(&e.display_name);
+    // The publisher may be part of the entry name, of the plugin name, of both or of neither.
+    let strip_publisher = |t: &str| -> Option<String> {
+        t.strip_prefix(&publisher)
+            .and_then(|r| r.strip_prefix(' '))
+            .map(str::to_string)
+    };
+    let name_variants = [Some(name.clone()), strip_publisher(&name)];
+    let stem_variants = [Some(stem.clone()), strip_publisher(&stem)];
+    // Needs evidence of the publisher: in the entry name, or in the plugin name.
+    if name_variants[1].is_none() && stem_variants[1].is_none() {
+        return false;
+    }
+    let names_match = name_variants.iter().flatten().any(|n| {
+        stem_variants
+            .iter()
+            .flatten()
+            .any(|s| !is_generic_name(s) && name_equals_or_versioned(n, s))
+    });
+    if !names_match {
+        return false;
+    }
+    let parent = parent_of(plugin_norm).map_or("", last_segment);
+    parent.is_empty() || GENERIC_DIR_NAMES.contains(&parent) || parent == publisher
+}
+
+/// Name-based fallback: the plugin stem or parent folder name equals the normalized DisplayName,
+/// or the entry is "<Publisher> <Product>" for this plugin.
 fn entry_name_matches(e: &UninstallEntry, plugin_norm: &str) -> bool {
     let name = normalize_name(&e.display_name);
     let mut candidates = Vec::new();
@@ -400,6 +477,7 @@ fn entry_name_matches(e: &UninstallEntry, plugin_norm: &str) -> bool {
         candidates.push(normalize_name(last_segment(parent)));
     }
     candidates.iter().any(|c| !is_generic_name(c) && *c == name)
+        || publisher_product_matches(e, plugin_norm)
 }
 
 /// Returns the usable entries matching the plugin, best match first (longest location wins).
@@ -685,6 +763,144 @@ mod tests {
 
     fn all_exist(_: &str) -> bool {
         true
+    }
+
+    fn voxengo() -> UninstallEntry {
+        UninstallEntry {
+            display_name: "Voxengo SPAN".into(),
+            publisher: Some("Voxengo".into()),
+            install_location: Some(r"C:\Program Files\Voxengo\Voxengo SPAN\".into()),
+            uninstall_string: Some(
+                r#""C:\Program Files\Voxengo\Voxengo SPAN\unins000.exe""#.into(),
+            ),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn matches_publisher_product_entry_for_every_span_variant() {
+        // Real registry entry reported by a user: the install folder does not contain the plugins.
+        let entries = vec![voxengo()];
+        for p in [
+            "C:/Program Files/Common Files/VST3/SPAN.vst3",
+            "C:/Program Files/Common Files/VST2/Voxengo/SPAN.dll",
+            "C:/Program Files (x86)/Common Files/VST2/Voxengo/SPAN.dll",
+            "C:/Program Files/Common Files/Avid/Audio/Plug-Ins/SPAN.aaxplugin",
+            "C:/Program Files/Common Files/VST2/Voxengo/SPAN_x64.dll",
+        ] {
+            let found = select_entries(&entries, p);
+            assert_eq!(found.len(), 1, "{p}");
+            assert_eq!(found[0].display_name, "Voxengo SPAN", "{p}");
+        }
+        let resolved = resolve_command(
+            &entries,
+            "C:/Program Files/Common Files/VST3/SPAN.vst3",
+            &all_exist,
+        )
+        .unwrap();
+        assert_eq!(resolved.info.kind, "exe");
+        assert!(resolved.info.command_preview.contains("unins000.exe"));
+    }
+
+    #[test]
+    fn publisher_product_match_ignores_version_and_rejects_other_vendors() {
+        let mut e = voxengo();
+        e.display_name = "Voxengo SPAN 3.6".into();
+        assert!(publisher_product_matches(
+            &e,
+            "c:/program files/common files/vst3/span.vst3"
+        ));
+        // Another vendor's plugin with the same name must not be attributed to Voxengo.
+        assert!(!publisher_product_matches(
+            &e,
+            "c:/program files/common files/vst2/acme/span.dll"
+        ));
+        // Different product of the same publisher.
+        assert!(!publisher_product_matches(
+            &e,
+            "c:/program files/common files/vst3/crunchessor.vst3"
+        ));
+        // No publisher registered: no guessing.
+        e.publisher = None;
+        assert!(!publisher_product_matches(
+            &e,
+            "c:/program files/common files/vst3/span.vst3"
+        ));
+    }
+
+    #[test]
+    fn numbered_product_names_keep_their_number() {
+        let fab = UninstallEntry {
+            display_name: "FabFilter Pro-Q 3".into(),
+            publisher: Some("FabFilter".into()),
+            install_location: Some(r"C:\Program Files\FabFilter\Pro-Q 3".into()),
+            uninstall_string: Some(r#""C:\Program Files\FabFilter\Pro-Q 3\unins000.exe""#.into()),
+            ..Default::default()
+        };
+        let vst3 = "c:/program files/common files/vst3/fabfilter pro-q 3.vst3";
+        assert!(publisher_product_matches(&fab, vst3));
+        // The plugin name without the publisher prefix also matches.
+        assert!(publisher_product_matches(
+            &fab,
+            "c:/program files/common files/vst3/pro-q 3.vst3"
+        ));
+        // A different major version of the same product is a different product.
+        assert!(!publisher_product_matches(
+            &fab,
+            "c:/program files/common files/vst3/pro-q 2.vst3"
+        ));
+        // A plugin without the number still matches: the trailing "3" counts as a version.
+        assert!(publisher_product_matches(
+            &fab,
+            "c:/program files/common files/vst3/pro-q.vst3"
+        ));
+
+        let ni = UninstallEntry {
+            display_name: "Native Instruments Kontakt 7".into(),
+            publisher: Some("Native Instruments".into()),
+            uninstall_string: Some(
+                r#""C:\Program Files\Native Instruments\Kontakt 7\unins000.exe""#.into(),
+            ),
+            ..Default::default()
+        };
+        assert!(publisher_product_matches(
+            &ni,
+            "c:/program files/common files/vst3/kontakt 7.vst3"
+        ));
+        assert!(!publisher_product_matches(
+            &ni,
+            "c:/program files/common files/vst3/kontakt 6.vst3"
+        ));
+
+        // Entry with a trailing version, plugin without the number.
+        let serum = UninstallEntry {
+            display_name: "Serum 1.3.6".into(),
+            publisher: Some("Xfer Records".into()),
+            ..Default::default()
+        };
+        // The publisher is neither in the entry name nor in the plugin name: no evidence, no match.
+        assert!(!publisher_product_matches(
+            &serum,
+            "c:/program files/common files/vst3/serum.vst3"
+        ));
+        let serum = UninstallEntry {
+            display_name: "Xfer Records Serum 1.3.6".into(),
+            ..serum
+        };
+        assert!(publisher_product_matches(
+            &serum,
+            "c:/program files/common files/vst3/serum.vst3"
+        ));
+    }
+
+    #[test]
+    fn version_tokens() {
+        for t in ["3", "v2.1", "1.3.6", "x64", "(x86)", "64-bit"] {
+            assert!(is_version_token(t), "{t}");
+        }
+        for t in ["span", "pro", "2nd"] {
+            assert!(!is_version_token(t), "{t}");
+        }
     }
 
     #[test]
