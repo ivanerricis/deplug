@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react"
 import { getVersion } from "@tauri-apps/api/app"
 import { openUrl } from "@tauri-apps/plugin-opener"
-import { Copy, ExternalLink } from "lucide-react"
+import { Copy, ExternalLink, RefreshCw } from "lucide-react"
+import { checkForUpdate, type UpdateResult } from "@/core/update"
 import { DOCS_AVAILABLE, DOCS_URL, ISSUES_URL, RELEASES_URL, REPO_URL } from "@/core/appInfo"
 import type { PluginArch } from "@/core/plugin/Meta"
 import { osLabel, type Platform } from "@/core/plugin/Path"
 import { useSettings } from "@/core/settings/SettingsContext"
 import type { AppInfo } from "@/core/settings/AppSettings"
 import { useI18n } from "@/i18n/I18nProvider"
+import { Alert, AlertDescription } from "../ui/alert"
 import { Button } from "../ui/button"
 import markLight from "../../../assets/brand/deplug-mark-color.svg"
 import markDark from "../../../assets/brand/deplug-mark-color-on-dark.svg"
@@ -24,6 +26,7 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
   const { settings } = useSettings()
   const [version, setVersion] = useState<string | null>(null)
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle")
+  const [update, setUpdate] = useState<UpdateResult | "checking" | null>(null)
 
   useEffect(() => {
     getVersion().then(setVersion, () => setVersion(null))
@@ -38,6 +41,12 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
     { label: t("settings.about.issues"), url: ISSUES_URL },
     { label: t("settings.about.releases"), url: RELEASES_URL },
   ]
+
+  const runUpdateCheck = async () => {
+    setUpdate("checking")
+    // Without a known running version (plain browser dev mode) there is nothing to compare.
+    setUpdate(version ? await checkForUpdate(version) : { status: "error", reason: "invalid-version" })
+  }
 
   const copyDiagnostics = async () => {
     const folders = [...systemPaths.filter(p => !settings.disabledSystemPaths.includes(p)), ...settings.customScanPaths]
@@ -93,6 +102,43 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
           {tError(appInfo.portableWarning)}
         </p>
       )}
+
+      <section aria-label={t("settings.about.updates")} className="flex flex-col gap-3">
+        <div>
+          <Button variant="outline" size="sm" onClick={runUpdateCheck} disabled={update === "checking"}>
+            <RefreshCw aria-hidden className={update === "checking" ? "animate-spin motion-reduce:animate-none" : ""} />
+            {update === "checking" ? t("settings.about.checking") : t("settings.about.checkUpdates")}
+          </Button>
+        </div>
+        {update && update !== "checking" && (
+          <Alert variant={update.status === "error" ? "destructive" : "default"} role="status">
+            <AlertDescription className="flex flex-col gap-2 text-foreground">
+              {update.status === "up-to-date" && <span>{t("settings.about.upToDate", { version: update.current })}</span>}
+              {update.status === "available" && (
+                <>
+                  <span className="font-medium">{t("settings.about.updateAvailable", { version: update.latest })}</span>
+                  <span className="text-muted-foreground">{t("settings.about.updateHint")}</span>
+                  <div>
+                    <Button size="sm" onClick={() => { openUrl(update.url).catch(console.error) }}>
+                      {t("settings.about.openRelease")} <ExternalLink aria-hidden />
+                    </Button>
+                  </div>
+                </>
+              )}
+              {update.status === "error" && (
+                <>
+                  <span>{t("settings.about.updateError")}</span>
+                  <div>
+                    <Button variant="outline" size="sm" onClick={() => { openUrl(RELEASES_URL).catch(console.error) }}>
+                      {t("settings.about.releases")} <ExternalLink aria-hidden />
+                    </Button>
+                  </div>
+                </>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+      </section>
 
       <nav aria-label={t("settings.about.links")} className="flex flex-wrap gap-2">
         {links.map(link => (

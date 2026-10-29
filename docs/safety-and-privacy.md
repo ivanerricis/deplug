@@ -1,8 +1,8 @@
 # Safety and privacy
 
-## Nothing leaves your machine
+## Nothing leaves your machine on its own
 
-Deplug has no account, no analytics, no telemetry and no update check. It scans local folders and shows you the result. The only thing it writes is a small `settings.json` ([where](/faq#where-does-deplug-store-its-data)).
+Deplug has no account, no analytics, no telemetry and no automatic update check. It scans local folders and shows you the result. The one network request it can make is the **Check for updates** button in Settings → About, which only runs when you click it and only reads the public list of releases from GitHub; nothing about your computer or plugins is sent. The only thing it writes is a small `settings.json` ([where](/faq#where-does-deplug-store-its-data)).
 
 ## Files go to the trash
 
