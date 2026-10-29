@@ -44,6 +44,13 @@ describe("elevation", () => {
     expect(b.trashPluginsElevated).not.toHaveBeenCalled()
   })
 
+  it("offers nothing when the process is already elevated", async () => {
+    const b = backend(async () => [])
+    expect(elevationCandidates(allDenied, true, true)).toEqual([])
+    expect((await retryElevated(allDenied, true, b, true)).items).toBe(allDenied)
+    expect(b.trashPluginsElevated).not.toHaveBeenCalled()
+  })
+
   it("retries once with the full paths and marks everything removed on success", async () => {
     const b = backend(async () => [])
     const r = await retryElevated(allDenied, true, b)

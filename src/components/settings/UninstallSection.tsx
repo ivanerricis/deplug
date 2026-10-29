@@ -18,6 +18,16 @@ export default function UninstallSection({ platform }: { platform: Platform }) {
           aria-describedby="set-rp-h"
         />
       </SettingRow>
+      {platform === "windows" && (
+        <SettingRow label={t("settings.uninstall.runAsAdmin")} hint={t("settings.uninstall.runAsAdminHint")} labelId="set-admin" hintId="set-admin-h">
+          <Switch
+            checked={settings.runAsAdmin}
+            onCheckedChange={v => update({ runAsAdmin: v })}
+            aria-labelledby="set-admin"
+            aria-describedby="set-admin-h"
+          />
+        </SettingRow>
+      )}
       {platform !== "windows" && (
         <p role="note" className="rounded bg-muted px-3 py-2 text-sm text-muted-foreground">
           {t("settings.uninstall.windowsOnly", { os: osLabel(platform) })}

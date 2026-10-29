@@ -12,6 +12,8 @@ export type AppSettings = {
   scanOnStartup: boolean
   customScanDepth: number
   disabledSystemPaths: string[]
+  /** Windows only: relaunch elevated at startup. Takes effect on the next start. */
+  runAsAdmin: boolean
 }
 
 export type AppInfo = {
@@ -19,6 +21,8 @@ export type AppInfo = {
   dataDir: string | null
   /** Stable code (WARN_NOT_WRITABLE | WARN_APP_TRANSLOCATION), see localizeBackendError. */
   portableWarning: string | null
+  /** True when the process already runs with administrator rights (Windows only). */
+  elevated: boolean
 }
 
 export const MIN_SCAN_DEPTH = 1
@@ -34,6 +38,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   scanOnStartup: true,
   customScanDepth: DEFAULT_SCAN_DEPTH,
   disabledSystemPaths: [],
+  runAsAdmin: false,
 }
 
 const onlyStrings = (value: unknown): string[] =>
@@ -61,6 +66,7 @@ export function normalizeSettings(raw: unknown): AppSettings {
     scanOnStartup: typeof r.scanOnStartup === "boolean" ? r.scanOnStartup : d.scanOnStartup,
     customScanDepth: r.customScanDepth === undefined ? d.customScanDepth : clampDepth(r.customScanDepth),
     disabledSystemPaths: onlyStrings(r.disabledSystemPaths),
+    runAsAdmin: typeof r.runAsAdmin === "boolean" ? r.runAsAdmin : d.runAsAdmin,
   }
 }
 

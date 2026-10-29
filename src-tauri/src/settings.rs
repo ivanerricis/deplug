@@ -15,6 +15,8 @@ pub struct AppInfo {
     pub portable: bool,
     pub data_dir: Option<String>,
     pub portable_warning: Option<String>,
+    /// True when the process runs with administrator rights (Windows only).
+    pub elevated: bool,
 }
 
 #[tauri::command]
@@ -47,5 +49,6 @@ pub fn app_info(mode: State<'_, AppMode>) -> AppInfo {
             .as_ref()
             .map(|p| p.to_string_lossy().into_owned()),
         portable_warning: mode.warning.clone(),
+        elevated: crate::elevation::is_elevated(),
     }
 }

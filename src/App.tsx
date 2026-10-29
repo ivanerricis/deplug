@@ -325,7 +325,7 @@ export default function App() {
         />
       )}
 
-      {uninstallTargets && <UninstallDialog plugins={uninstallTargets} meta={meta} onClose={closeUninstall} />}
+      {uninstallTargets && <UninstallDialog plugins={uninstallTargets} meta={meta} onClose={closeUninstall} elevated={appInfo?.elevated ?? false} />}
     </div>
   )
 }

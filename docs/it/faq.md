@@ -39,6 +39,8 @@ Cartelle come `C:\Program Files` possono richiedere anche i diritti di amministr
 
 I plugin nelle cartelle protette come `C:\Program Files\Common Files\VST2`, `VST3` o `Avid` si possono modificare solo con i permessi di amministratore, e Deplug di norma funziona senza, quindi Windows nega lo spostamento nel Cestino. In questo caso l'elenco dei risultati mostra un avviso e il pulsante **Riprova con permessi di amministratore**. Premilo e approva l'unica richiesta di autorizzazione di Windows (UAC): tutti i plugin negati vengono ritentati insieme. I file finiscono comunque nel Cestino, quindi puoi ripristinarli. Se annulli la richiesta non cambia nulla e puoi premere di nuovo il pulsante.
 
+Se preferisci non doverlo fare ogni volta, hai due possibilità: usare il pulsante di nuovo tentativo quando compare, oppure attivare **Esegui sempre Deplug come amministratore** in Impostazioni > Disinstallazione, così Deplug si avvia sempre con i diritti di amministratore. Se è già in esecuzione come amministratore e lo spostamento viene comunque negato, c'è qualcos'altro che blocca il file, ad esempio un altro programma che lo sta usando.
+
 ## La creazione del punto di ripristino è fallita
 
 Vedi [Punto di ripristino su Windows](/it/using-deplug#why-creating-a-restore-point-can-fail): UAC rifiutato, Protezione sistema disattivata o limite di 24 ore.

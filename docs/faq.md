@@ -39,6 +39,8 @@ Folders such as `C:\Program Files` can also need administrator rights. If remova
 
 Plugins in protected folders such as `C:\Program Files\Common Files\VST2`, `VST3` or `Avid` can only be changed with administrator rights, and Deplug normally runs without them, so Windows denies the move to the Recycle Bin. When this happens the results list shows a notice and a **Retry with administrator permission** button. Press it and approve the single Windows permission prompt (UAC): all the plugins that were denied are retried together. The files still go to the Recycle Bin, so you can restore them. If you cancel the prompt nothing changes and you can press the button again.
 
+If you would rather not be asked each time, there are two options: use the retry button when it appears, or turn on **Always run Deplug as administrator** in Settings > Uninstall, so Deplug starts with administrator rights from then on. If it already runs as administrator and the move is still denied, something else is blocking the file, for example another program using it.
+
 ## The restore point failed
 
 See [Restore point on Windows](/using-deplug#why-creating-a-restore-point-can-fail): UAC declined, System Protection off, or the 24-hour limit.
