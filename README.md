@@ -1,7 +1,17 @@
-# Tauri + React + Typescript
+# Plugin Uninstaller
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+Desktop app (Tauri + React + TypeScript) that scans the standard install
+folders for audio plugins (VST2, VST3, AAX) on Windows, macOS and Linux,
+lists them by format and lets you open their folder.
 
-## Recommended IDE Setup
+## Development
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+```bash
+npm ci
+npm run dev        # frontend only
+npm run tauri dev  # full app
+npm run typecheck
+npm test
+```
+
+Requires Node 20+ and the [Tauri prerequisites](https://tauri.app/start/prerequisites/).

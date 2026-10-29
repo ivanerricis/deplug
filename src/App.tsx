@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react"
 
+import { homeDir } from "@tauri-apps/api/path"
 import { PluginScanner } from "./core/plugin/PluginScanner"
+import { TauriOS } from "./core/os/TauriOS"
+import { detectPlatform, getPluginPaths } from "./core/plugin/Path"
 import UpdatePage from "./LoadingComponent"
 import Toolbar from "./components/Toolbar"
 import { Plugin } from "@/core/plugin/Plugin";
@@ -25,14 +28,19 @@ export default function App() {
 
   const scanPlugins = async () => {
     setLoading(true)
-    const scanner = new PluginScanner()
+    try {
+      const platform = detectPlatform()
+      const home = await homeDir().then(h => h.replace(/[\\/]+$/, ""), () => "")
+      const scanner = new PluginScanner(new TauriOS(), getPluginPaths(platform, home), platform)
 
-    const found = await scanner.search()
-    setPlugins(found.all)
-    setPluginsVST2(found.vst2)
-    setPluginsVST3(found.vst3)
-    setPluginsAAX(found.aax)
-    setLoading(false)
+      const found = await scanner.search()
+      setPlugins(found.all)
+      setPluginsVST2(found.vst2)
+      setPluginsVST3(found.vst3)
+      setPluginsAAX(found.aax)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
