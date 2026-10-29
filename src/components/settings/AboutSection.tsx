@@ -3,6 +3,7 @@ import { getVersion } from "@tauri-apps/api/app"
 import { openUrl } from "@tauri-apps/plugin-opener"
 import { Copy, ExternalLink } from "lucide-react"
 import { DOCS_AVAILABLE, DOCS_URL, ISSUES_URL, RELEASES_URL, REPO_URL } from "@/core/appInfo"
+import type { PluginArch } from "@/core/plugin/Meta"
 import { osLabel, type Platform } from "@/core/plugin/Path"
 import { useSettings } from "@/core/settings/SettingsContext"
 import type { AppInfo } from "@/core/settings/AppSettings"
@@ -15,9 +16,10 @@ type AboutProps = {
   platform: Platform
   appInfo?: AppInfo
   systemPaths: string[]
+  archSummary?: Partial<Record<PluginArch, number>>
 }
 
-export default function AboutSection({ platform, appInfo, systemPaths }: AboutProps) {
+export default function AboutSection({ platform, appInfo, systemPaths, archSummary }: AboutProps) {
   const { t, tError } = useI18n()
   const { settings } = useSettings()
   const [version, setVersion] = useState<string | null>(null)
@@ -39,6 +41,10 @@ export default function AboutSection({ platform, appInfo, systemPaths }: AboutPr
 
   const copyDiagnostics = async () => {
     const folders = [...systemPaths.filter(p => !settings.disabledSystemPaths.includes(p)), ...settings.customScanPaths]
+    const archLine = (["x64", "x86", "arm64", "universal", "mixed"] as const)
+      .filter(a => (archSummary?.[a] ?? 0) > 0)
+      .map(a => `${t(`arch.${a}`)} ${archSummary?.[a]}`)
+      .join(", ")
     const text = [
       `Deplug`,
       `${t("diagnostics.version")}: ${version ?? unknown}`,
@@ -47,6 +53,7 @@ export default function AboutSection({ platform, appInfo, systemPaths }: AboutPr
       ...(appInfo?.portable && appInfo.dataDir ? [`${t("diagnostics.dataDir")}: ${appInfo.dataDir}`] : []),
       `${t("diagnostics.scanFolders")}: ${folders.length === 0 ? t("diagnostics.none") : ""}`,
       ...folders.map(f => `  - ${f}`),
+      ...(archLine ? [`${t("diagnostics.architectures")}: ${archLine}`] : []),
     ].join("\n")
     try {
       await navigator.clipboard.writeText(text)

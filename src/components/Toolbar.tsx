@@ -1,10 +1,12 @@
 import type { RefObject } from "react"
-import { Copy, RefreshCcw, Search, Settings, X } from "lucide-react"
+import { ChevronDown, Copy, RefreshCcw, Search, Settings, X } from "lucide-react"
 import { Button } from "./ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import BrandMark from "./BrandMark"
 import { FormatDot } from "./FormatTag"
 import { useI18n } from "@/i18n/I18nProvider"
 import type { PluginType } from "@/core/plugin/Plugin"
+import type { ArchFilter } from "@/core/plugin/ListOps"
 
 type ToolbarProps = {
   pluginsCount: number
@@ -20,6 +22,11 @@ type ToolbarProps = {
   duplicatesOnly: boolean
   onToggleDuplicatesOnly: (value: boolean) => void
   duplicateCount: number
+  /** Architecture filter; the control is hidden until the backend has reported at least one architecture. */
+  archFilter: ArchFilter
+  onArchFilterChange: (value: ArchFilter) => void
+  archCounts: Record<ArchFilter, number>
+  archAvailable: boolean
 }
 
 const TYPES: PluginType[] = ["VST2", "VST3", "AAX", "AU"]
@@ -43,6 +50,10 @@ export default function Toolbar({
   duplicatesOnly,
   onToggleDuplicatesOnly,
   duplicateCount,
+  archFilter,
+  onArchFilterChange,
+  archCounts,
+  archAvailable,
 }: ToolbarProps) {
   const { t } = useI18n()
   return (
@@ -101,9 +112,33 @@ export default function Toolbar({
         className={`${chipBase} ${duplicatesOnly ? "border-signal/60 bg-signal/10 text-foreground hover:bg-signal/15" : chipOff}`}
       >
         <Copy aria-hidden className="size-3.5" />
-        <span aria-hidden>{t("toolbar.duplicatesShort")}</span>
+        <span aria-hidden className="hidden min-[900px]:inline">{t("toolbar.duplicatesShort")}</span>
         <span aria-hidden className="tabular-nums text-muted-foreground">{duplicateCount}</span>
       </button>
+
+      {archAvailable && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label={t("toolbar.archLabel")}
+            className={`${chipBase} ${archFilter === "all" ? chipOff : "border-signal/60 bg-signal/10 text-foreground hover:bg-signal/15"}`}
+          >
+            <span>{archFilter === "all" ? t("toolbar.arch") : t(`arch.${archFilter}`)}</span>
+            <ChevronDown aria-hidden className="size-3.5" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuRadioGroup value={archFilter} onValueChange={v => onArchFilterChange(v as ArchFilter)}>
+              <DropdownMenuRadioItem value="all">
+                {t("toolbar.archOption", { label: t("toolbar.archAll"), count: archCounts.all })}
+              </DropdownMenuRadioItem>
+              {(["x64", "x86", "arm64"] as const).map(a => (
+                <DropdownMenuRadioItem key={a} value={a}>
+                  {t("toolbar.archOption", { label: t(`arch.${a}`), count: archCounts[a] })}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       <span aria-live="polite" className="whitespace-nowrap text-xs tabular-nums text-muted-foreground max-[1099px]:sr-only">
         {t("toolbar.count", { count: pluginsCount })}
