@@ -10,9 +10,11 @@ type ToolbarProps = {
   showVST2: boolean
   showVST3: boolean
   showAAX: boolean
+  showAU: boolean
   onToggleVST2: (value: boolean) => void
   onToggleVST3: (value: boolean) => void
   onToggleAAX: (value: boolean) => void
+  onToggleAU: (value: boolean) => void
 }
 
 export default function Toolbar({
@@ -22,9 +24,11 @@ export default function Toolbar({
   showVST2,
   showVST3,
   showAAX,
+  showAU,
   onToggleVST2,
   onToggleVST3,
   onToggleAAX,
+  onToggleAU,
 }: ToolbarProps) {
   return (
     <div className="flex items-center justify-between mb-2">
@@ -44,6 +48,10 @@ export default function Toolbar({
         <div className="flex items-center gap-1">
           <Checkbox id="AAX" checked={showAAX} onCheckedChange={(value) => onToggleAAX(Boolean(value))} />
           <Label htmlFor="AAX" className="ml-1">AAX</Label>
+        </div>
+        <div className="flex items-center gap-1">
+          <Checkbox id="AU" checked={showAU} onCheckedChange={(value) => onToggleAU(Boolean(value))} />
+          <Label htmlFor="AU" className="ml-1">AU</Label>
         </div>
       </div>
 

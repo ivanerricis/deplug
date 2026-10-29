@@ -8,6 +8,8 @@ import UpdatePage from "./LoadingComponent"
 import Toolbar from "./components/Toolbar"
 import { Plugin } from "@/core/plugin/Plugin";
 import Section from "./components/Section"
+import SettingsPanel from "./components/SettingsPanel"
+import { loadCustomPaths, saveCustomPaths } from "./core/plugin/CustomPaths"
 
 export default function App() {
   const [loading, setLoading] = useState(true)
@@ -15,29 +17,35 @@ export default function App() {
   const [pluginsVST2, setPluginsVST2] = useState<Plugin[]>([])
   const [pluginsVST3, setPluginsVST3] = useState<Plugin[]>([])
   const [pluginsAAX, setPluginsAAX] = useState<Plugin[]>([])
+  const [pluginsAU, setPluginsAU] = useState<Plugin[]>([])
+  const [customPaths, setCustomPaths] = useState<string[]>(loadCustomPaths)
+  const [showSettings, setShowSettings] = useState(false)
   const [collapsedSections, setCollapsedSections] = useState({
     VST2: false,
     VST3: false,
     AAX: false,
+    AU: false,
   })
   const [visibleSections, setVisibleSections] = useState({
     VST2: true,
     VST3: true,
     AAX: true,
+    AU: true,
   })
 
-  const scanPlugins = async () => {
+  const scanPlugins = async (extraPaths: string[] = customPaths) => {
     setLoading(true)
     try {
       const platform = detectPlatform()
       const home = await homeDir().then(h => h.replace(/[\\/]+$/, ""), () => "")
-      const scanner = new PluginScanner(new TauriOS(), getPluginPaths(platform, home), platform)
+      const scanner = new PluginScanner(new TauriOS(), getPluginPaths(platform, home), platform, extraPaths)
 
       const found = await scanner.search()
       setPlugins(found.all)
       setPluginsVST2(found.vst2)
       setPluginsVST3(found.vst3)
       setPluginsAAX(found.aax)
+      setPluginsAU(found.au)
     } finally {
       setLoading(false)
     }
@@ -53,7 +61,10 @@ export default function App() {
     <div className="w-full h-full p-2 flex flex-col">
       <Toolbar
         pluginsCount={plugins.length}
-        onRefresh={scanPlugins}
+        onRefresh={() => scanPlugins()}
+        onSettings={() => setShowSettings(s => !s)}
+        showAU={visibleSections.AU}
+        onToggleAU={(value) => setVisibleSections(current => ({ ...current, AU: value }))}
         showVST2={visibleSections.VST2}
         showVST3={visibleSections.VST3}
         showAAX={visibleSections.AAX}
@@ -61,6 +72,18 @@ export default function App() {
         onToggleVST3={(value) => setVisibleSections(current => ({ ...current, VST3: value }))}
         onToggleAAX={(value) => setVisibleSections(current => ({ ...current, AAX: value }))}
       />
+
+      {showSettings && (
+        <SettingsPanel
+          paths={customPaths}
+          onChange={(paths) => {
+            setCustomPaths(paths)
+            saveCustomPaths(paths)
+            scanPlugins(paths)
+          }}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
 
       {plugins.length === 0 ? (
         <p className="shrink-0">Nessun plugin trovato</p>
@@ -93,6 +116,16 @@ export default function App() {
               collapsed={collapsedSections.AAX}
               onToggle={() =>
                 setCollapsedSections(current => ({ ...current, AAX: !current.AAX }))
+              }
+            ></Section>
+          )}
+          {visibleSections.AU && (
+            <Section
+              type="AU"
+              items={pluginsAU}
+              collapsed={collapsedSections.AU}
+              onToggle={() =>
+                setCollapsedSections(current => ({ ...current, AU: !current.AU }))
               }
             ></Section>
           )}

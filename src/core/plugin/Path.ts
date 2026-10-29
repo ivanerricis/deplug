@@ -20,9 +20,11 @@ export function getPluginPaths(platform: Platform, home: string): string[] {
       return [
         "/Library/Audio/Plug-Ins/VST",
         "/Library/Audio/Plug-Ins/VST3",
+        "/Library/Audio/Plug-Ins/Components",
         "/Library/Application Support/Avid/Audio/Plug-Ins",
         `${home}/Library/Audio/Plug-Ins/VST`,
         `${home}/Library/Audio/Plug-Ins/VST3`,
+        `${home}/Library/Audio/Plug-Ins/Components`,
       ]
     case "linux":
       return [
