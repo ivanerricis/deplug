@@ -10,6 +10,7 @@ import { Plugin } from "@/core/plugin/Plugin";
 import Section from "./components/Section"
 import SettingsPanel from "./components/SettingsPanel"
 import { loadCustomPaths, saveCustomPaths } from "./core/plugin/CustomPaths"
+import { getAppInfo, type AppInfo } from "./core/settings/AppSettings"
 
 export default function App() {
   const [loading, setLoading] = useState(true)
@@ -18,7 +19,8 @@ export default function App() {
   const [pluginsVST3, setPluginsVST3] = useState<Plugin[]>([])
   const [pluginsAAX, setPluginsAAX] = useState<Plugin[]>([])
   const [pluginsAU, setPluginsAU] = useState<Plugin[]>([])
-  const [customPaths, setCustomPaths] = useState<string[]>(loadCustomPaths)
+  const [customPaths, setCustomPaths] = useState<string[]>([])
+  const [appInfo, setAppInfo] = useState<AppInfo | undefined>(undefined)
   const [showSettings, setShowSettings] = useState(false)
   const [collapsedSections, setCollapsedSections] = useState({
     VST2: false,
@@ -52,7 +54,16 @@ export default function App() {
   }
 
   useEffect(() => {
-    scanPlugins()
+    getAppInfo().then(setAppInfo, () => {})
+    loadCustomPaths()
+      .then(paths => {
+        setCustomPaths(paths)
+        return scanPlugins(paths)
+      })
+      .catch(error => {
+        console.error(error)
+        return scanPlugins([])
+      })
   }, [])
 
   if (loading) return <UpdatePage />
@@ -76,9 +87,10 @@ export default function App() {
       {showSettings && (
         <SettingsPanel
           paths={customPaths}
+          appInfo={appInfo}
           onChange={(paths) => {
             setCustomPaths(paths)
-            saveCustomPaths(paths)
+            saveCustomPaths(paths).catch(console.error)
             scanPlugins(paths)
           }}
           onClose={() => setShowSettings(false)}
