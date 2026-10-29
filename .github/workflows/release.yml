@@ -3,6 +3,16 @@ name: Release
 on:
   push:
     tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release, e.g. v0.1.0-rc.1 (created if it does not exist)"
+        required: true
+        type: string
+
+env:
+  # The tag being released: the pushed tag, or the manual input.
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
 permissions:
   contents: write
@@ -12,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: ./packaging/check-version.sh "$GITHUB_REF_NAME"
+      - run: ./packaging/check-version.sh "$RELEASE_TAG"
 
   release:
     needs: verify-version
@@ -50,11 +60,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Deplug ${{ github.ref_name }}"
+          tagName: ${{ env.RELEASE_TAG }}
+          releaseName: "Deplug ${{ env.RELEASE_TAG }}"
           releaseBody: "See the assets below. Installers: .msi/.exe (Windows), .dmg (macOS), .deb/.rpm/.AppImage (Linux). Portable builds (no install, data kept next to the app): *_portable.zip (Windows, macOS) and *_portable.tar.gz (Linux)."
           releaseDraft: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           args: ${{ matrix.args }}
       - name: Package portable (Windows)
         if: runner.os == 'Windows'
@@ -63,7 +73,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_ID: ${{ steps.tauri.outputs.releaseId }}
         run: |
-          VER=${GITHUB_REF_NAME#v}
+          VER=${RELEASE_TAG#v}
           OUT="Deplug_${VER}_x64_portable.zip"
           mkdir Deplug-portable
           cp src-tauri/target/release/deplug.exe Deplug-portable/
@@ -78,7 +88,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_ID: ${{ steps.tauri.outputs.releaseId }}
         run: |
-          VER=${GITHUB_REF_NAME#v}
+          VER=${RELEASE_TAG#v}
           OUT="Deplug_${VER}_amd64_portable.tar.gz"
           mkdir Deplug-portable
           cp src-tauri/target/release/bundle/appimage/*.AppImage Deplug-portable/
@@ -94,7 +104,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_ID: ${{ steps.tauri.outputs.releaseId }}
         run: |
-          VER=${GITHUB_REF_NAME#v}
+          VER=${RELEASE_TAG#v}
           OUT="Deplug_${VER}_universal_portable.zip"
           mkdir Deplug-portable
           cp -R "src-tauri/target/universal-apple-darwin/release/bundle/macos/Deplug.app" Deplug-portable/

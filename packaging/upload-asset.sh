@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Upload a file to the (draft) release. Usage: upload-asset.sh <file>
-# Needs GH_TOKEN, GITHUB_REF_NAME, GITHUB_REPOSITORY; optional RELEASE_ID
+# Needs GH_TOKEN, RELEASE_TAG, GITHUB_REPOSITORY; optional RELEASE_ID
 # (tauri-action output) used as fallback when lookup by tag fails for drafts.
 set -euo pipefail
 file="$1"
-if gh release upload "$GITHUB_REF_NAME" "$file" --clobber; then exit 0; fi
+if gh release upload "$RELEASE_TAG" "$file" --clobber; then exit 0; fi
 if [ -z "${RELEASE_ID:-}" ]; then exit 1; fi
 name="$(basename "$file")"
 echo "Tag lookup failed, uploading via release id $RELEASE_ID"
