@@ -86,6 +86,15 @@ With several plugins, Deplug creates **one** restore point for the whole batch, 
 
 To undo, open the trash and restore the item to its original location, then press refresh in Deplug.
 
+### The publisher's uninstaller and leftover folders
+
+When you uninstall a **single** plugin, Deplug also looks in the background for two optional extras. If it finds nothing (or the check fails, or you are on Linux) the dialog looks exactly as before. Batch uninstalls never show them.
+
+- **The publisher's own uninstaller.** If the plugin was installed by a regular installer, the dialog says so and lets you choose between **Move only the files to the trash** (the default) and **Run the publisher's uninstaller**. The second choice shows the exact command first, and the confirm button becomes **Run uninstaller**. It starts a program from the publisher, which may ask for administrator permission and may remove more than this plugin; Deplug waits for it to finish. On macOS, if the plugin came from an installer package, the dialog only shows the package id: Deplug cannot run those, so the files are moved to the trash.
+- **Leftover folders.** A collapsed **Leftover folders** section lists data folders the publisher may have left behind (presets, licenses, settings), with their size. **None is selected by default.** Tick the ones you want gone; they are moved to the trash before the plugin is removed. Be careful: they can hold presets or licenses you still need.
+
+If something fails, the dialog ends with a summary of what was done and what was not. If the publisher's uninstaller finishes but the plugin is still there, Deplug tells you and leaves it alone.
+
 ## Restore point on Windows
 
 On Windows the dialog has a checkbox, on by default (you can change the default in [Settings](/settings#uninstall)): **Create a system restore point before uninstalling**. This is the same safety net Revo Uninstaller offers. If something goes wrong with your system after removing a plugin, you can roll back from Windows' System Restore.

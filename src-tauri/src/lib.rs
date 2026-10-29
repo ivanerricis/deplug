@@ -1,8 +1,10 @@
+mod leftovers;
 mod meta;
 mod portable;
 mod settings;
 mod syspaths;
 mod uninstall;
+mod vendor;
 
 use tauri::Manager;
 
@@ -39,7 +41,11 @@ pub fn run() {
             settings::save_settings,
             settings::app_info,
             uninstall::trash_plugin,
-            uninstall::create_restore_point
+            uninstall::create_restore_point,
+            vendor::find_vendor_uninstaller,
+            vendor::run_vendor_uninstaller,
+            leftovers::find_leftovers,
+            leftovers::trash_leftovers
         ])
         .setup(move |app| {
             let settings_path = match &mode.data_dir {

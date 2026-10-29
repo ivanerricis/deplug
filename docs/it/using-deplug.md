@@ -86,6 +86,15 @@ Con più plugin, Deplug crea **un solo** punto di ripristino per l'intero gruppo
 
 Per annullare, apri il cestino e ripristina l'elemento nella posizione originale, poi premi aggiorna in Deplug.
 
+### Il disinstallatore del produttore e le cartelle residue
+
+Quando disinstalli **un solo** plugin, Deplug cerca in background anche due extra facoltativi. Se non trova nulla (o la ricerca fallisce, o sei su Linux) la finestra resta identica a prima. Le disinstallazioni multiple non li mostrano mai.
+
+- **Il disinstallatore del produttore.** Se il plugin è stato installato con un normale installer, la finestra lo segnala e ti lascia scegliere tra **Sposta solo i file nel cestino** (predefinito) ed **Esegui il disinstallatore del produttore**. La seconda scelta mostra prima il comando esatto e il pulsante di conferma diventa **Esegui il disinstallatore**. Avvia un programma del produttore, che può chiedere i permessi di amministratore e rimuovere più del solo plugin; Deplug ne attende la fine. Su macOS, se il plugin viene da un pacchetto di installazione, la finestra mostra solo l'id del pacchetto: Deplug non può eseguirlo, quindi i file vengono spostati nel cestino.
+- **Cartelle residue.** Una sezione compressa **Cartelle residue** elenca le cartelle di dati che il produttore potrebbe aver lasciato (preset, licenze, impostazioni), con la dimensione. **Nessuna è selezionata in partenza.** Spunta quelle che vuoi eliminare: vengono spostate nel cestino prima della rimozione del plugin. Attenzione: possono contenere preset o licenze che ti servono ancora.
+
+Se qualcosa non riesce, la finestra termina con un riepilogo di cosa è stato fatto e cosa no. Se il disinstallatore del produttore termina ma il plugin è ancora presente, Deplug te lo dice e non lo tocca.
+
 ## Punto di ripristino su Windows
 
 Su Windows la finestra ha una casella attiva di default (il valore iniziale si cambia nelle [Impostazioni](/it/settings#uninstall)): **Crea un punto di ripristino di sistema prima di disinstallare**. È la stessa rete di sicurezza offerta da Revo Uninstaller. Se dopo aver rimosso un plugin qualcosa nel sistema non va, puoi tornare indietro con Ripristino configurazione di sistema di Windows.

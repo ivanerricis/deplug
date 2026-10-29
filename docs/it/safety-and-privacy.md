@@ -23,6 +23,12 @@ Prima di spostare qualcosa nel cestino, il backend ricontrolla il percorso e lo 
 
 Quindi, anche se una cartella personalizzata punta a qualcosa di grande, Deplug può mettere nel cestino solo un singolo file o bundle di plugin, mai una cartella dei tuoi documenti.
 
+## Il disinstallatore del produttore e i residui
+
+Per un singolo plugin Deplug può proporre di eseguire il **disinstallatore che il produttore ha registrato** nel sistema. È l'unico caso in cui Deplug avvia un altro programma, e non succede mai da solo: la finestra mostra il comando esatto, spiega che il programma può chiedere i permessi di amministratore e lo esegue solo se scegli quell'opzione e premi **Esegui il disinstallatore**. Deplug non esegue comandi che ritiene non sicuri.
+
+Le **cartelle residue** sono solo suggerimenti trovati in un insieme fisso di posizioni dati per utente e condivise. Sono deselezionate in partenza e vanno nel cestino come tutto il resto; il backend rifiuta qualsiasi cartella che non abbia ricavato lui stesso per quel plugin.
+
 ## Punti di ripristino
 
 Su Windows il punto di ripristino facoltativo è creato da `Checkpoint-Computer` di Windows PowerShell in un processo con privilegi elevati, dopo la consueta richiesta UAC. La descrizione viene ripulita prima di essere passata. Deplug chiede l'elevazione solo per questo passaggio e non conserva mai i diritti di amministratore.

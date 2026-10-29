@@ -23,6 +23,12 @@ Before anything is moved to the trash, the backend re-checks the path and refuse
 
 So even if a custom folder points at something large, Deplug can only ever trash an individual plugin file or bundle, never a folder of your documents.
 
+## The publisher's uninstaller and leftovers
+
+For a single plugin, Deplug can offer to run the **uninstaller the publisher registered** with the system. This is the only case where Deplug starts another program, and it never happens on its own: the dialog shows the exact command, explains that the program may ask for administrator permission, and only runs it when you choose that option and press **Run uninstaller**. Deplug does not run commands it considers unsafe.
+
+**Leftover folders** are only suggestions found in a fixed set of per-user and shared data locations. They are unselected by default and go to the trash, like everything else; the backend refuses any folder it did not derive itself for that plugin.
+
 ## Restore points
 
 On Windows the optional restore point is created by Windows PowerShell's `Checkpoint-Computer` in an elevated process after the usual UAC prompt. The description is sanitised before it is passed on. Deplug asks for elevation only for this step and never keeps administrator rights.

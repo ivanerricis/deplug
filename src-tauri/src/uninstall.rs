@@ -63,7 +63,7 @@ static TRASH_ENV_LOCK: Mutex<()> = Mutex::new(());
 /// Moves `path` to the system trash. In portable mode on Linux `XDG_DATA_HOME` points into
 /// the app's data folder, which would hide the trashed file inside it, so the original value is
 /// put back for the duration of the call.
-fn trash_with_system_env(
+pub(crate) fn trash_with_system_env(
     path: &Path,
     redirected: bool,
     original: &Option<OsString>,
