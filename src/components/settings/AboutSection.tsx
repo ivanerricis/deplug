@@ -35,6 +35,8 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
   const unknown = t("settings.about.unknown")
   const mode = appInfo?.portable ? t("settings.about.modePortable") : t("settings.about.modeNormal")
 
+  const adminText = appInfo?.elevated ? t("settings.about.yes") : t("settings.about.no")
+
   const links = [
     { label: t("settings.about.github"), url: REPO_URL },
     ...(DOCS_AVAILABLE ? [{ label: t("settings.about.docs"), url: DOCS_URL }] : []),
@@ -59,6 +61,7 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
       `${t("diagnostics.version")}: ${version ?? unknown}`,
       `${t("diagnostics.os")}: ${osLabel(platform)}`,
       `${t("diagnostics.mode")}: ${mode}`,
+      ...(platform === "windows" ? [`${t("diagnostics.admin")}: ${adminText}`] : []),
       ...(appInfo?.portable && appInfo.dataDir ? [`${t("diagnostics.dataDir")}: ${appInfo.dataDir}`] : []),
       `${t("diagnostics.scanFolders")}: ${folders.length === 0 ? t("diagnostics.none") : ""}`,
       ...folders.map(f => `  - ${f}`),
@@ -89,6 +92,12 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
         <dd className="tabular-nums">{version ?? unknown}</dd>
         <dt className="text-muted-foreground">{t("settings.about.mode")}</dt>
         <dd>{mode}</dd>
+        {platform === "windows" && (
+          <>
+            <dt className="text-muted-foreground">{t("settings.about.admin")}</dt>
+            <dd>{adminText}</dd>
+          </>
+        )}
         {appInfo?.portable && (
           <>
             <dt className="text-muted-foreground">{t("settings.about.dataDir")}</dt>

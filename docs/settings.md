@@ -19,6 +19,7 @@ The plugin list refreshes when you close the settings, if anything here changed.
 ## Uninstall {#uninstall}
 
 - **Create a restore point by default**: sets whether the restore point checkbox starts ticked in the uninstall dialog. You can still change it for each uninstall. Restore points only exist on Windows; on macOS and Linux the setting has no effect and the dialog says so.
+- **Always run Deplug as administrator** (Windows only, off by default): Windows asks for permission each time Deplug starts. Plugins in protected folders can then be removed without extra prompts, and programs Deplug starts (such as a publisher's uninstaller) also run with administrator rights. It takes effect the next time Deplug starts. If you decline the Windows prompt, Deplug starts normally without administrator rights. The About section shows whether the current session has them.
 
 ## About {#about}
 
@@ -27,7 +28,7 @@ The About section shows the app name, the **Version**, and the **Mode** (*Standa
 It also has:
 
 - links to the **GitHub page**, the **Documentation**, **Report an issue** and **Release notes**, which open in your browser;
-- **Copy diagnostics**, which puts the version, operating system, mode, data folder (portable only) and the folders being scanned on the clipboard, ready to paste into a bug report. It contains no plugin names;
+- **Copy diagnostics**, which puts the version, operating system, mode, administrator rights (Windows only), data folder (portable only) and the folders being scanned on the clipboard, ready to paste into a bug report. It contains no plugin names;
 - the license notice.
 
 ## Where settings are stored

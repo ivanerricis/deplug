@@ -17,9 +17,9 @@ export function isAccessDeniedError(error: string | undefined): boolean {
   return error.includes("ERR_TRASH_ACCESS_DENIED") || error.includes("Some operations were aborted")
 }
 
-/** Failed items that an elevated retry could fix. Never any off Windows. */
-export function elevationCandidates(items: BatchItemResult[], isWindows: boolean): BatchItemResult[] {
-  if (!isWindows) return []
+/** Failed items that an elevated retry could fix. Never any off Windows or when the process is already elevated. */
+export function elevationCandidates(items: BatchItemResult[], isWindows: boolean, alreadyElevated = false): BatchItemResult[] {
+  if (!isWindows || alreadyElevated) return []
   return items.filter(i => i.status === "failed" && isAccessDeniedError(i.error))
 }
 
@@ -41,8 +41,8 @@ export interface ElevatedRetryResult {
  * Retries the access-denied items with one elevated call and merges the outcome:
  * moved => removed, failed paths keep their own error, a rejected call changes nothing.
  */
-export async function retryElevated(items: BatchItemResult[], isWindows: boolean, backend: ElevatedBackend): Promise<ElevatedRetryResult> {
-  const candidates = elevationCandidates(items, isWindows)
+export async function retryElevated(items: BatchItemResult[], isWindows: boolean, backend: ElevatedBackend, alreadyElevated = false): Promise<ElevatedRetryResult> {
+  const candidates = elevationCandidates(items, isWindows, alreadyElevated)
   if (candidates.length === 0) return { items }
   const pathOf = (i: BatchItemResult) => buildPluginPath(i.plugin.installPath, i.plugin.name)
   let failures: string[]

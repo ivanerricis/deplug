@@ -19,6 +19,7 @@ L'elenco dei plugin si aggiorna quando chiudi le impostazioni, se qualcosa è ca
 ## Disinstallazione {#uninstall}
 
 - **Crea un punto di ripristino per impostazione predefinita**: stabilisce se la casella del punto di ripristino parte spuntata nella finestra di disinstallazione. Puoi comunque cambiarla a ogni disinstallazione. I punti di ripristino esistono solo su Windows; su macOS e Linux l'impostazione non ha effetto e la finestra lo segnala.
+- **Esegui sempre Deplug come amministratore** (solo Windows, disattivata per impostazione predefinita): Windows chiede il permesso a ogni avvio di Deplug. I plugin nelle cartelle protette si possono poi rimuovere senza altre richieste, e anche i programmi avviati da Deplug (come il disinstallatore di un editore) vengono eseguiti con i diritti di amministratore. Ha effetto al prossimo avvio di Deplug. Se rifiuti la richiesta di Windows, Deplug si avvia normalmente senza diritti di amministratore. La sezione Informazioni mostra se la sessione attuale li ha.
 
 ## Informazioni {#about}
 
@@ -27,7 +28,7 @@ La sezione Informazioni mostra il nome dell'app, la **Versione** e la **Modalit�
 Contiene inoltre:
 
 - i collegamenti a **Pagina GitHub**, **Documentazione**, **Segnala un problema** e **Note di rilascio**, che si aprono nel browser;
-- **Copia diagnostica**, che mette negli appunti versione, sistema operativo, modalità, cartella dei dati (solo portatile) e cartelle analizzate, pronti da incollare in una segnalazione. Non contiene nomi di plugin;
+- **Copia diagnostica**, che mette negli appunti versione, sistema operativo, modalità, diritti di amministratore (solo Windows), cartella dei dati (solo portatile) e cartelle analizzate, pronti da incollare in una segnalazione. Non contiene nomi di plugin;
 - l'avviso di licenza.
 
 ## Dove vengono salvate le impostazioni

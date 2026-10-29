@@ -37,13 +37,15 @@ type UninstallDialogProps = {
   meta?: MetaMap
   /** `removedAny` tells the caller whether the list needs a rescan. */
   onClose: (removedAny: boolean) => void
+  /** The app already runs as administrator: an access-denied error is then a plain failure. */
+  elevated?: boolean
 }
 
 const NAME_MARK = "\u0001"
 
 type Phase = "confirm" | "running" | "done"
 
-export default function UninstallDialog({ plugins, meta, onClose }: UninstallDialogProps) {
+export default function UninstallDialog({ plugins, meta, onClose, elevated = false }: UninstallDialogProps) {
   const isWindows = detectPlatform() === "windows"
   const { t, tError, language } = useI18n()
   const { settings } = useSettings()
@@ -176,14 +178,14 @@ export default function UninstallDialog({ plugins, meta, onClose }: UninstallDia
       ? [{ plugin: plugins[0], status: "failed", error: single.plugin.error }]
       : []
   const retryItems = many ? progress.completed : singleItem
-  const canElevate = phase === "done" && elevationCandidates(retryItems, isWindows).length > 0
+  const canElevate = phase === "done" && elevationCandidates(retryItems, isWindows, elevated).length > 0
 
   const retryWithAdmin = async () => {
     if (retrying) return
     setRetrying(true)
     setRetryError(null)
     try {
-      const outcome = await retryElevated(retryItems, isWindows, tauriElevatedBackend)
+      const outcome = await retryElevated(retryItems, isWindows, tauriElevatedBackend, elevated)
       if (outcome.callError) {
         setRetryError(outcome.callError)
       } else if (many) {

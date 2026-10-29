@@ -1,3 +1,4 @@
+mod elevation;
 mod leftovers;
 mod meta;
 mod portable;
@@ -10,6 +11,14 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Must come before the single-instance plugin is registered: when we were relaunched
+    // elevated, the previous instance still holds the lock until it has exited.
+    let args: Vec<String> = std::env::args().collect();
+    let elevated_from = elevation::parse_elevated_from(&args);
+    if let Some(pid) = elevated_from {
+        elevation::wait_for_exit(pid, elevation::WAIT_TIMEOUT_MS);
+    }
+
     // Must be first: may set env vars, which is only safe before other threads start.
     let mode = portable::init();
 
@@ -53,7 +62,22 @@ pub fn run() {
                 Some(dir) if mode.portable => dir.join("settings.json"),
                 _ => app.path().app_config_dir()?.join("settings.json"),
             };
+            let loaded = portable_core::load(&settings_path);
             app.manage(settings::SettingsPath(settings_path));
+
+            // Opt-in "always run as administrator": relaunch elevated and quit before any window shows.
+            if elevation::should_relaunch(
+                loaded.run_as_admin,
+                elevation::is_elevated(),
+                elevated_from.is_some(),
+                cfg!(windows),
+            ) {
+                match elevation::relaunch_elevated(std::process::id()) {
+                    Ok(()) => std::process::exit(0),
+                    // Typically the user declined the UAC prompt: keep running un-elevated.
+                    Err(e) => eprintln!("Could not relaunch as administrator: {e}"),
+                }
+            }
 
             // The window is configured visible:false; always show it here.
             if let Some(w) = app.get_webview_window("main") {
