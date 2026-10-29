@@ -3,11 +3,14 @@ import { Check, Loader2, X } from "lucide-react"
 import { Button } from "./ui/button"
 import { Checkbox } from "./ui/checkbox"
 import { Label } from "./ui/label"
+import { Badge } from "./ui/badge"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog"
+import { ScrollArea } from "./ui/scroll-area"
+import { Alert } from "./ui/alert"
 import type { Plugin } from "@/core/plugin/Plugin"
 import { detectPlatform } from "@/core/plugin/Path"
 import { useSettings } from "@/core/settings/SettingsContext"
 import { useI18n } from "@/i18n/I18nProvider"
-import { useModal } from "./ui/useModal"
 import {
   buildPluginPath,
   tauriUninstallBackend,
@@ -37,9 +40,8 @@ export default function UninstallDialog({ plugins, onClose }: UninstallDialogPro
   const [progress, setProgress] = useState<{ completed: BatchItemResult[]; current: Plugin | null }>({ completed: [], current: null })
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; resolve: (v: boolean) => void } | null>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
-  const dialogRef = useRef<HTMLDivElement>(null)
-  const titleId = useId()
-  const descId = useId()
+  // Radix only restores focus to a <DialogTrigger>; this dialog is mounted on demand, so remember the opener.
+  const opener = useRef(document.activeElement as HTMLElement | null)
   const checkboxId = useId()
   const [before, after] = t("uninstall.description", { name: NAME_MARK }).split(NAME_MARK)
   const running = phase === "running"
@@ -63,8 +65,6 @@ export default function UninstallDialog({ plugins, onClose }: UninstallDialogPro
     if (running) return
     onClose(phase === "done" && removedAny)
   }
-
-  useModal(dialogRef, cancel, cancelRef)
 
   const confirm = async () => {
     setPhase("running")
@@ -109,19 +109,29 @@ export default function UninstallDialog({ plugins, onClose }: UninstallDialogPro
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={descId}
-        className="flex max-h-full w-full max-w-lg flex-col gap-3 rounded-lg border border-border bg-card p-4 text-card-foreground shadow-lg"
+    <Dialog open onOpenChange={open => { if (!open) cancel() }}>
+      <DialogContent
+        showCloseButton={false}
+        className="flex max-h-[calc(100%-2rem)] flex-col gap-3 overflow-y-auto bg-card p-4 text-card-foreground"
+        onCloseAutoFocus={e => {
+          e.preventDefault()
+          if (opener.current?.isConnected) opener.current.focus()
+        }}
+        onOpenAutoFocus={e => {
+          // Land on the safe choice, not on the destructive button.
+          e.preventDefault()
+          cancelRef.current?.focus()
+        }}
+        // Only the explicit buttons dismiss this dialog.
+        onInteractOutside={e => e.preventDefault()}
       >
-        <h2 id={titleId} className="text-lg font-semibold">
-          {many ? t("uninstall.titleMany", { count: plugins.length }) : t("uninstall.title")}
-        </h2>
-        <div id={descId} className="flex flex-col gap-2 text-sm">
+        <DialogHeader>
+          <DialogTitle>
+            {many ? t("uninstall.titleMany", { count: plugins.length }) : t("uninstall.title")}
+          </DialogTitle>
+        </DialogHeader>
+        <DialogDescription asChild>
+        <div className="flex flex-col gap-2 text-sm text-foreground">
           {phase === "done" ? (
             <p role="status">
               {failed === 0 ? t("uninstall.summaryOk", { removed }) : t("uninstall.summary", { removed, failed })}
@@ -143,11 +153,13 @@ export default function UninstallDialog({ plugins, onClose }: UninstallDialogPro
             </>
           )}
         </div>
+        </DialogDescription>
 
         {(many || phase === "done") && (
+          <ScrollArea className="min-h-0 rounded border border-border [&_[data-radix-scroll-area-viewport]]:max-h-60 [&_[data-radix-scroll-area-viewport]>div]:!block">
           <ul
             aria-label={many ? t("uninstall.titleMany", { count: plugins.length }) : plugins[0].name}
-            className="flex max-h-60 min-h-0 flex-col divide-y overflow-y-auto rounded border border-border"
+            className="flex flex-col divide-y outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
             tabIndex={0}
           >
             {ordered.map(({ plugin, index: i }) => {
@@ -174,17 +186,18 @@ export default function UninstallDialog({ plugins, onClose }: UninstallDialogPro
                     )}
                   </div>
                   {phase !== "confirm" && (
-                    <span className={`shrink-0 text-xs ${result?.status === "failed" ? "font-medium text-destructive" : "text-muted-foreground"}`}>
+                    <Badge variant="outline" className={result?.status === "failed" ? "border-destructive/50 text-destructive" : "border-transparent text-muted-foreground"}>
                       {result?.status === "removed" && t("uninstall.resultOk")}
                       {result?.status === "failed" && t("uninstall.resultFailed")}
                       {st === "running" && t("uninstall.resultRunning")}
                       {st === "pending" && t("uninstall.resultPending")}
-                    </span>
+                    </Badge>
                   )}
                 </li>
               )
             })}
           </ul>
+          </ScrollArea>
         )}
 
         {isWindows && phase !== "done" && (
@@ -206,21 +219,21 @@ export default function UninstallDialog({ plugins, onClose }: UninstallDialogPro
         )}
 
         {pendingConfirm && (
-          <div role="alert" className="flex flex-col gap-2 rounded border border-destructive p-2 text-sm">
+          <Alert variant="destructive" className="flex flex-col gap-2 border-destructive p-2 text-sm">
             <p className="text-destructive break-words">{tError(pendingConfirm.message)}</p>
-            <p>{t("uninstall.continueQuestion")}</p>
+            <p className="text-foreground">{t("uninstall.continueQuestion")}</p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => answer(false)}>{t("uninstall.no")}</Button>
               <Button variant="destructive" size="sm" onClick={() => answer(true)}>{t("uninstall.yesContinue")}</Button>
             </div>
-          </div>
+          </Alert>
         )}
 
         {error && (
           <p role="alert" className="text-sm text-destructive break-words">{tError(error)}</p>
         )}
 
-        <div className="flex justify-end gap-2">
+        <DialogFooter>
           {phase === "done" ? (
             <Button ref={cancelRef as never} variant="outline" onClick={cancel}>
               {t("uninstall.close")}
@@ -235,8 +248,8 @@ export default function UninstallDialog({ plugins, onClose }: UninstallDialogPro
               </Button>
             </>
           )}
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

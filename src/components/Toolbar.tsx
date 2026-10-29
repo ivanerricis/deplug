@@ -1,6 +1,8 @@
 import type { RefObject } from "react"
 import { Copy, RefreshCcw, Search, Settings, X } from "lucide-react"
 import { Button } from "./ui/button"
+import { Input } from "./ui/input"
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip"
 import BrandMark from "./BrandMark"
 import { FormatDot } from "./FormatTag"
 import { useI18n } from "@/i18n/I18nProvider"
@@ -51,7 +53,7 @@ export default function Toolbar({
 
       <div className="relative min-w-[9rem] flex-1">
         <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <input
+        <Input
           ref={searchRef}
           type="text"
           value={query}
@@ -60,18 +62,23 @@ export default function Toolbar({
           aria-label={t("toolbar.searchLabel")}
           autoComplete="off"
           spellCheck={false}
-          className="h-9 w-full rounded-lg border border-transparent bg-secondary pl-8 pr-9 text-sm outline-none transition-colors placeholder:text-muted-foreground hover:bg-accent/70 focus-visible:border-ring focus-visible:bg-background focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="rounded-lg border-transparent bg-secondary pl-8 pr-9 text-sm shadow-none hover:bg-accent/70 focus-visible:bg-background dark:bg-secondary dark:hover:bg-accent/70 dark:focus-visible:bg-background"
         />
         {query !== "" && (
-          <button
-            type="button"
-            onClick={() => { onQueryChange(""); searchRef.current?.focus() }}
-            aria-label={t("toolbar.searchClear")}
-            title={t("toolbar.searchClear")}
-            className="absolute right-1 top-1/2 flex size-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50"
-          >
-            <X aria-hidden className="size-4" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => { onQueryChange(""); searchRef.current?.focus() }}
+                aria-label={t("toolbar.searchClear")}
+                className="absolute right-1 top-1/2 size-7 -translate-y-1/2"
+              >
+                <X aria-hidden />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("toolbar.searchClear")}</TooltipContent>
+          </Tooltip>
         )}
       </div>
 
@@ -96,7 +103,6 @@ export default function Toolbar({
         type="button"
         aria-pressed={duplicatesOnly}
         aria-label={t("toolbar.duplicatesOnly")}
-        title={t("toolbar.duplicatesOnly")}
         onClick={() => onToggleDuplicatesOnly(!duplicatesOnly)}
         className={`${chipBase} ${duplicatesOnly ? "border-signal/60 bg-signal/10 text-foreground hover:bg-signal/15" : chipOff}`}
       >
@@ -110,12 +116,22 @@ export default function Toolbar({
       </span>
 
       <div className="flex items-center">
-        <Button variant="ghost" size="icon" onClick={onRefresh} aria-label={t("toolbar.rescan")} title={t("toolbar.rescan")}>
-          <RefreshCcw aria-hidden />
-        </Button>
-        <Button variant="ghost" size="icon" onClick={onSettings} aria-label={t("toolbar.settings")} title={t("toolbar.settings")}>
-          <Settings aria-hidden />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={onRefresh} aria-label={t("toolbar.rescan")}>
+              <RefreshCcw aria-hidden />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("toolbar.rescan")}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={onSettings} aria-label={t("toolbar.settings")}>
+              <Settings aria-hidden />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("toolbar.settings")}</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   )

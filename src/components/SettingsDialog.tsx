@@ -1,13 +1,16 @@
-import { useEffect, useId, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { Info, ScanSearch, SlidersHorizontal, Trash2, X, type LucideIcon } from "lucide-react"
 import { useSettings } from "@/core/settings/SettingsContext"
 import type { AppInfo } from "@/core/settings/AppSettings"
 import type { Platform } from "@/core/plugin/Path"
 import { useI18n } from "@/i18n/I18nProvider"
 import type { MessageKey } from "@/i18n/translate"
-import { cn } from "@/lib/utils"
+import { Alert, AlertDescription } from "./ui/alert"
 import { Button } from "./ui/button"
-import { useModal } from "./ui/useModal"
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog"
+import { ScrollArea } from "./ui/scroll-area"
+import { Separator } from "./ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import GeneralSection from "./settings/GeneralSection"
 import ScanSection from "./settings/ScanSection"
 import UninstallSection from "./settings/UninstallSection"
@@ -34,109 +37,79 @@ export default function SettingsDialog({ platform, systemPaths, appInfo, initial
   const { t, tError } = useI18n()
   const { saveError, clearSaveError } = useSettings()
   const [tab, setTab] = useState<TabId>(initialTab)
-  const dialogRef = useRef<HTMLDivElement>(null)
   const tabsRef = useRef<HTMLDivElement>(null)
-  const uid = useId()
-  const titleId = `${uid}-title`
-
-  useModal(dialogRef, onClose)
-  useEffect(() => {
-    // Start on the selected tab rather than the close button.
-    tabsRef.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus()
-  }, [])
-
-  const onTabKey = (e: React.KeyboardEvent, index: number) => {
-    const delta = e.key === "ArrowDown" ? 1 : e.key === "ArrowUp" ? -1 : 0
-    const jump = e.key === "Home" ? 0 : e.key === "End" ? TABS.length - 1 : null
-    if (!delta && jump === null) return
-    e.preventDefault()
-    const next = jump ?? (index + delta + TABS.length) % TABS.length
-    setTab(TABS[next].id)
-    tabsRef.current?.querySelectorAll<HTMLElement>('[role="tab"]')[next]?.focus()
-  }
+  // Radix only restores focus to a <DialogTrigger>; this dialog is mounted on demand, so remember the opener.
+  const opener = useRef(document.activeElement as HTMLElement | null)
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onMouseDown={e => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="flex max-h-full w-full max-w-[680px] flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-lg"
-        style={{ height: 560 }}
+    <Dialog open onOpenChange={open => { if (!open) onClose() }}>
+      <DialogContent
+        showCloseButton={false}
+        aria-describedby={undefined}
+        className="flex h-[560px] max-h-[calc(100%-2rem)] flex-col gap-0 overflow-hidden bg-card p-0 text-card-foreground sm:max-w-[680px]"
+        onCloseAutoFocus={e => {
+          e.preventDefault()
+          if (opener.current?.isConnected) opener.current.focus()
+        }}
+        onOpenAutoFocus={e => {
+          // Start on the selected tab rather than the close button.
+          e.preventDefault()
+          tabsRef.current?.querySelector<HTMLElement>('[role="tab"][data-state="active"]')?.focus()
+        }}
       >
-        <header className="flex shrink-0 items-center justify-between border-b border-border py-2 pl-5 pr-3">
-          <h2 id={titleId} className="text-base font-semibold">{t("settings.title")}</h2>
-          <Button variant="ghost" size="icon-sm" aria-label={t("settings.close")} onClick={onClose}>
-            <X />
-          </Button>
-        </header>
+        <DialogHeader className="flex-row items-center justify-between space-y-0 py-2 pl-5 pr-3">
+          <DialogTitle className="text-base">{t("settings.title")}</DialogTitle>
+          <DialogClose asChild>
+            <Button variant="ghost" size="icon-sm" aria-label={t("settings.close")}>
+              <X />
+            </Button>
+          </DialogClose>
+        </DialogHeader>
+        <Separator />
 
-        <div className="flex min-h-0 flex-1">
-          <div
+        <Tabs
+          value={tab}
+          onValueChange={v => setTab(v as TabId)}
+          orientation="vertical"
+          className="min-h-0 flex-1 flex-row gap-0"
+        >
+          <TabsList
             ref={tabsRef}
-            role="tablist"
-            aria-orientation="vertical"
             aria-label={t("settings.sections")}
-            className="flex w-44 shrink-0 flex-col gap-0.5 border-r border-border bg-background/60 p-2"
+            className="h-auto w-44 shrink-0 flex-col items-stretch justify-start gap-0.5 rounded-none border-r border-border bg-background/60 p-2"
           >
-            {TABS.map(({ id, label, icon: Icon }, i) => {
-              const active = tab === id
-              return (
-                <button
-                  key={id}
-                  id={`${uid}-tab-${id}`}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  aria-controls={`${uid}-panel-${id}`}
-                  tabIndex={active ? 0 : -1}
-                  onClick={() => setTab(id)}
-                  onKeyDown={e => onTabKey(e, i)}
-                  className={cn(
-                    "relative flex h-9 w-full cursor-pointer items-center gap-2.5 rounded px-3 text-left text-sm outline-none transition-colors",
-                    "focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                    active ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-                  )}
-                >
-                  {active && <span aria-hidden className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-signal" />}
-                  <Icon aria-hidden className="size-4 shrink-0" />
-                  <span className="truncate">{t(label)}</span>
-                </button>
-              )
-            })}
-          </div>
+            {TABS.map(({ id, label, icon: Icon }) => (
+              <TabsTrigger
+                key={id}
+                value={id}
+                className="relative h-9 flex-none cursor-pointer justify-start gap-2.5 px-3 text-left text-muted-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full hover:bg-accent/60 hover:text-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none data-[state=active]:before:bg-signal dark:text-muted-foreground dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-accent dark:data-[state=active]:text-accent-foreground"
+              >
+                <Icon aria-hidden />
+                <span className="truncate">{t(label)}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-          <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {saveError && (
-              <div role="alert" className="flex shrink-0 items-start justify-between gap-2 bg-destructive/10 px-5 py-2 text-sm text-destructive">
-                <span className="break-words">{t("settings.saveError", { error: tError(saveError) })}</span>
-                <button type="button" onClick={clearSaveError} className="shrink-0 cursor-pointer rounded px-1 underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
-                  {t("settings.dismiss")}
-                </button>
-              </div>
+              <Alert variant="destructive" className="shrink-0 rounded-none border-0 bg-destructive/10 px-5 py-2">
+                <AlertDescription className="flex items-start justify-between gap-2 text-destructive">
+                  <span className="break-words">{t("settings.saveError", { error: tError(saveError) })}</span>
+                  <button type="button" onClick={clearSaveError} className="shrink-0 cursor-pointer rounded px-1 underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+                    {t("settings.dismiss")}
+                  </button>
+                </AlertDescription>
+              </Alert>
             )}
-            <div
-              key={tab}
-              id={`${uid}-panel-${tab}`}
-              role="tabpanel"
-              aria-labelledby={`${uid}-tab-${tab}`}
-              tabIndex={0}
-              className="min-h-0 flex-1 overflow-y-auto px-5 py-4 outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
-            >
-              {tab === "general" && <GeneralSection />}
-              {tab === "scan" && <ScanSection systemPaths={systemPaths} />}
-              {tab === "uninstall" && <UninstallSection platform={platform} />}
-              {tab === "about" && <AboutSection platform={platform} appInfo={appInfo} systemPaths={systemPaths} />}
-            </div>
+            <ScrollArea className="min-h-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block">
+              <TabsContent value="general" className="px-5 py-4"><GeneralSection /></TabsContent>
+              <TabsContent value="scan" className="px-5 py-4"><ScanSection systemPaths={systemPaths} /></TabsContent>
+              <TabsContent value="uninstall" className="px-5 py-4"><UninstallSection platform={platform} /></TabsContent>
+              <TabsContent value="about" className="px-5 py-4"><AboutSection platform={platform} appInfo={appInfo} systemPaths={systemPaths} /></TabsContent>
+            </ScrollArea>
           </div>
-        </div>
-      </div>
-    </div>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   )
 }

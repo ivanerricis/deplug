@@ -1,38 +1,29 @@
+import * as React from "react"
+import * as SwitchPrimitive from "@radix-ui/react-switch"
+
 import { cn } from "@/lib/utils"
 
-type SwitchProps = {
-  checked: boolean
-  onCheckedChange: (value: boolean) => void
-  id?: string
-  disabled?: boolean
-  "aria-labelledby"?: string
-  "aria-describedby"?: string
-  "aria-label"?: string
-}
-
-/** Accessible on/off toggle (role=switch). */
-export function Switch({ checked, onCheckedChange, className, ...rest }: SwitchProps & { className?: string }) {
+function Switch({
+  className,
+  ...props
+}: React.ComponentProps<typeof SwitchPrimitive.Root>) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onCheckedChange(!checked)}
+    <SwitchPrimitive.Root
+      data-slot="switch"
       className={cn(
-        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-input p-0.5 outline-none transition-colors",
-        "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50",
-        checked ? "bg-primary border-primary" : "bg-muted",
-        className,
+        "peer data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:border-ring focus-visible:ring-ring/50 dark:data-[state=unchecked]:bg-input/80 inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+        className
       )}
-      {...rest}
+      {...props}
     >
-      <span
-        aria-hidden
+      <SwitchPrimitive.Thumb
+        data-slot="switch-thumb"
         className={cn(
-          "block size-4.5 rounded-full transition-transform motion-reduce:transition-none",
-          checked ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground",
+          "bg-background dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0"
         )}
       />
-    </button>
+    </SwitchPrimitive.Root>
   )
 }
+
+export { Switch }
