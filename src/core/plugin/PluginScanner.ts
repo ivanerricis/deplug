@@ -4,6 +4,13 @@ import { Plugin, PluginType } from "./Plugin"
 const MAX_DEPTH = 3
 const CUSTOM_MAX_DEPTH = 6
 
+export interface ScannerOptions {
+  /** Max folder depth for manually added folders. */
+  customDepth?: number
+  /** Built-in system folders the user switched off. */
+  disabledPaths?: string[]
+}
+
 export interface ScanResult {
   all: Plugin[]
   vst2: Plugin[]
@@ -29,16 +36,19 @@ export class PluginScanner {
     private paths: string[],
     private platform: string,
     private customPaths: string[] = [],
+    private options: ScannerOptions = {},
   ) {}
 
   async search(): Promise<ScanResult> {
     const result: ScanResult = { all: [], vst2: [], vst3: [], aax: [], au: [] }
     const seen = new Set<string>()
 
+    const disabled = new Set(this.options.disabledPaths ?? [])
+    const customDepth = this.options.customDepth ?? CUSTOM_MAX_DEPTH
     const roots = [
-      ...this.paths.map(path => ({ path, depth: MAX_DEPTH })),
+      ...this.paths.filter(path => !disabled.has(path)).map(path => ({ path, depth: MAX_DEPTH })),
       // manually installed plugins can live anywhere, so dig deeper
-      ...this.customPaths.map(path => ({ path, depth: CUSTOM_MAX_DEPTH })),
+      ...this.customPaths.map(path => ({ path, depth: customDepth })),
     ]
     for (const { path: root, depth: maxDepth } of roots) {
       if (!(await this.os.pathExists(root).catch(() => false))) continue

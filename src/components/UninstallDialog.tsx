@@ -4,6 +4,9 @@ import { Checkbox } from "./ui/checkbox"
 import { Label } from "./ui/label"
 import type { Plugin } from "@/core/plugin/Plugin"
 import { detectPlatform } from "@/core/plugin/Path"
+import { useSettings } from "@/core/settings/SettingsContext"
+import { useI18n } from "@/i18n/I18nProvider"
+import { useModal } from "./ui/useModal"
 import { buildPluginPath, tauriUninstallBackend, uninstallPlugin } from "@/core/plugin/Uninstall"
 
 type UninstallDialogProps = {
@@ -12,21 +15,23 @@ type UninstallDialogProps = {
   onUninstalled: () => void
 }
 
+const NAME_MARK = "\u0001"
+
 export default function UninstallDialog({ plugin, onClose, onUninstalled }: UninstallDialogProps) {
   const isWindows = detectPlatform() === "windows"
-  const [restorePoint, setRestorePoint] = useState(true)
+  const { t, tError } = useI18n()
+  const { settings } = useSettings()
+  const [restorePoint, setRestorePoint] = useState(settings.restorePointDefault)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; resolve: (v: boolean) => void } | null>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   const descId = useId()
   const checkboxId = useId()
+  const [before, after] = t("uninstall.description", { name: NAME_MARK }).split(NAME_MARK)
   const fullPath = buildPluginPath(plugin.installPath, plugin.name)
-
-  useEffect(() => {
-    cancelRef.current?.focus()
-  }, [])
 
   useEffect(() => {
     if (pendingConfirm) cancelRef.current?.focus()
@@ -42,16 +47,7 @@ export default function UninstallDialog({ plugin, onClose, onUninstalled }: Unin
     if (!running) onClose()
   }
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        cancel()
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  })
+  useModal(dialogRef, cancel, cancelRef)
 
   const confirm = async () => {
     setRunning(true)
@@ -67,7 +63,7 @@ export default function UninstallDialog({ plugin, onClose, onUninstalled }: Unin
         onClose()
         return
       }
-      if (result.status === "failed") setError(result.error ?? "Errore sconosciuto")
+      if (result.status === "failed") setError(result.error ?? t("uninstall.unknownError"))
     } catch (e) {
       setError(String(e))
     }
@@ -77,18 +73,19 @@ export default function UninstallDialog({ plugin, onClose, onUninstalled }: Unin
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descId}
-        className="flex w-full max-w-lg flex-col gap-3 rounded border-2 border-foreground/50 bg-background p-4 text-foreground shadow-lg"
+        className="flex w-full max-w-lg flex-col gap-3 rounded-lg border border-border bg-card p-4 text-card-foreground shadow-lg"
       >
-        <h2 id={titleId} className="text-lg font-semibold">Disinstalla plugin</h2>
+        <h2 id={titleId} className="text-lg font-semibold">{t("uninstall.title")}</h2>
         <div id={descId} className="flex flex-col gap-2 text-sm">
           <p>
-            Il plugin <strong className="break-all">{plugin.name}</strong> verrà spostato nel cestino di sistema.
+            {before}<strong className="break-all">{plugin.name}</strong>{after}
           </p>
-          <p className="break-all opacity-70">{fullPath}</p>
+          <p className="break-all text-muted-foreground">{fullPath}</p>
         </div>
 
         {isWindows && (
@@ -102,34 +99,34 @@ export default function UninstallDialog({ plugin, onClose, onUninstalled }: Unin
             />
             <div className="flex flex-col gap-1">
               <Label htmlFor={checkboxId} className="text-sm">
-                Crea un punto di ripristino di sistema prima di disinstallare
+                {t("uninstall.restorePoint")}
               </Label>
-              <span className="text-xs opacity-70">Windows potrebbe richiedere i permessi di amministratore.</span>
+              <span className="text-xs text-muted-foreground">{t("uninstall.restorePointHint")}</span>
             </div>
           </div>
         )}
 
         {pendingConfirm && (
           <div role="alert" className="flex flex-col gap-2 rounded border border-destructive p-2 text-sm">
-            <p className="text-destructive">{pendingConfirm.message}</p>
-            <p>Continuare senza punto di ripristino?</p>
+            <p className="text-destructive break-words">{tError(pendingConfirm.message)}</p>
+            <p>{t("uninstall.continueQuestion")}</p>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => answer(false)}>No</Button>
-              <Button variant="destructive" size="sm" onClick={() => answer(true)}>Sì, continua</Button>
+              <Button variant="outline" size="sm" onClick={() => answer(false)}>{t("uninstall.no")}</Button>
+              <Button variant="destructive" size="sm" onClick={() => answer(true)}>{t("uninstall.yesContinue")}</Button>
             </div>
           </div>
         )}
 
         {error && (
-          <p role="alert" className="text-sm text-destructive break-words">{error}</p>
+          <p role="alert" className="text-sm text-destructive break-words">{tError(error)}</p>
         )}
 
         <div className="flex justify-end gap-2">
           <Button ref={cancelRef as never} variant="outline" onClick={cancel} disabled={running && !pendingConfirm}>
-            Annulla
+            {t("uninstall.cancel")}
           </Button>
           <Button variant="destructive" onClick={confirm} disabled={running}>
-            {running ? "Disinstallazione…" : "Sposta nel cestino"}
+            {running ? t("uninstall.running") : t("uninstall.confirm")}
           </Button>
         </div>
       </div>

@@ -74,6 +74,31 @@ describe("custom paths", () => {
   })
 })
 
+describe("scanner options", () => {
+  const tree: Record<string, DirEntry[]> = {
+    "/sys": [file("/sys", "a.dll")],
+    "/c": [folder("/c", "x")],
+    "/c/x": [folder("/c/x", "y")],
+    "/c/x/y": [file("/c/x/y", "deep.dll")],
+  }
+
+  it("skips disabled system paths but still scans custom ones", async () => {
+    const scanner = new PluginScanner(fakeOS(tree), ["/sys"], "windows", [], { disabledPaths: ["/sys"] })
+    expect((await scanner.search()).all).toHaveLength(0)
+    const enabled = new PluginScanner(fakeOS(tree), ["/sys"], "windows", [], { disabledPaths: ["/other"] })
+    expect((await enabled.search()).all).toHaveLength(1)
+  })
+
+  it("honours customDepth for custom folders only", async () => {
+    const shallow = new PluginScanner(fakeOS(tree), [], "windows", ["/c"], { customDepth: 1 })
+    expect((await shallow.search()).all).toHaveLength(0)
+    const deep = new PluginScanner(fakeOS(tree), [], "windows", ["/c"], { customDepth: 2 })
+    expect((await deep.search()).all.map(p => p.name)).toEqual(["deep.dll"])
+    const asSystem = new PluginScanner(fakeOS(tree), ["/c"], "windows", [], { customDepth: 1 })
+    expect((await asSystem.search()).all).toHaveLength(1)
+  })
+})
+
 describe("getPluginPaths", () => {
   it("uses the home dir on macOS and linux", () => {
     expect(getPluginPaths("macos", "/Users/me")).toContain("/Users/me/Library/Audio/Plug-Ins/VST3")

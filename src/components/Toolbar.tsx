@@ -2,6 +2,7 @@ import { Button } from "./ui/button"
 import { RefreshCcw, Settings } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 import { Label } from "./ui/label"
+import { useI18n } from "@/i18n/I18nProvider"
 
 type ToolbarProps = {
   pluginsCount: number
@@ -30,13 +31,14 @@ export default function Toolbar({
   onToggleAAX,
   onToggleAU,
 }: ToolbarProps) {
+  const { t } = useI18n()
   return (
     <div className="flex items-center justify-between mb-2">
-      <div className="flex space-x-4 mr-14">
-        Plugin trovati: {pluginsCount}
+      <div className="flex space-x-4 mr-14 whitespace-nowrap" aria-live="polite">
+        {t("toolbar.count", { count: pluginsCount })}
       </div>
 
-      <div className="flex items-center flex-1 space-x-6">
+      <div role="group" aria-label={t("toolbar.formats")} className="flex items-center flex-1 space-x-6">
         <div className="flex items-center gap-1">
           <Checkbox id="VST2" checked={showVST2} onCheckedChange={(value) => onToggleVST2(Boolean(value))} />
           <Label htmlFor="VST2" className="ml-1">VST2</Label>
@@ -56,15 +58,17 @@ export default function Toolbar({
       </div>
 
       <div className="flex space-x-2 flex-1 justify-end">
-        <Button variant="outline" size="sm" onClick={onRefresh}>
-          <RefreshCcw />
+        <Button variant="outline" size="sm" onClick={onRefresh} aria-label={t("toolbar.rescan")} title={t("toolbar.rescan")}>
+          <RefreshCcw aria-hidden />
         </Button>
         <Button
           variant="outline"
           size="sm"
           onClick={onSettings}
+          aria-label={t("toolbar.settings")}
+          title={t("toolbar.settings")}
         >
-          <Settings />
+          <Settings aria-hidden />
         </Button>
       </div>
     </div>
