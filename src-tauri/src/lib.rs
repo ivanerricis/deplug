@@ -1,5 +1,6 @@
 mod portable;
 mod settings;
+mod uninstall;
 
 use tauri::Manager;
 
@@ -31,7 +32,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             settings::get_settings,
             settings::save_custom_paths,
-            settings::app_info
+            settings::app_info,
+            uninstall::trash_plugin,
+            uninstall::create_restore_point
         ])
         .setup(move |app| {
             let settings_path = match &mode.data_dir {

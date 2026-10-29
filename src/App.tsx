@@ -109,6 +109,7 @@ export default function App() {
               onToggle={() =>
                 setCollapsedSections(current => ({ ...current, VST2: !current.VST2 }))
               }
+              onUninstalled={() => scanPlugins()}
             ></Section>
           )}
           {visibleSections.VST3 && (
@@ -119,6 +120,7 @@ export default function App() {
               onToggle={() =>
                 setCollapsedSections(current => ({ ...current, VST3: !current.VST3 }))
               }
+              onUninstalled={() => scanPlugins()}
             ></Section>
           )}
           {visibleSections.AAX && (
@@ -129,6 +131,7 @@ export default function App() {
               onToggle={() =>
                 setCollapsedSections(current => ({ ...current, AAX: !current.AAX }))
               }
+              onUninstalled={() => scanPlugins()}
             ></Section>
           )}
           {visibleSections.AU && (
@@ -139,6 +142,7 @@ export default function App() {
               onToggle={() =>
                 setCollapsedSections(current => ({ ...current, AU: !current.AU }))
               }
+              onUninstalled={() => scanPlugins()}
             ></Section>
           )}
         </div>
