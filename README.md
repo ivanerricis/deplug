@@ -14,7 +14,7 @@ npm run typecheck
 npm test
 ```
 
-Requires Node 20+ and the [Tauri prerequisites](https://tauri.app/start/prerequisites/).
+Requires Node 24+ and the [Tauri prerequisites](https://tauri.app/start/prerequisites/).
 
 ## Portable
 
