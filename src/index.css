@@ -30,6 +30,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-signal: var(--signal);
+  --color-caution: var(--caution);
   --color-fmt-vst2: var(--fmt-vst2);
   --color-fmt-vst3: var(--fmt-vst3);
   --color-fmt-aax: var(--fmt-aax);
@@ -76,6 +77,8 @@
   --input: rgb(20 22 26 / 28%);
   --ring: #e8472a;
   --signal: #ff5c39;
+  /* Amber for 32-bit: a heads-up, not an error. */
+  --caution: #8a5a00;
   /* Format tones: desaturated, AA against their own 12% tint on the page background. */
   --fmt-vst2: #4f5766;
   --fmt-vst3: #2b5a8c;
@@ -117,6 +120,7 @@
   --input: rgb(255 255 255 / 24%);
   --ring: #ff5c39;
   --signal: #ff5c39;
+  --caution: #e6b050;
   --fmt-vst2: #aab2c0;
   --fmt-vst3: #8db7e6;
   --fmt-aax: #7fcdb9;

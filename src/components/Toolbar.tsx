@@ -1,10 +1,11 @@
 import type { RefObject } from "react"
-import { Copy, RefreshCcw, Search, Settings, X } from "lucide-react"
+import { ChevronDown, Copy, RefreshCcw, Search, Settings, X } from "lucide-react"
 import { Button } from "./ui/button"
 import BrandMark from "./BrandMark"
 import { FormatDot } from "./FormatTag"
 import { useI18n } from "@/i18n/I18nProvider"
 import type { PluginType } from "@/core/plugin/Plugin"
+import type { ArchFilter } from "@/core/plugin/ListOps"
 
 type ToolbarProps = {
   pluginsCount: number
@@ -20,6 +21,11 @@ type ToolbarProps = {
   duplicatesOnly: boolean
   onToggleDuplicatesOnly: (value: boolean) => void
   duplicateCount: number
+  /** Architecture filter; the control is hidden until the backend has reported at least one architecture. */
+  archFilter: ArchFilter
+  onArchFilterChange: (value: ArchFilter) => void
+  archCounts: Record<ArchFilter, number>
+  archAvailable: boolean
 }
 
 const TYPES: PluginType[] = ["VST2", "VST3", "AAX", "AU"]
@@ -43,6 +49,10 @@ export default function Toolbar({
   duplicatesOnly,
   onToggleDuplicatesOnly,
   duplicateCount,
+  archFilter,
+  onArchFilterChange,
+  archCounts,
+  archAvailable,
 }: ToolbarProps) {
   const { t } = useI18n()
   return (
@@ -104,6 +114,26 @@ export default function Toolbar({
         <span aria-hidden>{t("toolbar.duplicatesShort")}</span>
         <span aria-hidden className="tabular-nums text-muted-foreground">{duplicateCount}</span>
       </button>
+
+      {archAvailable && (
+        <label
+          className={`relative inline-flex h-8 shrink-0 items-center rounded-full border text-xs font-medium focus-within:ring-[3px] focus-within:ring-ring/50 focus-within:border-ring ${archFilter === "all" ? "border-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground" : "border-signal/60 bg-signal/10 text-foreground hover:bg-signal/15"}`}
+        >
+          <span className="sr-only">{t("toolbar.archLabel")}</span>
+          <select
+            value={archFilter}
+            onChange={e => onArchFilterChange(e.target.value as ArchFilter)}
+            title={t("toolbar.archLabel")}
+            className="h-full max-w-[9.5rem] cursor-pointer appearance-none rounded-full bg-transparent pl-2.5 pr-6 text-xs font-medium outline-none"
+          >
+            <option value="all">{archFilter === "all" ? t("toolbar.arch") : t("toolbar.archAll")}</option>
+            {(["x64", "x86", "arm64"] as const).map(a => (
+              <option key={a} value={a}>{t("toolbar.archOption", { label: t(`arch.${a}`), count: archCounts[a] })}</option>
+            ))}
+          </select>
+          <ChevronDown aria-hidden className="pointer-events-none absolute right-2 size-3.5" />
+        </label>
+      )}
 
       <span aria-live="polite" className="whitespace-nowrap text-xs tabular-nums text-muted-foreground max-[1099px]:sr-only">
         {t("toolbar.count", { count: pluginsCount })}
