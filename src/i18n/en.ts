@@ -73,6 +73,7 @@ export const en = {
   "uninstall.title": "Uninstall plugin",
   "uninstall.titleMany": "Uninstall {count} plugins",
   "uninstall.description": "{name} will be moved to the system trash.",
+  "uninstall.descriptionVendor": "The publisher's uninstaller will be run to remove {name}.",
   "uninstall.descriptionMany": "These {count} plugins will be moved to the system trash.",
   "uninstall.progress": "Uninstalling {current} of {total}…",
   "uninstall.summary": "{removed} moved to the trash, {failed} failed.",

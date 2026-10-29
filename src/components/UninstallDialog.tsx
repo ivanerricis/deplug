@@ -63,10 +63,10 @@ export default function UninstallDialog({ plugins, meta, onClose }: UninstallDia
   // Radix only restores focus to a <DialogTrigger>; this dialog is mounted on demand, so remember the opener.
   const opener = useRef(document.activeElement as HTMLElement | null)
   const checkboxId = useId()
-  const [before, after] = t("uninstall.description", { name: NAME_MARK }).split(NAME_MARK)
   const running = phase === "running"
   const runnableVendor = vendor && vendor.kind !== "pkg" ? vendor : null
   const useVendor = method === "vendor" && runnableVendor !== null
+  const [before, after] = t(useVendor ? "uninstall.descriptionVendor" : "uninstall.description", { name: NAME_MARK }).split(NAME_MARK)
   const singleTouched = !!single && (
     single.leftoversTrashed > 0 || (!!single.plugin && single.plugin.status !== "failed" && single.plugin.action === "trash") ||
     (single.plugin?.action === "vendor" && single.plugin.status !== "failed")

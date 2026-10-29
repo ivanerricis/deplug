@@ -71,6 +71,7 @@ export const it: Record<MessageKey, string> = {
   "uninstall.title": "Disinstalla plugin",
   "uninstall.titleMany": "Disinstalla {count} plugin",
   "uninstall.description": "{name} verrà spostato nel cestino di sistema.",
+  "uninstall.descriptionVendor": "Verrà eseguito il disinstallatore del produttore per rimuovere {name}.",
   "uninstall.descriptionMany": "Questi {count} plugin verranno spostati nel cestino di sistema.",
   "uninstall.progress": "Disinstallazione {current} di {total}…",
   "uninstall.summary": "{removed} spostati nel cestino, {failed} non riusciti.",
