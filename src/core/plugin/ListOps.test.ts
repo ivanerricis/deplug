@@ -1,0 +1,105 @@
+import { describe, expect, it } from "vitest"
+import { filterPlugins, findDuplicates, naturalCompare, normalizeBaseName, pluginKey, sortPlugins } from "./ListOps"
+import type { Plugin } from "./Plugin"
+
+const p = (name: string, installPath = "/vst3", type: Plugin["type"] = "VST3"): Plugin => ({ name, installPath, type })
+
+describe("filterPlugins", () => {
+  const list = [p("Serum.vst3", "/a/Xfer"), p("Éclat.vst3", "/b"), p("Surge XT.vst3", "/c/Surge")]
+  it("returns everything for an empty or blank query", () => {
+    expect(filterPlugins(list, "")).toBe(list)
+    expect(filterPlugins(list, "   ")).toBe(list)
+  })
+  it("matches name case-insensitively as a substring", () => {
+    expect(filterPlugins(list, "SURGE").map(x => x.name)).toEqual(["Surge XT.vst3"])
+    expect(filterPlugins(list, "rum").map(x => x.name)).toEqual(["Serum.vst3"])
+  })
+  it("matches the path too", () => {
+    expect(filterPlugins(list, "xfer").map(x => x.name)).toEqual(["Serum.vst3"])
+  })
+  it("handles unicode and accents", () => {
+    expect(filterPlugins(list, "eclat").map(x => x.name)).toEqual(["Éclat.vst3"])
+    expect(filterPlugins(list, "ÉCLAT").map(x => x.name)).toEqual(["Éclat.vst3"])
+    expect(filterPlugins([p("Ωmega.vst3")], "ωMEGA")).toHaveLength(1)
+  })
+  it("returns nothing when there is no match", () => {
+    expect(filterPlugins(list, "zzz")).toEqual([])
+  })
+})
+
+describe("naturalCompare / sortPlugins", () => {
+  it("orders numbers naturally", () => {
+    expect(["Plug 10", "Plug 2", "Plug 1"].sort(naturalCompare)).toEqual(["Plug 1", "Plug 2", "Plug 10"])
+  })
+  it("ignores case and accents but is deterministic", () => {
+    expect(naturalCompare("alpha", "Beta")).toBeLessThan(0)
+    expect(naturalCompare("eclat", "Éclat")).not.toBe(0)
+    expect(naturalCompare("Éclat", "Zed")).toBeLessThan(0)
+  })
+  it("sorts by name ascending and descending without mutating the input", () => {
+    const list = [p("b.vst3"), p("A10.vst3"), p("A2.vst3")]
+    const copy = [...list]
+    expect(sortPlugins(list, { key: "name", dir: "asc" }).map(x => x.name)).toEqual(["A2.vst3", "A10.vst3", "b.vst3"])
+    expect(sortPlugins(list, { key: "name", dir: "desc" }).map(x => x.name)).toEqual(["b.vst3", "A10.vst3", "A2.vst3"])
+    expect(list).toEqual(copy)
+  })
+  it("sorts by path with the name as tie-break", () => {
+    const list = [p("Z.vst3", "/b"), p("B.vst3", "/a"), p("A.vst3", "/a")]
+    expect(sortPlugins(list, { key: "path", dir: "asc" }).map(x => x.name)).toEqual(["A.vst3", "B.vst3", "Z.vst3"])
+    expect(sortPlugins(list, { key: "path", dir: "desc" }).map(x => x.name)).toEqual(["Z.vst3", "B.vst3", "A.vst3"])
+  })
+})
+
+describe("normalizeBaseName", () => {
+  it("strips extension, case and x64 suffixes", () => {
+    expect(normalizeBaseName("Serum.vst3")).toBe("serum")
+    expect(normalizeBaseName("SERUM.dll")).toBe("serum")
+    expect(normalizeBaseName("Serum x64.dll")).toBe("serum")
+    expect(normalizeBaseName("Serum_x64.dll")).toBe("serum")
+    expect(normalizeBaseName("Serum (x64).vst3")).toBe("serum")
+    expect(normalizeBaseName("Serum X64.dll")).toBe("serum")
+  })
+  it("keeps meaningful parts", () => {
+    expect(normalizeBaseName("Serum 2.vst3")).toBe("serum 2")
+    expect(normalizeBaseName("Surge XT.vst3")).toBe("surge xt")
+    expect(normalizeBaseName("Kontakt 7.5.component")).toBe("kontakt 7.5")
+    expect(normalizeBaseName("Foo64.dll")).toBe("foo64")
+  })
+})
+
+describe("findDuplicates", () => {
+  it("groups the same name across formats", () => {
+    const a = p("Serum.dll", "C:/VST", "VST2")
+    const b = p("Serum.vst3", "C:/VST3")
+    const d = findDuplicates([a, b, p("Vital.vst3")])
+    expect([...d.keys()].sort()).toEqual([pluginKey(a), pluginKey(b)].sort())
+    expect(d.get(pluginKey(a))).toEqual([b])
+    expect(d.get(pluginKey(b))).toEqual([a])
+  })
+  it("groups the same VST3 in two folders", () => {
+    const a = p("Vital.vst3", "/usr/lib/vst3")
+    const b = p("Vital.vst3", "/home/u/.vst3")
+    const d = findDuplicates([a, b])
+    expect(d.get(pluginKey(a))).toEqual([b])
+  })
+  it("ignores the x64 suffix and case", () => {
+    const a = p("Dexed x64.dll", "/a", "VST2")
+    const b = p("dexed.vst3", "/b")
+    expect(findDuplicates([a, b]).size).toBe(2)
+  })
+  it("does not group different plugins", () => {
+    expect(findDuplicates([p("Serum.vst3"), p("Vital.vst3"), p("Helm.vst3")]).size).toBe(0)
+  })
+  it("does not group similar but different names", () => {
+    expect(findDuplicates([p("Serum.vst3"), p("Serum 2.vst3"), p("Surge.vst3"), p("Surge XT.vst3")]).size).toBe(0)
+  })
+  it("lists all other copies of a three-way group", () => {
+    const a = p("X.vst3", "/1")
+    const b = p("X.vst3", "/2")
+    const c = p("X.dll", "/3", "VST2")
+    expect(findDuplicates([a, b, c]).get(pluginKey(a))).toEqual([b, c])
+  })
+  it("does not treat the same entry listed twice as a duplicate", () => {
+    expect(findDuplicates([p("A.vst3"), p("A.vst3")]).size).toBe(0)
+  })
+})

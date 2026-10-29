@@ -40,13 +40,33 @@ export function buildPluginPath(installPath: string, name: string): string {
   return `${base}${sep}${leaf}`
 }
 
-export async function uninstallPlugin(plugin: Plugin, options: UninstallOptions): Promise<UninstallResult> {
-  const { restorePoint, backend, confirmContinue } = options
-  let rp: UninstallResult["restorePoint"] = "skipped"
+export interface BatchItemResult {
+  plugin: Plugin
+  status: "removed" | "failed"
+  error?: string
+}
 
-  if (restorePoint) {
+export interface BatchResult {
+  /** "cancelled" means the restore point failed and the user declined: nothing was touched. */
+  status: "completed" | "cancelled"
+  restorePoint: "created" | "skipped" | "failed"
+  results: BatchItemResult[]
+}
+
+export interface BatchOptions extends UninstallOptions {
+  /** Called before each plugin (current set) and once at the end (current null), with the results so far. */
+  onProgress?: (completed: BatchItemResult[], current: Plugin | null) => void
+}
+
+/** One restore point for the whole batch, then each plugin is trashed in turn; a failure never stops the rest. */
+export async function uninstallPlugins(plugins: Plugin[], options: BatchOptions): Promise<BatchResult> {
+  const { restorePoint, backend, confirmContinue, onProgress } = options
+  let rp: BatchResult["restorePoint"] = "skipped"
+
+  if (restorePoint && plugins.length > 0) {
+    const description = plugins.length === 1 ? `Deplug: ${plugins[0].name}` : `Deplug: ${plugins.length} plugins`
     try {
-      await backend.createRestorePoint(`Plugin Uninstaller: ${plugin.name}`)
+      await backend.createRestorePoint(description)
       rp = "created"
     } catch (e) {
       rp = "failed"
@@ -56,14 +76,28 @@ export async function uninstallPlugin(plugin: Plugin, options: UninstallOptions)
       } catch {
         proceed = false
       }
-      if (!proceed) return { status: "cancelled", restorePoint: rp }
+      if (!proceed) return { status: "cancelled", restorePoint: rp, results: [] }
     }
   }
 
-  try {
-    await backend.trashPlugin(buildPluginPath(plugin.installPath, plugin.name))
-    return { status: "removed", restorePoint: rp }
-  } catch (e) {
-    return { status: "failed", restorePoint: rp, error: errorMessage(e) }
+  const results: BatchItemResult[] = []
+  for (const plugin of plugins) {
+    onProgress?.([...results], plugin)
+    try {
+      await backend.trashPlugin(buildPluginPath(plugin.installPath, plugin.name))
+      results.push({ plugin, status: "removed" })
+    } catch (e) {
+      results.push({ plugin, status: "failed", error: errorMessage(e) })
+    }
   }
+  onProgress?.([...results], null)
+  return { status: "completed", restorePoint: rp, results }
+}
+
+export async function uninstallPlugin(plugin: Plugin, options: UninstallOptions): Promise<UninstallResult> {
+  const batch = await uninstallPlugins([plugin], options)
+  if (batch.status === "cancelled") return { status: "cancelled", restorePoint: batch.restorePoint }
+  const [item] = batch.results
+  if (item.status === "removed") return { status: "removed", restorePoint: batch.restorePoint }
+  return { status: "failed", restorePoint: batch.restorePoint, error: item.error }
 }
