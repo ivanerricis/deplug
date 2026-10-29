@@ -1,12 +1,8 @@
 # Usare Deplug
 
-::: info La lingua dell'interfaccia
-La versione attuale mostra l'interfaccia in italiano. L'interfaccia in inglese e italiano, con un selettore della lingua nelle Impostazioni, arriva con la 0.1.0.
-:::
-
 ## Cosa viene analizzato {#what-gets-scanned}
 
-All'avvio, e ogni volta che premi aggiorna, Deplug passa in rassegna le cartelle standard dei plugin del tuo sistema. Scende fino a tre livelli di sottocartelle, quindi le cartelle dei produttori sono incluse.
+All'avvio (a meno che tu non l'abbia disattivato nelle [Impostazioni](/it/settings#scan)) e ogni volta che premi il pulsante di nuova scansione, Deplug passa in rassegna le cartelle standard dei plugin del tuo sistema. Scende fino a tre livelli di sottocartelle, quindi le cartelle dei produttori sono incluse.
 
 | Sistema | Cartelle |
 | --- | --- |
@@ -14,7 +10,7 @@ All'avvio, e ogni volta che premi aggiorna, Deplug passa in rassegna le cartelle
 | macOS | `/Library/Audio/Plug-Ins/VST`, `.../VST3`, `.../Components`, `/Library/Application Support/Avid/Audio/Plug-Ins`, e le stesse cartelle `VST`, `VST3` e `Components` in `~/Library/Audio/Plug-Ins` |
 | Linux | `/usr/lib/vst`, `/usr/local/lib/vst`, `~/.vst`, `/usr/lib/vst3`, `/usr/local/lib/vst3`, `~/.vst3` |
 
-Ogni [cartella personalizzata](/it/custom-folders) che aggiungi viene analizzata a sua volta, fino a sei livelli di profondità.
+Ogni [cartella personalizzata](/it/custom-folders) che aggiungi viene analizzata a sua volta, di default fino a sei livelli di profondità (puoi cambiarlo da 1 a 10 nelle [Impostazioni](/it/settings#scan)). Sempre lì puoi disattivare singole cartelle standard.
 
 ## Formati
 
@@ -31,25 +27,54 @@ Un bundle di plugin (una cartella come `Qualcosa.vst3`) è elencato come un solo
 
 Le quattro caselle nella barra degli strumenti (VST2, VST3, AAX, AU) mostrano o nascondono la sezione di quel formato. Il filtro cambia solo ciò che vedi e non ripete la scansione. Ogni sezione si può anche comprimere da sola, e un formato senza plugin non ha sezione.
 
+## Cercare
+
+Il campo di ricerca nella barra degli strumenti filtra l'elenco mentre scrivi. Confronta nome e percorso del plugin, senza distinguere maiuscole e accenti. Premi **Ctrl+F** (**Cmd+F** su macOS) per raggiungerlo da qualsiasi punto della finestra. **Esc** cancella la ricerca, come la croce dentro il campo. Se nessun plugin corrisponde, il pulsante **Azzera i filtri** ripristina in un colpo solo la ricerca, il filtro dei duplicati e i filtri dei formati.
+
+## Ordinare
+
+Ogni sezione ha le intestazioni di colonna **Nome** e **Percorso**. Fai clic su una per ordinare, e di nuovo per invertire l'ordine. L'ordinamento è naturale, quindi "Plug 2" viene prima di "Plug 10", e ogni sezione di formato mantiene il proprio.
+
+## Duplicati
+
+Un plugin presente più volte riceve il badge **Duplicato**. Due voci sono considerate lo stesso plugin quando i nomi coincidono dopo aver tolto l'estensione e un eventuale `x64` finale, senza distinguere maiuscole. Così vengono riconosciuti lo stesso plugin in più formati (VST2 e VST3), in più cartelle, o entrambi. Passa il mouse sul badge per vedere dove si trovano le altre copie.
+
+La casella **Mostra solo i duplicati** nella barra degli strumenti tiene soltanto questi plugin e ne indica il numero. È un buon punto di partenza per fare pulizia. Deplug si limita a segnalarli: quale copia tenere lo decidi tu.
+
+## Selezionare più plugin
+
+Ogni riga ha una casella nella prima colonna.
+
+- Fai clic sulla casella per selezionare un plugin. Con la casella a fuoco, **Spazio** fa lo stesso.
+- **Maiusc+clic** su una seconda casella seleziona (o deseleziona) l'intero intervallo tra le due, all'interno di una sezione.
+- La casella nell'intestazione di una sezione seleziona tutti i plugin mostrati in quel momento nella sezione. I plugin nascosti (da ricerca, formato o duplicati) non vengono mai selezionati.
+- **Esc** annulla la selezione.
+
+Finché qualcosa è selezionato, una barra in basso mostra "Selezionati: N" con **Disinstalla selezionati** e **Deseleziona**.
+
 ## Aprire la cartella di un plugin
 
 Ogni riga inizia con un pulsante a forma di cartella. Apre nel file manager la cartella che contiene il plugin. Usalo per controllare cosa c'è prima di disinstallare.
 
 ## Disinstallare un plugin {#uninstall-a-plugin}
 
-1. Premi il pulsante del cestino sulla riga del plugin. Si apre una finestra di conferma con il nome del plugin e il suo percorso completo.
+1. Premi il pulsante del cestino sulla riga del plugin, oppure seleziona più plugin e premi **Disinstalla selezionati**. Si apre una finestra di conferma con il nome del plugin (o l'elenco dei plugin).
 2. Su Windows, decidi se creare un punto di ripristino (sezione successiva).
-3. Premi **Sposta nel cestino**. Il plugin finisce nel cestino di sistema e l'elenco si aggiorna.
+3. Premi **Sposta nel cestino**. I plugin finiscono nel cestino di sistema e l'elenco si aggiorna.
 
 Non succede nulla finché non confermi, e **Annulla** (o Esc) chiude la finestra senza toccare niente.
 
 Deplug rimuove soltanto il file o il bundle del plugin. Non elimina preset, file di licenza, campioni o impostazioni che l'installer del plugin ha messo altrove. È voluto: spesso sono condivisi con altri prodotti o servono se reinstalli in seguito.
 
+### Disinstallare più plugin insieme
+
+Con più plugin, Deplug crea **un solo** punto di ripristino per l'intero gruppo, poi sposta i plugin nel cestino uno dopo l'altro. Se uno non riesce, gli altri proseguono. Alla fine la finestra elenca l'esito di ogni plugin (**Spostato nel cestino** oppure **Non riuscito**, con il motivo), con quelli falliti in cima. Chiudila e l'elenco si aggiorna.
+
 Per annullare, apri il cestino e ripristina l'elemento nella posizione originale, poi premi aggiorna in Deplug.
 
 ## Punto di ripristino su Windows
 
-Su Windows la finestra ha una casella attiva di default: **Crea un punto di ripristino di sistema prima di disinstallare**. È la stessa rete di sicurezza offerta da Revo Uninstaller. Se dopo aver rimosso un plugin qualcosa nel sistema non va, puoi tornare indietro con Ripristino configurazione di sistema di Windows.
+Su Windows la finestra ha una casella attiva di default (il valore iniziale si cambia nelle [Impostazioni](/it/settings#uninstall)): **Crea un punto di ripristino di sistema prima di disinstallare**. È la stessa rete di sicurezza offerta da Revo Uninstaller. Se dopo aver rimosso un plugin qualcosa nel sistema non va, puoi tornare indietro con Ripristino configurazione di sistema di Windows.
 
 Windows chiede i permessi di amministratore per creare un punto di ripristino (richiesta UAC), perché è una modifica a livello di sistema. La casella non compare su macOS e Linux.
 
@@ -59,6 +84,8 @@ Se non riesce, Deplug mostra il motivo e chiede se **continuare senza punto di r
 
 - **L'UAC è stato rifiutato o annullato.** La richiesta di amministratore è stata chiusa o negata. Ripeti la disinstallazione e accettala.
 - **La Protezione sistema è disattivata.** Windows crea punti di ripristino solo per le unità con la Protezione sistema attiva. Apri "Crea un punto di ripristino" dal menu Start, seleziona l'unità di sistema, premi **Configura** e attiva la protezione.
-- **Windows ne ha già creato uno nelle ultime 24 ore.** Per impostazione predefinita Windows consente un solo punto di ripristino automatico ogni 24 ore e Deplug non può aggirare il limite. Se rimuovi più plugin, la prima disinstallazione copre il resto della giornata: continua senza crearne un altro.
+- **Windows ne ha già creato uno nelle ultime 24 ore.** Per impostazione predefinita Windows consente un solo punto di ripristino automatico ogni 24 ore e Deplug non può aggirare il limite. Se rimuovi i plugin in momenti separati, il primo punto di ripristino copre il resto della giornata: continua senza crearne un altro.
+
+Con più plugin la domanda è una sola: se il punto di ripristino non riesce, decidi se continuare per tutti i plugin selezionati.
 
 Per gli altri errori viene mostrato il messaggio restituito da Windows PowerShell.

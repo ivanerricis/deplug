@@ -6,15 +6,15 @@ A **custom scan folder** tells Deplug to look there as well.
 
 ## Add a folder
 
-1. Open the folder list in the settings panel (the gear button in the toolbar).
-2. Press the add-folder button and choose a folder in the system dialog.
-3. Deplug rescans immediately. Plugins found in the new folder appear in their format sections.
+1. Open **Settings** (the gear button in the toolbar) and go to **Scan**.
+2. Under **Custom folders**, press **Add folder** and choose a folder in the system dialog.
+3. Close the settings. Deplug rescans and the plugins found in the new folder appear in their format sections.
 
 Remove a folder with the cross next to it. The folder itself and its files are never touched; Deplug just stops looking there.
 
 ## How custom folders are scanned
 
-- Sub-folders are searched up to **six levels deep**, deeper than the three levels used for standard folders, because manually organised libraries are often nested.
+- Sub-folders are searched up to **six levels deep** by default, deeper than the three levels used for standard folders, because manually organised libraries are often nested. Change it with **Custom folder depth** in Settings, from 1 to 10. It applies to all custom folders.
 - A plugin found by both a standard and a custom folder is listed once.
 - A custom folder that no longer exists (for example an unplugged drive) is skipped without an error.
 - The same format rules apply: `.vst3` and `.aaxplugin` everywhere, `.dll` on Windows, `.vst` and `.component` on macOS, `.so` on Linux.

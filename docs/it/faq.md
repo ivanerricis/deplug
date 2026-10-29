@@ -23,9 +23,10 @@ Puoi anche consentirla in **Impostazioni di Sistema, Privacy e sicurezza** subit
 ## Non è stato trovato nulla {#nothing-was-found}
 
 - Deplug guarda solo nelle [cartelle standard](/it/using-deplug#what-gets-scanned). Se i tuoi plugin sono altrove, aggiungi [una cartella personalizzata](/it/custom-folders).
-- Controlla i filtri di formato nella barra degli strumenti: un formato senza spunta è nascosto.
+- Controlla i filtri di formato, il campo di ricerca e **Mostra solo i duplicati** nella barra degli strumenti: ciò che è filtrato è nascosto.
+- Controlla **Impostazioni, Scansione**: una cartella standard deselezionata, o la **Scansione all'avvio** disattivata, dà anch'essa un elenco vuoto.
 - I formati dipendono dal sistema: `.component` (AU) viene cercato solo su macOS, il VST2 è `.dll` su Windows, `.vst` su macOS e `.so` su Linux.
-- Premi il pulsante di aggiornamento dopo aver installato o spostato dei plugin.
+- Premi il pulsante di nuova scansione dopo aver installato o spostato dei plugin.
 - Se una cartella richiede permessi speciali, Deplug salta ciò che non riesce a leggere, senza errori. Su macOS verifica in **Privacy e sicurezza** che Deplug possa accedere a quella posizione.
 
 ## Un plugin è in uso o non si riesce a rimuovere
@@ -44,16 +45,16 @@ No. Deplug rimuove solo il file o il bundle del plugin che hai selezionato. Vedi
 
 ## Dove salva i dati Deplug? {#where-does-deplug-store-its-data}
 
-Un solo file: `settings.json`, che contiene le cartelle di scansione personalizzate (e, dalla 0.1.0, le tue preferenze).
+Un solo file: `settings.json`. Contiene le tue preferenze (lingua, tema, opzioni di scansione, punto di ripristino predefinito) e le cartelle di scansione personalizzate.
 
 | Modalità | Posizione |
 | --- | --- |
-| Installato, Windows | `%APPDATA%\<identificatore app>\settings.json` |
-| Installato, macOS | `~/Library/Application Support/<identificatore app>/settings.json` |
-| Installato, Linux | `~/.config/<identificatore app>/settings.json` |
+| Installato, Windows | `%APPDATA%\com.ivane.deplug\settings.json` |
+| Installato, macOS | `~/Library/Application Support/com.ivane.deplug/settings.json` |
+| Installato, Linux | `~/.config/com.ivane.deplug/settings.json` |
 | [Portatile](/it/portable-mode) | `Deplug-data/settings.json` accanto all'app |
 
-`<identificatore app>` è la cartella con l'identificatore dell'applicazione. Elimina il file per tornare ai valori predefiniti. L'elenco dei plugin non viene mai salvato: si ricostruisce a ogni scansione.
+`com.ivane.deplug` è la cartella con l'identificatore dell'applicazione. Elimina il file (con Deplug chiuso) per tornare ai valori predefiniti: viene ricreato alla modifica successiva. Il file è JSON semplice, con chiavi come `language`, `theme`, `scanOnStartup`, `customScanDepth`, `customScanPaths`, `disabledSystemPaths` e `restorePointDefault`, ma per cambiarle conviene usare la finestra Impostazioni. L'elenco dei plugin non viene mai salvato: si ricostruisce a ogni scansione.
 
 ## Viene inviato qualcosa in rete?
 

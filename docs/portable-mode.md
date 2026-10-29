@@ -8,19 +8,19 @@ When portable mode is active:
 
 - settings are saved in a `Deplug-data` folder next to the app;
 - the app redirects its web view data and caches into that folder where the platform allows it;
-- the settings panel shows "Portable mode" and the data folder path.
+- the About section of the settings shows "Portable mode" and the data folder path.
 
 If the folder next to the app is not writable (a read-only disk, a protected location), Deplug falls back to normal storage and shows a warning.
 
 ## Windows
 
-1. Download `*_portable.zip` from [Releases](https://github.com/ivanerricis/deplug/releases).
+1. Download `Deplug_<version>_*_portable.zip` from [Releases](https://github.com/ivanerricis/deplug/releases).
 2. Unzip it anywhere, including a USB stick.
-3. Run the `.exe` inside. `portable.txt` must stay in the same folder.
+3. Run `deplug.exe` inside. `portable.txt` must stay in the same folder.
 
 ## Linux {#linux}
 
-1. Download `*_portable.tar.gz` and extract it. The folder contains an `.AppImage` (already executable) and `portable.txt`.
+1. Download `Deplug_<version>_*_portable.tar.gz` and extract it. The folder contains an `.AppImage` (already executable) and `portable.txt`.
 2. Run the `.AppImage`.
 
 AppImages need **FUSE 2**. If it does not start, install `libfuse2` (on Ubuntu 24.04 the package is `libfuse2t64`), or run it without FUSE:
@@ -31,7 +31,7 @@ AppImages need **FUSE 2**. If it does not start, install `libfuse2` (on Ubuntu 2
 
 ## macOS
 
-1. Download `*_portable.zip` and unzip it. Keep the app and `portable.txt` in the same folder.
+1. Download `Deplug_<version>_*_portable.zip` and unzip it. Keep the app and `portable.txt` in the same folder.
 2. The app is not notarized, so remove the quarantine flag once:
 
 ```bash

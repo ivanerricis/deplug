@@ -6,15 +6,15 @@ Una **cartella di scansione personalizzata** dice a Deplug di guardare anche lì
 
 ## Aggiungere una cartella
 
-1. Apri l'elenco delle cartelle nel pannello delle impostazioni (il pulsante a forma di ingranaggio nella barra degli strumenti).
-2. Premi il pulsante per aggiungere una cartella e sceglila nella finestra di sistema.
-3. Deplug ripete subito la scansione. I plugin trovati nella nuova cartella compaiono nelle sezioni dei rispettivi formati.
+1. Apri le **Impostazioni** (il pulsante a forma di ingranaggio nella barra degli strumenti) e vai su **Scansione**.
+2. In **Cartelle personalizzate** premi **Aggiungi cartella** e sceglila nella finestra di sistema.
+3. Chiudi le impostazioni. Deplug ripete la scansione e i plugin trovati nella nuova cartella compaiono nelle sezioni dei rispettivi formati.
 
 Per togliere una cartella usa la croce accanto ad essa. La cartella e i suoi file non vengono mai toccati: Deplug smette soltanto di cercarvi.
 
 ## Come vengono analizzate
 
-- Le sottocartelle sono esplorate fino a **sei livelli**, più dei tre usati per le cartelle standard, perché le librerie organizzate a mano sono spesso molto annidate.
+- Le sottocartelle sono esplorate di default fino a **sei livelli**, più dei tre usati per le cartelle standard, perché le librerie organizzate a mano sono spesso molto annidate. Si cambia con **Profondità cartelle personalizzate** nelle Impostazioni, da 1 a 10, e vale per tutte le cartelle personalizzate.
 - Un plugin trovato sia da una cartella standard sia da una personalizzata compare una volta sola.
 - Una cartella personalizzata che non esiste più (ad esempio un disco scollegato) viene saltata senza errori.
 - Valgono le stesse regole sui formati: `.vst3` e `.aaxplugin` ovunque, `.dll` su Windows, `.vst` e `.component` su macOS, `.so` su Linux.

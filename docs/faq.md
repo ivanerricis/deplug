@@ -23,9 +23,10 @@ You can also allow it in **System Settings, Privacy & Security** right after a b
 ## Nothing was found
 
 - Deplug only looks in the [standard folders](/using-deplug#what-gets-scanned). If your plugins live somewhere else, add [a custom folder](/custom-folders).
-- Check the format filters in the toolbar: a format that is unticked is hidden.
+- Check the format filters, the search field and **Show only duplicates** in the toolbar: anything filtered out is hidden.
+- Check **Settings, Scan**: a standard folder you unticked, or **Scan on startup** being off, also means an empty list.
 - Formats depend on the system: `.component` (AU) is only scanned on macOS, VST2 is `.dll` on Windows, `.vst` on macOS and `.so` on Linux.
-- Press the refresh button after installing or moving plugins.
+- Press the rescan button after installing or moving plugins.
 - If a folder needs special permissions, Deplug skips what it cannot read, without an error. On macOS, check that Deplug is allowed to access that location in **Privacy & Security**.
 
 ## A plugin is in use or cannot be removed
@@ -44,7 +45,7 @@ No. Deplug removes only the plugin file or bundle you selected. See [Using Deplu
 
 ## Where does Deplug store its data?
 
-Only one file: `settings.json`, which holds the custom scan folders (and, from 0.1.0, your preferences).
+Only one file: `settings.json`. It holds your preferences (language, theme, scan options, restore point default) and the custom scan folders.
 
 | Mode | Location |
 | --- | --- |
@@ -53,7 +54,7 @@ Only one file: `settings.json`, which holds the custom scan folders (and, from 0
 | Installed, Linux | `~/.config/com.ivane.deplug/settings.json` |
 | [Portable](/portable-mode) | `Deplug-data/settings.json` next to the app |
 
-`com.ivane.deplug` is the application's identifier folder. Delete the file to reset to defaults. The plugin list itself is never stored; it is rebuilt on every scan.
+`com.ivane.deplug` is the application's identifier folder. Delete the file (with Deplug closed) to reset to defaults; it is created again on the next change. The file is plain JSON, with keys such as `language`, `theme`, `scanOnStartup`, `customScanDepth`, `customScanPaths`, `disabledSystemPaths` and `restorePointDefault`, but the Settings dialog is the intended way to change them. The plugin list itself is never stored; it is rebuilt on every scan.
 
 ## Is anything sent over the network?
 

@@ -1,12 +1,8 @@
 # Using Deplug
 
-::: info The interface language
-The current build shows its interface in Italian. The English and Italian interface, with a language switch in Settings, is coming in 0.1.0. Button names in these docs use the English wording; "Move to trash" is "Sposta nel cestino" and "Cancel" is "Annulla" in the Italian UI.
-:::
-
 ## What gets scanned
 
-On startup, and whenever you press refresh, Deplug looks through the standard plugin folders of your system. It searches up to three folder levels deep, so vendor sub-folders are covered.
+On startup (unless you turned that off in [Settings](/settings#scan)), and whenever you press the rescan button, Deplug looks through the standard plugin folders of your system. It searches up to three folder levels deep, so vendor sub-folders are covered.
 
 | System | Folders |
 | --- | --- |
@@ -14,7 +10,7 @@ On startup, and whenever you press refresh, Deplug looks through the standard pl
 | macOS | `/Library/Audio/Plug-Ins/VST`, `.../VST3`, `.../Components`, `/Library/Application Support/Avid/Audio/Plug-Ins`, and the same `VST`, `VST3` and `Components` folders under `~/Library/Audio/Plug-Ins` |
 | Linux | `/usr/lib/vst`, `/usr/local/lib/vst`, `~/.vst`, `/usr/lib/vst3`, `/usr/local/lib/vst3`, `~/.vst3` |
 
-Anything you add as a [custom folder](/custom-folders) is scanned too, up to six levels deep.
+Anything you add as a [custom folder](/custom-folders) is scanned too, by default up to six levels deep (you can change this between 1 and 10 in [Settings](/settings#scan)). You can also switch off individual standard folders there.
 
 ## Formats
 
@@ -31,25 +27,54 @@ A plugin bundle (a folder such as `Something.vst3`) is listed as one plugin; Dep
 
 The four checkboxes in the toolbar (VST2, VST3, AAX, AU) show or hide the section of that format. Filtering only changes what you see; it does not rescan. Each section can also be collapsed on its own, and a format with no plugins has no section.
 
+## Search
+
+The search field in the toolbar filters the list as you type. It matches the plugin name or its path, ignoring case and accents. Press **Ctrl+F** (**Cmd+F** on macOS) to jump to it from anywhere in the window. **Esc** clears the search; use the cross inside the field for the same. If nothing matches, a **Clear filters** button resets the search, the duplicates filter and the format filters in one go.
+
+## Sorting
+
+Each section has **Name** and **Path** column headers. Click one to sort by it, click it again to reverse the order. Sorting is natural, so "Plug 2" comes before "Plug 10", and every format section keeps its own order.
+
+## Duplicates
+
+A plugin that appears more than once gets a **Duplicate** badge. Two entries count as the same plugin when their names match after removing the extension and a trailing `x64`, ignoring case. That catches the same plugin in several formats (VST2 and VST3), in several folders, or both. Hover the badge to see where the other copies are.
+
+The **Show only duplicates** checkbox in the toolbar keeps only those plugins and shows how many there are. It is a good starting point for a clean-up. Deplug only points them out; deciding which copy to keep is up to you.
+
+## Select several plugins
+
+Every row has a checkbox in its first column.
+
+- Click a checkbox to select a plugin. Press **Space** on a focused checkbox for the same.
+- **Shift+click** a second checkbox to select (or deselect) the whole range between the two, within one section.
+- The checkbox in a section header selects every plugin currently shown in that section. Hidden plugins (filtered out by search, format or duplicates) are never selected.
+- **Esc** clears the selection.
+
+While something is selected, a bar at the bottom shows "N selected" with **Uninstall selected** and **Clear**.
+
 ## Open a plugin's folder
 
 Every row starts with a folder button. It opens the folder that contains the plugin in your file manager. Use it to check what is there before you uninstall.
 
 ## Uninstall a plugin
 
-1. Press the trash button on the plugin's row. A confirmation dialog opens, with the plugin name and its full path.
+1. Press the trash button on the plugin's row, or select several plugins and press **Uninstall selected**. A confirmation dialog opens, with the plugin name (or the list of plugins).
 2. On Windows, decide whether to create a restore point (next section).
-3. Press **Move to trash**. The plugin goes to the system trash (Recycle Bin, Trash) and the list refreshes.
+3. Press **Move to trash**. The plugins go to the system trash (Recycle Bin, Trash) and the list refreshes.
 
 Nothing happens until you confirm, and **Cancel** (or Esc) closes the dialog without touching anything.
 
 Deplug removes the plugin file or bundle only. It does not clean up presets, license files, samples or settings that the plugin's own installer put elsewhere. That is deliberate: those are often shared with other products or needed if you reinstall later.
 
+### Uninstalling a batch
+
+With several plugins, Deplug creates **one** restore point for the whole batch, then moves the plugins to the trash one after another. A failure on one plugin does not stop the others. When it finishes, the dialog lists the result for each plugin (**Moved to the trash** or **Failed**, with the reason), failed ones first. Close it and the list refreshes.
+
 To undo, open the trash and restore the item to its original location, then press refresh in Deplug.
 
 ## Restore point on Windows
 
-On Windows the dialog has a checkbox, on by default: **Create a system restore point before uninstalling**. This is the same safety net Revo Uninstaller offers. If something goes wrong with your system after removing a plugin, you can roll back from Windows' System Restore.
+On Windows the dialog has a checkbox, on by default (you can change the default in [Settings](/settings#uninstall)): **Create a system restore point before uninstalling**. This is the same safety net Revo Uninstaller offers. If something goes wrong with your system after removing a plugin, you can roll back from Windows' System Restore.
 
 Windows asks for administrator permission to create a restore point (a UAC prompt), because restore points are a system-level change. The checkbox is not shown on macOS and Linux.
 
@@ -59,6 +84,8 @@ If it fails, Deplug shows the reason and asks whether to **continue without a re
 
 - **UAC was declined or cancelled.** The administrator prompt was closed or denied. Run the uninstall again and accept it.
 - **System Protection is turned off.** Windows only creates restore points for drives where System Protection is on. Open "Create a restore point" in the Start menu, select your system drive, press **Configure** and turn protection on.
-- **Windows created one in the last 24 hours.** By default Windows allows one automatically-created restore point per 24 hours. Deplug cannot override that. If you are removing several plugins, the first uninstall covers the rest of the day: continue without a new one.
+- **Windows created one in the last 24 hours.** By default Windows allows one automatically-created restore point per 24 hours. Deplug cannot override that. If you remove plugins in separate steps, the first restore point covers the rest of the day: continue without a new one.
+
+A batch asks only once: if the restore point fails, you choose whether to continue for all the selected plugins.
 
 Other errors show the message reported by Windows PowerShell.

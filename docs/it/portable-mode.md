@@ -8,19 +8,19 @@ Quando la modalità portatile è attiva:
 
 - le impostazioni vengono salvate in una cartella `Deplug-data` accanto all'app;
 - l'app sposta in quella cartella i dati e le cache della web view, dove la piattaforma lo permette;
-- il pannello delle impostazioni mostra "Modalità portatile" e il percorso della cartella dati.
+- la sezione Informazioni delle impostazioni mostra "Modalità portatile" e il percorso della cartella dati.
 
 Se la cartella accanto all'app non è scrivibile (disco in sola lettura, posizione protetta), Deplug torna al salvataggio normale e mostra un avviso.
 
 ## Windows
 
-1. Scarica `*_portable.zip` dalle [Release](https://github.com/ivanerricis/deplug/releases).
+1. Scarica `Deplug_<version>_*_portable.zip` dalle [Release](https://github.com/ivanerricis/deplug/releases).
 2. Estrailo dove vuoi, anche su una chiavetta USB.
-3. Avvia l'`.exe` all'interno. `portable.txt` deve restare nella stessa cartella.
+3. Avvia `deplug.exe` all'interno. `portable.txt` deve restare nella stessa cartella.
 
 ## Linux {#linux}
 
-1. Scarica `*_portable.tar.gz` ed estrailo. La cartella contiene un'`.AppImage` (già eseguibile) e `portable.txt`.
+1. Scarica `Deplug_<version>_*_portable.tar.gz` ed estrailo. La cartella contiene un'`.AppImage` (già eseguibile) e `portable.txt`.
 2. Avvia l'`.AppImage`.
 
 Le AppImage richiedono **FUSE 2**. Se non parte, installa `libfuse2` (su Ubuntu 24.04 il pacchetto è `libfuse2t64`), oppure avviala senza FUSE:
@@ -31,7 +31,7 @@ Le AppImage richiedono **FUSE 2**. Se non parte, installa `libfuse2` (su Ubuntu 
 
 ## macOS
 
-1. Scarica `*_portable.zip` ed estrailo. Tieni l'app e `portable.txt` nella stessa cartella.
+1. Scarica `Deplug_<version>_*_portable.zip` ed estrailo. Tieni l'app e `portable.txt` nella stessa cartella.
 2. L'app non è notarizzata, quindi rimuovi una volta il flag di quarantena:
 
 ```bash

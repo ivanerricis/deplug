@@ -8,9 +8,9 @@ Get the latest build from the [Releases page](https://github.com/ivanerricis/dep
 
 | System | Installer | Portable |
 | --- | --- | --- |
-| Windows | `.msi` or `.exe` | `*_portable.zip` |
-| macOS | `.dmg` (universal: Apple silicon and Intel) | `*_portable.zip` |
-| Linux | `.deb`, `.rpm` or `.AppImage` | `*_portable.tar.gz` |
+| Windows | `.msi` or `.exe` | `Deplug_<version>_*_portable.zip` |
+| macOS | `.dmg` (universal: Apple silicon and Intel) | `Deplug_<version>_*_portable.zip` |
+| Linux | `.deb`, `.rpm` or `.AppImage` | `Deplug_<version>_*_portable.tar.gz` |
 
 Releases whose tag ends in `-rc.N` (for example `v0.1.0-rc.1`) are release candidates and are marked as pre-releases. Use a plain `vX.Y.Z` release unless you want to test.
 
@@ -41,7 +41,7 @@ Prefer not to install anything? Use the [portable build](/portable-mode).
 1. Start Deplug. It scans the standard plugin folders automatically and shows a spinner until it is done.
 2. The toolbar shows **how many plugins were found** and four format checkboxes: VST2, VST3, AAX and AU.
 3. Plugins are listed in one collapsible section per format. Expand a section to see its plugins.
-4. Use the refresh button after you install or remove something outside Deplug.
+4. Search by name with the field in the toolbar (Ctrl+F or Cmd+F), and use the rescan button after you install or remove something outside Deplug.
 
 If the list is empty or a plugin you expect is missing, read [Nothing was found](/faq#nothing-was-found) or add [a custom folder](/custom-folders).
 
