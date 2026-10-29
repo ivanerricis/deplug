@@ -55,3 +55,31 @@ jobs:
       - name: Clippy
         working-directory: src-tauri
         run: cargo clippy --all-targets -- -D warnings
+
+  rust-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for portable-core crate
+        id: detect
+        run: |
+          if [ -f src-tauri/portable-core/Cargo.toml ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "portable-core not present, skipping"
+          fi
+      - uses: dtolnay/rust-toolchain@stable
+        if: steps.detect.outputs.present == 'true'
+        with:
+          components: rustfmt
+      - uses: swatinem/rust-cache@v2
+        if: steps.detect.outputs.present == 'true'
+        with:
+          workspaces: src-tauri/portable-core
+      - name: Test
+        if: steps.detect.outputs.present == 'true'
+        run: cargo test --manifest-path src-tauri/portable-core/Cargo.toml
+      - name: Format
+        if: steps.detect.outputs.present == 'true'
+        run: cargo fmt --manifest-path src-tauri/portable-core/Cargo.toml --check
