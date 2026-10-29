@@ -19,7 +19,7 @@
         "decorations": true,
         "resizable": true,
         "minHeight": 720,
-        "minWidth":720,
+        "minWidth": 720,
         "visible": false
       }
     ],
@@ -36,6 +36,15 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "perMachine"
+      }
+    },
+    "publisher": "Ivan Erricis",
+    "copyright": "Copyright (c) 2026 Ivan Erricis. All rights reserved.",
+    "shortDescription": "Find and remove audio plugins",
+    "longDescription": "Deplug finds the VST2, VST3, AAX and AU plugins installed on your computer and uninstalls the ones you choose."
   }
 }
