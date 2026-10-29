@@ -6,9 +6,11 @@ All'avvio (a meno che tu non l'abbia disattivato nelle [Impostazioni](/it/settin
 
 | Sistema | Cartelle |
 | --- | --- |
-| Windows | `C:\Program Files\Common Files\VST2`, `C:\Program Files\Steinberg\VSTPlugins`, `C:\Program Files (x86)\Steinberg\VstPlugins`, `C:\Program Files\Common Files\VST3`, `C:\Program Files\Common Files\Avid\Audio\Plug-Ins` |
-| macOS | `/Library/Audio/Plug-Ins/VST`, `.../VST3`, `.../Components`, `/Library/Application Support/Avid/Audio/Plug-Ins`, e le stesse cartelle `VST`, `VST3` e `Components` in `~/Library/Audio/Plug-Ins` |
+| Windows | VST2: `Program Files\VstPlugins`, `Program Files (x86)\VstPlugins`, `Common Files\VST2` (entrambe), `Program Files\Steinberg\VSTPlugins`, `Program Files (x86)\Steinberg\VstPlugins`. VST3: `Common Files\VST3` (entrambe), `%LOCALAPPDATA%\Programs\Common\VST3`. AAX: `Common Files\Avid\Audio\Plug-Ins` (entrambe). Vedi sotto. |
+| macOS | `/Library/Audio/Plug-Ins/VST`, `.../VST3`, `.../Components`, `/Library/Application Support/Avid/Audio/Plug-Ins`, e le stesse cartelle `VST`, `VST3` e `Components` in `~/Library/Audio/Plug-Ins` più `~/Library/Application Support/Avid/Audio/Plug-Ins` |
 | Linux | `/usr/lib/vst`, `/usr/local/lib/vst`, `~/.vst`, `/usr/lib/vst3`, `/usr/local/lib/vst3`, `~/.vst3` |
+
+Su Windows le radici sono lette dal sistema (le posizioni `ProgramFiles`, `ProgramFiles(x86)`, `CommonProgramFiles` e `CommonProgramFiles(x86)`), quindi funziona anche con Program Files spostata o localizzata. "Entrambe" indica la variante a 64 bit e quella a 32 bit (`Program Files (x86)`) della cartella.
 
 Ogni [cartella personalizzata](/it/custom-folders) che aggiungi viene analizzata a sua volta, di default fino a sei livelli di profondità (puoi cambiarlo da 1 a 10 nelle [Impostazioni](/it/settings#scan)). Sempre lì puoi disattivare singole cartelle standard.
 
@@ -23,13 +25,25 @@ Ogni [cartella personalizzata](/it/custom-folders) che aggiungi viene analizzata
 
 Un bundle di plugin (una cartella come `Qualcosa.vst3`) è elencato come un solo plugin; Deplug non guarda al suo interno.
 
+## AAX, 32 bit e 64 bit
+
+I plugin **AAX** (Pro Tools) sono bundle `.aaxplugin` e hanno una sezione propria che funziona come le altre: ordinamento, selezione, duplicati e disinstallazione. Su Windows stanno in `Common Files\Avid\Audio\Plug-Ins`, su macOS in `/Library/Application Support/Avid/Audio/Plug-Ins` e nella stessa cartella dentro la tua home. AU esiste solo su macOS.
+
+Deplug legge l'architettura di ogni file di plugin. Accanto al nome può comparire una piccola etichetta:
+
+- **32 bit** (ambra): il plugin non si carica in una DAW a 64 bit senza un bridge. Tipico dei plugin in `Program Files (x86)`.
+- **ARM64**, **Universal** (Intel e ARM) e **Misto** (un bundle con architetture diverse), in grigio tenue.
+- I plugin a 64 bit, la norma, non mostrano etichette, e neppure quelli di cui non si è potuta determinare l'architettura.
+
+Il menu **Architettura** nella barra degli strumenti (Tutte, 64 bit, 32 bit, ARM64) restringe l'elenco a una sola architettura. Funziona insieme a ricerca, caselle dei formati e filtro dei duplicati, e i conteggi li seguono. Con un'architettura specifica scelta, i plugin di architettura sconosciuta restano nascosti. Il menu compare quando almeno un'architettura è nota. L'architettura è mostrata anche nella finestra di disinstallazione e nella diagnostica copiata.
+
 ## Filtrare per formato
 
 Le quattro caselle nella barra degli strumenti (VST2, VST3, AAX, AU) mostrano o nascondono la sezione di quel formato. Il filtro cambia solo ciò che vedi e non ripete la scansione. Ogni sezione si può anche comprimere da sola, e un formato senza plugin non ha sezione.
 
 ## Cercare
 
-Il campo di ricerca nella barra degli strumenti filtra l'elenco mentre scrivi. Confronta nome e percorso del plugin, senza distinguere maiuscole e accenti. Premi **Ctrl+F** (**Cmd+F** su macOS) per raggiungerlo da qualsiasi punto della finestra. **Esc** cancella la ricerca, come la croce dentro il campo. Se nessun plugin corrisponde, il pulsante **Azzera i filtri** ripristina in un colpo solo la ricerca, il filtro dei duplicati e i filtri dei formati.
+Il campo di ricerca nella barra degli strumenti filtra l'elenco mentre scrivi. Confronta nome e percorso del plugin, senza distinguere maiuscole e accenti. Premi **Ctrl+F** (**Cmd+F** su macOS) per raggiungerlo da qualsiasi punto della finestra. **Esc** cancella la ricerca, come la croce dentro il campo. Se nessun plugin corrisponde, il pulsante **Azzera i filtri** ripristina in un colpo solo la ricerca, i filtri di duplicati, architettura e formato.
 
 ## Ordinare
 

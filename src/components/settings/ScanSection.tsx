@@ -6,6 +6,8 @@ import { MAX_SCAN_DEPTH, MIN_SCAN_DEPTH } from "@/core/settings/AppSettings"
 import { useI18n } from "@/i18n/I18nProvider"
 import { Button } from "../ui/button"
 import { Checkbox } from "../ui/checkbox"
+import { Input } from "../ui/input"
+import { Separator } from "../ui/separator"
 import { Switch } from "../ui/switch"
 import { Group, SettingRow } from "./SettingRow"
 
@@ -41,7 +43,7 @@ export default function ScanSection({ systemPaths }: { systemPaths: string[] }) 
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col divide-y divide-border">
+      <div className="flex flex-col">
         <SettingRow label={t("settings.scan.startup")} hint={t("settings.scan.startupHint")} labelId="set-startup" hintId="set-startup-h">
           <Switch
             checked={settings.scanOnStartup}
@@ -50,10 +52,11 @@ export default function ScanSection({ systemPaths }: { systemPaths: string[] }) 
             aria-describedby="set-startup-h"
           />
         </SettingRow>
+        <Separator />
         <SettingRow label={t("settings.scan.depth")} hint={t("settings.scan.depthHint")} labelId="set-depth" hintId="set-depth-h">
           <div className="inline-flex items-center gap-1">
             <Button variant="outline" size="icon-sm" aria-label="−" onClick={() => step(-1)} disabled={settings.customScanDepth <= MIN_SCAN_DEPTH}>−</Button>
-            <input
+            <Input
               type="number"
               inputMode="numeric"
               min={MIN_SCAN_DEPTH}
@@ -66,7 +69,7 @@ export default function ScanSection({ systemPaths }: { systemPaths: string[] }) 
                 commitDepth(e.target.value)
               }}
               onBlur={() => setDraft(null)}
-              className="h-8 w-14 rounded border border-input bg-background px-2 text-center text-sm tabular-nums outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+              className="h-8 w-14 px-2 text-center tabular-nums"
             />
             <Button variant="outline" size="icon-sm" aria-label="+" onClick={() => step(1)} disabled={settings.customScanDepth >= MAX_SCAN_DEPTH}>+</Button>
           </div>

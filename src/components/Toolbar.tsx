@@ -1,10 +1,15 @@
 import type { RefObject } from "react"
-import { Copy, RefreshCcw, Search, Settings, X } from "lucide-react"
+import { ChevronDown, Copy, RefreshCcw, Search, Settings, X } from "lucide-react"
 import { Button } from "./ui/button"
+import { Input } from "./ui/input"
+import { Toggle } from "./ui/toggle"
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import BrandMark from "./BrandMark"
 import { FormatDot } from "./FormatTag"
 import { useI18n } from "@/i18n/I18nProvider"
 import type { PluginType } from "@/core/plugin/Plugin"
+import type { ArchFilter } from "@/core/plugin/ListOps"
 
 type ToolbarProps = {
   pluginsCount: number
@@ -20,6 +25,11 @@ type ToolbarProps = {
   duplicatesOnly: boolean
   onToggleDuplicatesOnly: (value: boolean) => void
   duplicateCount: number
+  /** Architecture filter; the control is hidden until the backend has reported at least one architecture. */
+  archFilter: ArchFilter
+  onArchFilterChange: (value: ArchFilter) => void
+  archCounts: Record<ArchFilter, number>
+  archAvailable: boolean
 }
 
 const TYPES: PluginType[] = ["VST2", "VST3", "AAX", "AU"]
@@ -43,6 +53,10 @@ export default function Toolbar({
   duplicatesOnly,
   onToggleDuplicatesOnly,
   duplicateCount,
+  archFilter,
+  onArchFilterChange,
+  archCounts,
+  archAvailable,
 }: ToolbarProps) {
   const { t } = useI18n()
   return (
@@ -51,7 +65,7 @@ export default function Toolbar({
 
       <div className="relative min-w-[9rem] flex-1">
         <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <input
+        <Input
           ref={searchRef}
           type="text"
           value={query}
@@ -60,62 +74,98 @@ export default function Toolbar({
           aria-label={t("toolbar.searchLabel")}
           autoComplete="off"
           spellCheck={false}
-          className="h-9 w-full rounded-lg border border-transparent bg-secondary pl-8 pr-9 text-sm outline-none transition-colors placeholder:text-muted-foreground hover:bg-accent/70 focus-visible:border-ring focus-visible:bg-background focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="rounded-lg border-transparent bg-secondary pl-8 pr-9 text-sm shadow-none hover:bg-accent/70 focus-visible:bg-background dark:bg-secondary dark:hover:bg-accent/70 dark:focus-visible:bg-background"
         />
         {query !== "" && (
-          <button
-            type="button"
-            onClick={() => { onQueryChange(""); searchRef.current?.focus() }}
-            aria-label={t("toolbar.searchClear")}
-            title={t("toolbar.searchClear")}
-            className="absolute right-1 top-1/2 flex size-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50"
-          >
-            <X aria-hidden className="size-4" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => { onQueryChange(""); searchRef.current?.focus() }}
+                aria-label={t("toolbar.searchClear")}
+                className="absolute right-1 top-1/2 size-7 -translate-y-1/2"
+              >
+                <X aria-hidden />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("toolbar.searchClear")}</TooltipContent>
+          </Tooltip>
         )}
       </div>
 
       <div role="group" aria-label={t("toolbar.formats")} className="flex items-center gap-1">
         {TYPES.map(type => (
-          <button
+          <Toggle
             key={type}
-            type="button"
-            aria-pressed={visible[type]}
+            pressed={visible[type]}
             aria-label={t("toolbar.formatChip", { type, count: counts[type] })}
-            onClick={() => onToggleType(type, !visible[type])}
+            onPressedChange={pressed => onToggleType(type, pressed)}
             className={`${chipBase} ${visible[type] ? chipOn : chipOff}`}
           >
             <FormatDot type={type} className={visible[type] ? "" : "opacity-40"} />
             <span aria-hidden>{type}</span>
             <span aria-hidden className="hidden tabular-nums text-muted-foreground min-[900px]:inline">{counts[type]}</span>
-          </button>
+          </Toggle>
         ))}
       </div>
 
-      <button
-        type="button"
-        aria-pressed={duplicatesOnly}
+      <Toggle
+        pressed={duplicatesOnly}
         aria-label={t("toolbar.duplicatesOnly")}
-        title={t("toolbar.duplicatesOnly")}
-        onClick={() => onToggleDuplicatesOnly(!duplicatesOnly)}
+        onPressedChange={onToggleDuplicatesOnly}
         className={`${chipBase} ${duplicatesOnly ? "border-signal/60 bg-signal/10 text-foreground hover:bg-signal/15" : chipOff}`}
       >
         <Copy aria-hidden className="size-3.5" />
-        <span aria-hidden>{t("toolbar.duplicatesShort")}</span>
+        <span aria-hidden className="hidden min-[900px]:inline">{t("toolbar.duplicatesShort")}</span>
         <span aria-hidden className="tabular-nums text-muted-foreground">{duplicateCount}</span>
-      </button>
+      </Toggle>
+
+      {archAvailable && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label={t("toolbar.archLabel")}
+            className={`${chipBase} ${archFilter === "all" ? chipOff : "border-signal/60 bg-signal/10 text-foreground hover:bg-signal/15"}`}
+          >
+            <span>{archFilter === "all" ? t("toolbar.arch") : t(`arch.${archFilter}`)}</span>
+            <ChevronDown aria-hidden className="size-3.5" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuRadioGroup value={archFilter} onValueChange={v => onArchFilterChange(v as ArchFilter)}>
+              <DropdownMenuRadioItem value="all">
+                {t("toolbar.archOption", { label: t("toolbar.archAll"), count: archCounts.all })}
+              </DropdownMenuRadioItem>
+              {(["x64", "x86", "arm64"] as const).map(a => (
+                <DropdownMenuRadioItem key={a} value={a}>
+                  {t("toolbar.archOption", { label: t(`arch.${a}`), count: archCounts[a] })}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       <span aria-live="polite" className="whitespace-nowrap text-xs tabular-nums text-muted-foreground max-[1099px]:sr-only">
         {t("toolbar.count", { count: pluginsCount })}
       </span>
 
       <div className="flex items-center">
-        <Button variant="ghost" size="icon" onClick={onRefresh} aria-label={t("toolbar.rescan")} title={t("toolbar.rescan")}>
-          <RefreshCcw aria-hidden />
-        </Button>
-        <Button variant="ghost" size="icon" onClick={onSettings} aria-label={t("toolbar.settings")} title={t("toolbar.settings")}>
-          <Settings aria-hidden />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={onRefresh} aria-label={t("toolbar.rescan")}>
+              <RefreshCcw aria-hidden />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("toolbar.rescan")}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={onSettings} aria-label={t("toolbar.settings")}>
+              <Settings aria-hidden />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("toolbar.settings")}</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   )

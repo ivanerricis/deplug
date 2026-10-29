@@ -106,3 +106,29 @@ describe("getPluginPaths", () => {
     expect(getPluginPaths("linux", "/home/me")).toContain("/home/me/.vst3")
   })
 })
+
+describe("AAX and 32-bit Windows scenarios", () => {
+  const cpf = "C:/Program Files/Common Files/Avid/Audio/Plug-Ins"
+  it("classifies an .aaxplugin bundle in a Windows path as AAX without descending into it", async () => {
+    const os = fakeOS({
+      [cpf]: [folder(cpf, "Delay.aaxplugin"), file(cpf, "readme.txt")],
+      [`${cpf}/Delay.aaxplugin`]: [folder(`${cpf}/Delay.aaxplugin`, "Contents")],
+    })
+    const res = await new PluginScanner(os, [cpf], "windows").search()
+    expect(res.aax).toEqual([{ name: "Delay.aaxplugin", installPath: cpf, type: "AAX" }])
+    expect(res.vst2).toEqual([])
+    expect(res.au).toEqual([])
+  })
+
+  it("finds plugins under Program Files (x86) via the default Windows list", async () => {
+    const x86 = "C:/Program Files (x86)/VstPlugins"
+    const x86Common = "C:/Program Files (x86)/Common Files/VST3"
+    const os = fakeOS({
+      [x86]: [file(x86, "Old32.dll")],
+      [x86Common]: [folder(x86Common, "Legacy.vst3")],
+    })
+    const res = await new PluginScanner(os, getPluginPaths("windows", ""), "windows").search()
+    expect(res.vst2.map(p => p.installPath)).toEqual([x86])
+    expect(res.vst3.map(p => p.installPath)).toEqual([x86Common])
+  })
+})

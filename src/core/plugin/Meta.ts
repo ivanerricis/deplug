@@ -1,11 +1,16 @@
 import { invoke } from "@tauri-apps/api/core"
 
+/** CPU architecture of a plugin binary, as detected by the backend. */
+export type PluginArch = "x86" | "x64" | "arm64" | "universal" | "mixed" | "unknown"
+
 /** File metadata reported by the backend; null when it could not be read. */
 export interface PluginMeta {
   path: string
   size: number | null
   /** Last modification time, unix seconds. */
   modified: number | null
+  /** Detected architecture; null/undefined when the backend could not tell (or is older). */
+  arch?: PluginArch | null
 }
 
 export type MetaMap = ReadonlyMap<string, PluginMeta>
@@ -33,4 +38,10 @@ export async function fetchPluginMeta(
       // Metadata is optional; keep going with the next batch.
     }
   }
+}
+
+/** The architecture when it is a definite answer, otherwise null ("unknown" counts as not known). */
+export function knownArch(meta: PluginMeta | undefined): Exclude<PluginArch, "unknown"> | null {
+  const a = meta?.arch
+  return a && a !== "unknown" ? a : null
 }
