@@ -48,12 +48,12 @@ Only one file: `settings.json`, which holds the custom scan folders (and, from 0
 
 | Mode | Location |
 | --- | --- |
-| Installed, Windows | `%APPDATA%\<app identifier>\settings.json` |
-| Installed, macOS | `~/Library/Application Support/<app identifier>/settings.json` |
-| Installed, Linux | `~/.config/<app identifier>/settings.json` |
-| [Portable](/portable-mode) | `PluginUninstaller-data/settings.json` next to the app |
+| Installed, Windows | `%APPDATA%\com.ivane.deplug\settings.json` |
+| Installed, macOS | `~/Library/Application Support/com.ivane.deplug/settings.json` |
+| Installed, Linux | `~/.config/com.ivane.deplug/settings.json` |
+| [Portable](/portable-mode) | `Deplug-data/settings.json` next to the app |
 
-`<app identifier>` is the application's identifier folder. Delete the file to reset to defaults. The plugin list itself is never stored; it is rebuilt on every scan.
+`com.ivane.deplug` is the application's identifier folder. Delete the file to reset to defaults. The plugin list itself is never stored; it is rebuilt on every scan.
 
 ## Is anything sent over the network?
 

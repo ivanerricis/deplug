@@ -51,7 +51,7 @@ Un solo file: `settings.json`, che contiene le cartelle di scansione personalizz
 | Installato, Windows | `%APPDATA%\<identificatore app>\settings.json` |
 | Installato, macOS | `~/Library/Application Support/<identificatore app>/settings.json` |
 | Installato, Linux | `~/.config/<identificatore app>/settings.json` |
-| [Portatile](/it/portable-mode) | `PluginUninstaller-data/settings.json` accanto all'app |
+| [Portatile](/it/portable-mode) | `Deplug-data/settings.json` accanto all'app |
 
 `<identificatore app>` è la cartella con l'identificatore dell'applicazione. Elimina il file per tornare ai valori predefiniti. L'elenco dei plugin non viene mai salvato: si ricostruisce a ogni scansione.
 

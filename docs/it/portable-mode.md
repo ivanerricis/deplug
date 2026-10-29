@@ -6,7 +6,7 @@ Si attiva con un file marcatore chiamato `portable.txt` posto accanto all'esegui
 
 Quando la modalità portatile è attiva:
 
-- le impostazioni vengono salvate in una cartella `PluginUninstaller-data` accanto all'app;
+- le impostazioni vengono salvate in una cartella `Deplug-data` accanto all'app;
 - l'app sposta in quella cartella i dati e le cache della web view, dove la piattaforma lo permette;
 - il pannello delle impostazioni mostra "Modalità portatile" e il percorso della cartella dati.
 

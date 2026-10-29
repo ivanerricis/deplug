@@ -6,7 +6,7 @@ It is switched on by a marker file named `portable.txt` placed beside the execut
 
 When portable mode is active:
 
-- settings are saved in a `PluginUninstaller-data` folder next to the app;
+- settings are saved in a `Deplug-data` folder next to the app;
 - the app redirects its web view data and caches into that folder where the platform allows it;
 - the settings panel shows "Portable mode" and the data folder path.
 
