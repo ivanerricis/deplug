@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { filterPlugins, findDuplicates, naturalCompare, normalizeBaseName, pluginKey, sortPlugins } from "./ListOps"
+import { filterPlugins, findDuplicates, folderRuns, naturalCompare, shouldGroupByFolder, normalizeBaseName, pluginKey, sortPlugins } from "./ListOps"
 import type { Plugin } from "./Plugin"
 
 const p = (name: string, installPath = "/vst3", type: Plugin["type"] = "VST3"): Plugin => ({ name, installPath, type })
@@ -101,5 +101,47 @@ describe("findDuplicates", () => {
   })
   it("does not treat the same entry listed twice as a duplicate", () => {
     expect(findDuplicates([p("A.vst3"), p("A.vst3")]).size).toBe(0)
+  })
+})
+
+describe("folderRuns / shouldGroupByFolder", () => {
+  const list = [p("A", "/x"), p("B", "/x"), p("C", "/x"), p("D", "/y"), p("E", "/y"), p("F", "/y")]
+  it("groups consecutive plugins of the same folder", () => {
+    expect(folderRuns(list)).toEqual([
+      { folder: "/x", start: 0, length: 3 },
+      { folder: "/y", start: 3, length: 3 },
+    ])
+    expect(shouldGroupByFolder(folderRuns(list), list.length)).toBe(true)
+  })
+  it("falls back to per-row paths when folders alternate", () => {
+    const mixed = [p("A", "/x"), p("B", "/y"), p("C", "/x"), p("D", "/y")]
+    expect(folderRuns(mixed)).toHaveLength(4)
+    expect(shouldGroupByFolder(folderRuns(mixed), mixed.length)).toBe(false)
+  })
+  it("always groups a single folder", () => {
+    expect(shouldGroupByFolder(folderRuns([p("A", "/x")]), 1)).toBe(true)
+  })
+})
+
+describe("sortPlugins by size and date", () => {
+  const a = p("A.vst3", "/x")
+  const b = p("B.vst3", "/x")
+  const c = p("C.vst3", "/x")
+  const d = p("D.vst3", "/x")
+  const meta = new Map([
+    ["/x/A.vst3", { path: "/x/A.vst3", size: 300, modified: 10 }],
+    ["/x/B.vst3", { path: "/x/B.vst3", size: 100, modified: 30 }],
+    ["/x/C.vst3", { path: "/x/C.vst3", size: 200, modified: 20 }],
+  ])
+  const names = (list: Plugin[]) => list.map(x => x.name)
+  it("sorts by size with unknown values last in both directions", () => {
+    expect(names(sortPlugins([a, b, c, d], { key: "size", dir: "asc" }, meta))).toEqual(["B.vst3", "C.vst3", "A.vst3", "D.vst3"])
+    expect(names(sortPlugins([a, b, c, d], { key: "size", dir: "desc" }, meta))).toEqual(["A.vst3", "C.vst3", "B.vst3", "D.vst3"])
+  })
+  it("sorts by modified date", () => {
+    expect(names(sortPlugins([a, b, c, d], { key: "modified", dir: "desc" }, meta))).toEqual(["B.vst3", "C.vst3", "A.vst3", "D.vst3"])
+  })
+  it("falls back to name order without metadata", () => {
+    expect(names(sortPlugins([c, a, b], { key: "size", dir: "asc" }))).toEqual(["A.vst3", "B.vst3", "C.vst3"])
   })
 })

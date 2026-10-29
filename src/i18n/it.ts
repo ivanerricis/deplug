@@ -21,6 +21,8 @@ export const it: Record<MessageKey, string> = {
   "toolbar.searchLabel": "Cerca i plugin per nome o percorso",
   "toolbar.searchClear": "Cancella la ricerca",
   "toolbar.duplicatesOnly": "Mostra solo i duplicati",
+  "toolbar.duplicatesShort": "Duplicati",
+  "toolbar.formatChip": "Plugin {type}: {count}",
 
   "list.noResults.title": "Nessun plugin corrisponde",
   "list.noResults.body": "Prova un'altra ricerca, oppure disattiva il filtro dei duplicati e i filtri dei formati.",
@@ -28,6 +30,8 @@ export const it: Record<MessageKey, string> = {
 
   "section.name": "Nome",
   "section.path": "Percorso",
+  "section.size": "Dimensione",
+  "section.modified": "Modificato",
   "section.expand": "Espandi l'elenco {type}",
   "section.collapse": "Comprimi l'elenco {type}",
   "section.count": "{shown} di {total}",
@@ -40,6 +44,8 @@ export const it: Record<MessageKey, string> = {
   "row.openFolder": "Mostra {name} nella sua cartella",
   "row.uninstall": "Disinstalla {name}",
   "row.select": "Seleziona {name}",
+  "row.unknown": "Sconosciuto",
+  "row.folder": "Cartella: {path}",
   "row.duplicate": "Duplicato",
   "row.duplicateAlso": "Presente anche in:",
 

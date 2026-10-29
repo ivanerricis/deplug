@@ -23,6 +23,8 @@ export const en = {
   "toolbar.searchLabel": "Search plugins by name or path",
   "toolbar.searchClear": "Clear search",
   "toolbar.duplicatesOnly": "Show only duplicates",
+  "toolbar.duplicatesShort": "Duplicates",
+  "toolbar.formatChip": "{type} plugins: {count}",
 
   "list.noResults.title": "No plugins match",
   "list.noResults.body": "Try a different search, or turn off the duplicates filter and the format filters.",
@@ -30,6 +32,8 @@ export const en = {
 
   "section.name": "Name",
   "section.path": "Path",
+  "section.size": "Size",
+  "section.modified": "Modified",
   "section.expand": "Expand {type} list",
   "section.collapse": "Collapse {type} list",
   "section.count": "{shown} of {total}",
@@ -42,6 +46,8 @@ export const en = {
   "row.openFolder": "Show {name} in its folder",
   "row.uninstall": "Uninstall {name}",
   "row.select": "Select {name}",
+  "row.unknown": "Unknown",
+  "row.folder": "Folder: {path}",
   "row.duplicate": "Duplicate",
   "row.duplicateAlso": "Also found in:",
 
