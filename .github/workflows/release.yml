@@ -8,7 +8,14 @@ permissions:
   contents: write
 
 jobs:
+  verify-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./packaging/check-version.sh "$GITHUB_REF_NAME"
+
   release:
+    needs: verify-version
     strategy:
       fail-fast: false
       matrix:
@@ -47,7 +54,7 @@ jobs:
           releaseName: "Plugin Uninstaller ${{ github.ref_name }}"
           releaseBody: "See the assets below. Installers: .msi/.exe (Windows), .dmg (macOS), .deb/.rpm/.AppImage (Linux). Portable builds (no install, data kept next to the app): *_portable.zip (Windows, macOS) and *_portable.tar.gz (Linux)."
           releaseDraft: true
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
           args: ${{ matrix.args }}
       - name: Package portable (Windows)
         if: runner.os == 'Windows'
