@@ -51,7 +51,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: "Plugin Uninstaller ${{ github.ref_name }}"
+          releaseName: "Deplug ${{ github.ref_name }}"
           releaseBody: "See the assets below. Installers: .msi/.exe (Windows), .dmg (macOS), .deb/.rpm/.AppImage (Linux). Portable builds (no install, data kept next to the app): *_portable.zip (Windows, macOS) and *_portable.tar.gz (Linux)."
           releaseDraft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
@@ -64,11 +64,11 @@ jobs:
           RELEASE_ID: ${{ steps.tauri.outputs.releaseId }}
         run: |
           VER=${GITHUB_REF_NAME#v}
-          OUT="Plugin-Uninstaller_${VER}_x64_portable.zip"
-          mkdir PluginUninstaller-portable
-          cp src-tauri/target/release/plugin-uninstaller.exe PluginUninstaller-portable/
-          cp packaging/portable.txt PluginUninstaller-portable/
-          pwsh -NoProfile -Command "Compress-Archive -Path PluginUninstaller-portable -DestinationPath '$OUT' -Force"
+          OUT="Deplug_${VER}_x64_portable.zip"
+          mkdir Deplug-portable
+          cp src-tauri/target/release/deplug.exe Deplug-portable/
+          cp packaging/portable.txt Deplug-portable/
+          pwsh -NoProfile -Command "Compress-Archive -Path Deplug-portable -DestinationPath '$OUT' -Force"
           bash packaging/upload-asset.sh "$OUT"
           echo "PORTABLE_FILE=$OUT" >> "$GITHUB_ENV"
       - name: Package portable (Linux)
@@ -79,12 +79,12 @@ jobs:
           RELEASE_ID: ${{ steps.tauri.outputs.releaseId }}
         run: |
           VER=${GITHUB_REF_NAME#v}
-          OUT="Plugin-Uninstaller_${VER}_amd64_portable.tar.gz"
-          mkdir PluginUninstaller-portable
-          cp src-tauri/target/release/bundle/appimage/*.AppImage PluginUninstaller-portable/
-          chmod +x PluginUninstaller-portable/*.AppImage
-          cp packaging/portable.txt PluginUninstaller-portable/
-          tar -czf "$OUT" PluginUninstaller-portable
+          OUT="Deplug_${VER}_amd64_portable.tar.gz"
+          mkdir Deplug-portable
+          cp src-tauri/target/release/bundle/appimage/*.AppImage Deplug-portable/
+          chmod +x Deplug-portable/*.AppImage
+          cp packaging/portable.txt Deplug-portable/
+          tar -czf "$OUT" Deplug-portable
           bash packaging/upload-asset.sh "$OUT"
           echo "PORTABLE_FILE=$OUT" >> "$GITHUB_ENV"
       - name: Package portable (macOS)
@@ -95,11 +95,11 @@ jobs:
           RELEASE_ID: ${{ steps.tauri.outputs.releaseId }}
         run: |
           VER=${GITHUB_REF_NAME#v}
-          OUT="Plugin-Uninstaller_${VER}_universal_portable.zip"
-          mkdir PluginUninstaller-portable
-          cp -R "src-tauri/target/universal-apple-darwin/release/bundle/macos/Plugin Uninstaller.app" PluginUninstaller-portable/
-          cp packaging/portable.txt PluginUninstaller-portable/
-          ditto -c -k --sequesterRsrc --keepParent PluginUninstaller-portable "$OUT"
+          OUT="Deplug_${VER}_universal_portable.zip"
+          mkdir Deplug-portable
+          cp -R "src-tauri/target/universal-apple-darwin/release/bundle/macos/Deplug.app" Deplug-portable/
+          cp packaging/portable.txt Deplug-portable/
+          ditto -c -k --sequesterRsrc --keepParent Deplug-portable "$OUT"
           bash packaging/upload-asset.sh "$OUT"
           echo "PORTABLE_FILE=$OUT" >> "$GITHUB_ENV"
       - uses: actions/upload-artifact@v4

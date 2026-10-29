@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 /// Marker file whose presence next to the app enables portable mode.
 pub const MARKER: &str = "portable.txt";
 /// Name of the data directory created next to the app in portable mode.
-pub const DATA_DIR_NAME: &str = "PluginUninstaller-data";
+pub const DATA_DIR_NAME: &str = "Deplug-data";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TargetOs {

@@ -1,10 +1,10 @@
 PORTABLE MODE / MODALITA' PORTABILE
 
 EN: This file enables portable mode. While it sits next to the app, all data is
-    stored in the "PluginUninstaller-data" folder next to the app instead of the
+    stored in the "Deplug-data" folder next to the app instead of the
     system profile. Delete this file to turn portable mode off.
 
 IT: Questo file attiva la modalita' portabile. Finche' si trova accanto
-    all'app, tutti i dati vengono salvati nella cartella "PluginUninstaller-data"
+    all'app, tutti i dati vengono salvati nella cartella "Deplug-data"
     accanto all'app invece che nel profilo di sistema. Elimina questo file per
     disattivare la modalita' portabile.

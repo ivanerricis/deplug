@@ -14,7 +14,7 @@ pub struct AppMode {
 /// environment variables. Must run before the Builder and before any threads.
 pub fn init() -> AppMode {
     let os = TargetOs::current();
-    let env_force = std::env::var("PLUGIN_UNINSTALLER_PORTABLE").is_ok_and(|v| v == "1");
+    let env_force = std::env::var("DEPLUG_PORTABLE").is_ok_and(|v| v == "1");
     let exe = match std::env::current_exe() {
         Ok(p) => p,
         Err(e) => {
