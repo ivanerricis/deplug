@@ -16,7 +16,7 @@
         "width": 1280,
         "height": 720,
         "center": true,
-        "decorations": false,
+        "decorations": true,
         "resizable": true,
         "minHeight": 720,
         "minWidth":720,
