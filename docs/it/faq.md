@@ -35,6 +35,10 @@ Se il tuo DAW (o un host di plugin) ha caricato il plugin, il sistema operativo 
 
 Cartelle come `C:\Program Files` possono richiedere anche i diritti di amministratore. Se la rimozione viene rifiutata per questo motivo, avvia Deplug come amministratore oppure elimina quel singolo file dal file manager.
 
+## La disinstallazione fallisce con "servono i permessi di amministratore"
+
+I plugin nelle cartelle protette come `C:\Program Files\Common Files\VST2`, `VST3` o `Avid` si possono modificare solo con i permessi di amministratore, e Deplug di norma funziona senza, quindi Windows nega lo spostamento nel Cestino. In questo caso l'elenco dei risultati mostra un avviso e il pulsante **Riprova con permessi di amministratore**. Premilo e approva l'unica richiesta di autorizzazione di Windows (UAC): tutti i plugin negati vengono ritentati insieme. I file finiscono comunque nel Cestino, quindi puoi ripristinarli. Se annulli la richiesta non cambia nulla e puoi premere di nuovo il pulsante.
+
 ## La creazione del punto di ripristino è fallita
 
 Vedi [Punto di ripristino su Windows](/it/using-deplug#why-creating-a-restore-point-can-fail): UAC rifiutato, Protezione sistema disattivata o limite di 24 ore.

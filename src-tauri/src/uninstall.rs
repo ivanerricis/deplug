@@ -85,6 +85,30 @@ pub(crate) fn trash_with_system_env(
     result
 }
 
+/// True when a trash error message means the OS refused the operation for lack of permissions.
+/// The `trash` crate reports a denied Recycle Bin move on Windows as "Some operations were aborted".
+pub fn is_access_denied(err: &str) -> bool {
+    let l = err.to_lowercase();
+    [
+        "some operations were aborted",
+        "access is denied",
+        "os error 5",
+        "permission denied",
+    ]
+    .iter()
+    .any(|needle| l.contains(needle))
+}
+
+/// Maps a trash failure to a stable code: access-denied (Windows only, where an elevated retry
+/// can help) becomes `ERR_TRASH_ACCESS_DENIED`, anything else keeps its detail.
+pub fn map_trash_error(detail: &str, windows: bool) -> String {
+    if windows && is_access_denied(detail) {
+        "ERR_TRASH_ACCESS_DENIED".into()
+    } else {
+        format!("ERR_TRASH_FAILED:{detail}")
+    }
+}
+
 #[tauri::command]
 pub async fn trash_plugin(path: String, mode: State<'_, AppMode>) -> Result<(), String> {
     let p = std::path::PathBuf::from(path);
@@ -93,7 +117,7 @@ pub async fn trash_plugin(path: String, mode: State<'_, AppMode>) -> Result<(), 
     tauri::async_runtime::spawn_blocking(move || {
         validate_plugin_path(&p)?;
         trash_with_system_env(&p, redirected, &original)
-            .map_err(|e| format!("ERR_TRASH_FAILED:{e}"))
+            .map_err(|e| map_trash_error(&e.to_string(), cfg!(windows)))
     })
     .await
     .map_err(|e| format!("ERR_INTERNAL:{e}"))?
@@ -227,6 +251,202 @@ fn base64_encode(data: &[u8]) -> String {
     s
 }
 
+/// Maximum number of paths accepted by one elevated trash call.
+#[cfg_attr(not(windows), allow(dead_code))]
+const MAX_ELEVATED_PATHS: usize = 100;
+/// Upper bound for the base64 script so the elevated command line stays under the Windows limit.
+#[cfg_attr(not(windows), allow(dead_code))]
+const MAX_ENCODED_SCRIPT_LEN: usize = 30_000;
+
+/// Quotes a string as a PowerShell single-quoted literal. Besides `'`, PowerShell also treats the
+/// typographic quotes U+2018, U+2019, U+201A and U+201B as quote characters, so all are doubled.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub fn ps_quote(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push('\'');
+    for c in s.chars() {
+        out.push(c);
+        if matches!(c, '\'' | '\u{2018}' | '\u{2019}' | '\u{201A}' | '\u{201B}') {
+            out.push(c);
+        }
+    }
+    out.push('\'');
+    out
+}
+
+/// Builds the PowerShell script that sends every path to the Recycle Bin. Each result is
+/// appended to `log_path` as `OK|<index>` or `ERR|<index>|<message>`; paths never reach the log.
+/// The paths are embedded as literals: the elevated process must never read them from a file
+/// a normal user could modify.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub fn build_trash_script(paths: &[String], log_path: &str) -> String {
+    let list = paths
+        .iter()
+        .map(|p| ps_quote(p))
+        .collect::<Vec<_>>()
+        .join(",");
+    let log = ps_quote(log_path);
+    format!(
+        "$ErrorActionPreference='Stop'; Add-Type -AssemblyName Microsoft.VisualBasic; \
+$log={log}; $paths=@({list}); \
+for($i=0; $i -lt $paths.Count; $i++) {{ $p=$paths[$i]; \
+try {{ \
+if(Test-Path -LiteralPath $p -PathType Container) {{ [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory($p,'OnlyErrorDialogs','SendToRecycleBin') }} \
+elseif(Test-Path -LiteralPath $p -PathType Leaf) {{ [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($p,'OnlyErrorDialogs','SendToRecycleBin') }} \
+else {{ throw 'Path not found' }}; \
+Add-Content -LiteralPath $log -Value \"OK|$i\" -Encoding UTF8 \
+}} catch {{ \
+$m=($_.Exception.Message -replace '[\\r\\n|]+',' '); \
+Add-Content -LiteralPath $log -Value \"ERR|$i|$m\" -Encoding UTF8 \
+}} }}; exit 0"
+    )
+}
+
+/// Reads the log written by the elevated script. Returns one `ERR_TRASH_FAILED(<message>):<path>`
+/// entry per failed path; a path with no `OK` line (missing or garbled log) counts as failed.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub fn parse_trash_log(log: &str, paths: &[String]) -> Vec<String> {
+    let mut status: Vec<Option<Result<(), String>>> = vec![None; paths.len()];
+    for line in log.lines() {
+        let line = line.trim().trim_start_matches('\u{feff}');
+        let mut parts = line.splitn(3, '|');
+        let (Some(kind), Some(idx)) = (parts.next(), parts.next()) else {
+            continue;
+        };
+        let Ok(i) = idx.trim().parse::<usize>() else {
+            continue;
+        };
+        let Some(slot) = status.get_mut(i) else {
+            continue;
+        };
+        match kind {
+            "OK" => *slot = Some(Ok(())),
+            "ERR" => {
+                let msg: String = parts
+                    .next()
+                    .unwrap_or("")
+                    .replace(['(', ')'], " ")
+                    .trim()
+                    .chars()
+                    .take(200)
+                    .collect();
+                *slot = Some(Err(if msg.is_empty() {
+                    "unknown error".to_string()
+                } else {
+                    msg
+                }));
+            }
+            _ => {}
+        }
+    }
+    paths
+        .iter()
+        .zip(status)
+        .filter_map(|(path, st)| match st {
+            Some(Ok(())) => None,
+            Some(Err(msg)) => Some(format!("ERR_TRASH_FAILED({msg}):{path}")),
+            None => Some(format!("ERR_TRASH_FAILED(no result):{path}")),
+        })
+        .collect()
+}
+
+/// Rejects paths that cannot be embedded safely in a script literal (NUL, newlines, control chars).
+#[cfg_attr(not(windows), allow(dead_code))]
+fn check_script_safe(paths: &[String]) -> Result<(), String> {
+    if paths.iter().any(|p| p.chars().any(char::is_control)) {
+        return Err("ERR_INVALID_PATH".into());
+    }
+    Ok(())
+}
+
+/// Elevated UTF-16LE base64 launch shared by the Windows helpers.
+#[cfg(windows)]
+fn trash_elevated_blocking(paths: Vec<String>) -> Result<Vec<String>, String> {
+    use std::hash::{BuildHasher, Hasher};
+    use std::os::windows::process::CommandExt;
+    use std::process::Command;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+    if paths.is_empty() {
+        return Ok(Vec::new());
+    }
+    if paths.len() > MAX_ELEVATED_PATHS {
+        return Err("ERR_INVALID_PATH".into());
+    }
+    check_script_safe(&paths)?;
+    for p in &paths {
+        validate_plugin_path(Path::new(p))?;
+    }
+
+    // Unpredictable log name; the file is created now (create_new fails if something is already
+    // there) and the elevated script only appends to it. It is output only, never read as input.
+    let nonce = std::collections::hash_map::RandomState::new()
+        .build_hasher()
+        .finish();
+    let log =
+        std::env::temp_dir().join(format!("pu-trash-{}-{nonce:016x}.log", std::process::id()));
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&log)
+        .map_err(|e| format!("ERR_INTERNAL:{e}"))?;
+    let log_str = log.to_string_lossy().to_string();
+
+    let inner = build_trash_script(&paths, &log_str);
+    let utf16: Vec<u8> = inner.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
+    let encoded = base64_encode(&utf16);
+    // The whole command line is limited to about 32,000 characters on Windows, and `encoded` appears in it.
+    if encoded.len() > MAX_ENCODED_SCRIPT_LEN {
+        let _ = std::fs::remove_file(&log);
+        return Err("ERR_INVALID_PATH".into());
+    }
+    let outer = format!(
+        "$p = Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -PassThru -ArgumentList '-NoProfile','-NonInteractive','-EncodedCommand','{encoded}'; exit $p.ExitCode"
+    );
+
+    let out = Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &outer])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+    let content = std::fs::read(&log)
+        .map(|b| String::from_utf8_lossy(&b).to_string())
+        .unwrap_or_default();
+    let _ = std::fs::remove_file(&log);
+    let out = out.map_err(|e| format!("ERR_INTERNAL:{e}"))?;
+
+    let stderr = String::from_utf8_lossy(&out.stderr).to_lowercase();
+    let cancelled =
+        stderr.contains("canceled by the user") || stderr.contains("annullata dall'utente");
+    if cancelled || (!out.status.success() && content.trim().is_empty()) {
+        return Err(if cancelled {
+            "ERR_ELEVATION_CANCELLED".into()
+        } else {
+            format!(
+                "ERR_INTERNAL:elevated process exited with {:?}",
+                out.status.code()
+            )
+        });
+    }
+    Ok(parse_trash_log(&content, &paths))
+}
+
+/// Sends the given plugins to the Recycle Bin from an elevated PowerShell (one UAC prompt).
+/// Returns one `<code>:<path>` entry per failed path; an empty list means all were moved.
+#[tauri::command]
+pub async fn trash_plugins_elevated(paths: Vec<String>) -> Result<Vec<String>, String> {
+    #[cfg(windows)]
+    {
+        tauri::async_runtime::spawn_blocking(move || trash_elevated_blocking(paths))
+            .await
+            .map_err(|e| format!("ERR_INTERNAL:{e}"))?
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = paths;
+        Err("ERR_ELEVATION_UNSUPPORTED".into())
+    }
+}
+
 #[tauri::command]
 pub async fn create_restore_point(description: String) -> Result<(), String> {
     #[cfg(windows)]
@@ -319,6 +539,79 @@ mod tests {
         if let Some(h) = home_dir() {
             assert!(validate_plugin_path(&h).is_err());
         }
+    }
+
+    #[test]
+    fn detects_access_denied() {
+        assert!(is_access_denied(
+            "Error during a `trash` operation: Unknown { description: \"Some operations were aborted\" }"
+        ));
+        assert!(is_access_denied("Access is denied. (os error 5)"));
+        assert!(is_access_denied("PERMISSION DENIED"));
+        assert!(!is_access_denied("The file is in use"));
+        assert_eq!(
+            map_trash_error("Some operations were aborted", true),
+            "ERR_TRASH_ACCESS_DENIED"
+        );
+        assert_eq!(
+            map_trash_error("Some operations were aborted", false),
+            "ERR_TRASH_FAILED:Some operations were aborted"
+        );
+        assert_eq!(map_trash_error("busy", true), "ERR_TRASH_FAILED:busy");
+    }
+
+    #[test]
+    fn quotes_powershell_literals() {
+        assert_eq!(ps_quote("a b"), "'a b'");
+        assert_eq!(ps_quote("it's"), "'it''s'");
+        assert_eq!(
+            ps_quote("\u{2018}x\u{2019}"),
+            "'\u{2018}\u{2018}x\u{2019}\u{2019}'"
+        );
+        assert_eq!(ps_quote("[a]$(x)`"), "'[a]$(x)`'");
+        assert_eq!(ps_quote("Plügin 音.vst3"), "'Plügin 音.vst3'");
+    }
+
+    #[test]
+    fn builds_trash_script() {
+        let paths = vec![
+            "C:\\Program Files\\Common Files\\VST3\\O'Neil [x].vst3".to_string(),
+            "C:\\Plug\u{fc}\\a.dll".to_string(),
+        ];
+        let s = build_trash_script(&paths, "C:\\Temp\\l.log");
+        assert!(s.contains(
+            "'C:\\Program Files\\Common Files\\VST3\\O''Neil [x].vst3','C:\\Plug\u{fc}\\a.dll'"
+        ));
+        assert!(s.contains("DeleteDirectory($p,'OnlyErrorDialogs','SendToRecycleBin')"));
+        assert!(s.contains("DeleteFile($p,'OnlyErrorDialogs','SendToRecycleBin')"));
+        assert!(s.contains("Test-Path -LiteralPath"));
+        assert!(s.contains("$log='C:\\Temp\\l.log'"));
+        assert!(s.contains("OK|$i") && s.contains("ERR|$i|"));
+    }
+
+    #[test]
+    fn parses_trash_log() {
+        let paths: Vec<String> = ["C:\\a.dll", "C:\\b.vst3", "C:\\c.dll", "C:\\d.dll"]
+            .map(String::from)
+            .to_vec();
+        let log = "\u{feff}OK|0\nERR|1|Boom (bad)\ngarbage\nOK|x\nOK|99\nERR|3\n";
+        assert_eq!(
+            parse_trash_log(log, &paths),
+            vec![
+                "ERR_TRASH_FAILED(Boom  bad):C:\\b.vst3".to_string(),
+                "ERR_TRASH_FAILED(no result):C:\\c.dll".to_string(),
+                "ERR_TRASH_FAILED(unknown error):C:\\d.dll".to_string(),
+            ]
+        );
+        assert!(parse_trash_log("OK|0\nOK|1", &paths[..2]).is_empty());
+        assert_eq!(parse_trash_log("", &paths[..1]).len(), 1);
+    }
+
+    #[test]
+    fn rejects_control_chars_in_script_paths() {
+        assert!(check_script_safe(&["C:\\a.dll".into()]).is_ok());
+        assert!(check_script_safe(&["C:\\a\n.dll".into()]).is_err());
+        assert!(check_script_safe(&["C:\\a\0.dll".into()]).is_err());
     }
 
     #[test]

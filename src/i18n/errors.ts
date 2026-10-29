@@ -3,6 +3,9 @@ import type { MessageKey, TFunction } from "./translate"
 const SIMPLE: Record<string, MessageKey> = {
   ERR_INVALID_PATH: "error.invalidPath",
   ERR_NOT_FOUND: "error.notFound",
+  ERR_TRASH_ACCESS_DENIED: "error.trashAccessDenied",
+  ERR_ELEVATION_CANCELLED: "error.elevationCancelled",
+  ERR_ELEVATION_UNSUPPORTED: "error.elevationUnsupported",
   ERR_RESTORE_UNSUPPORTED: "error.restoreUnsupported",
   ERR_RESTORE_UAC_CANCELLED: "error.restoreUacCancelled",
   ERR_RESTORE_PROTECTION_DISABLED: "error.restoreProtectionDisabled",
@@ -30,6 +33,8 @@ const WITH_DETAIL: Record<string, MessageKey> = {
 /** Maps a stable backend error/warning code to a localized message. Unknown strings are returned unchanged. */
 export function localizeBackendError(code: string, t: TFunction): string {
   const trimmed = code.trim()
+  // Older builds returned the raw `trash` crate text for a Recycle Bin move denied by Windows.
+  if (trimmed.includes("Some operations were aborted")) return t("error.trashAccessDenied")
   if (Object.prototype.hasOwnProperty.call(SIMPLE, trimmed)) return t(SIMPLE[trimmed])
   const colon = trimmed.indexOf(":")
   if (colon > 0) {

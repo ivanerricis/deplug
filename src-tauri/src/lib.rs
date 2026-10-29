@@ -41,6 +41,7 @@ pub fn run() {
             settings::save_settings,
             settings::app_info,
             uninstall::trash_plugin,
+            uninstall::trash_plugins_elevated,
             uninstall::create_restore_point,
             vendor::find_vendor_uninstaller,
             vendor::run_vendor_uninstaller,
