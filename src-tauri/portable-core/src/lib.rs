@@ -65,11 +65,20 @@ pub enum PortableResolution {
     Installed { warning: Option<String> },
 }
 
-fn installed_warn(msg: String) -> PortableResolution {
-    PortableResolution::Installed { warning: Some(msg) }
+/// Warning code: portable data dir cannot be created or written.
+pub const WARN_NOT_WRITABLE: &str = "WARN_NOT_WRITABLE";
+/// Warning code: app runs from a macOS AppTranslocation location.
+pub const WARN_APP_TRANSLOCATION: &str = "WARN_APP_TRANSLOCATION";
+
+/// Fallback to installed mode with a stable warning code (localized by the frontend).
+fn installed_warn(code: &str) -> PortableResolution {
+    PortableResolution::Installed {
+        warning: Some(code.to_string()),
+    }
 }
 
 /// Decide whether to run in portable mode and prepare the data directory.
+/// Fallback warnings are machine codes (`WARN_*`), not human-readable text.
 pub fn resolve(base: &Path, env_force: bool) -> PortableResolution {
     if !env_force && !base.join(MARKER).exists() {
         return PortableResolution::Installed { warning: None };
@@ -79,32 +88,17 @@ pub fn resolve(base: &Path, env_force: bool) -> PortableResolution {
         .replace('\\', "/")
         .contains("/AppTranslocation/")
     {
-        return installed_warn(
-            "Modalità portatile non disponibile: l'app è eseguita da una posizione \
-             temporanea di macOS (AppTranslocation). Sposta l'app (.app) in un'altra \
-             cartella, oppure esegui `xattr -dr com.apple.quarantine <App.app>`, e riavviala."
-                .to_string(),
-        );
+        return installed_warn(WARN_APP_TRANSLOCATION);
     }
     let data_dir = base.join(DATA_DIR_NAME);
-    if let Err(e) = fs::create_dir_all(&data_dir) {
-        return installed_warn(format!(
-            "Modalità portatile non disponibile: impossibile creare la cartella dati {}: {}. \
-             Uso la modalità installata.",
-            data_dir.display(),
-            e
-        ));
+    if fs::create_dir_all(&data_dir).is_err() {
+        return installed_warn(WARN_NOT_WRITABLE);
     }
     let probe = data_dir.join(format!(".write-test-{}.tmp", std::process::id()));
     let probed = fs::write(&probe, b"ok").and_then(|_| fs::remove_file(&probe));
-    if let Err(e) = probed {
+    if probed.is_err() {
         let _ = fs::remove_file(&probe);
-        return installed_warn(format!(
-            "Modalità portatile non disponibile: la cartella dati {} non è scrivibile: {}. \
-             Uso la modalità installata.",
-            data_dir.display(),
-            e
-        ));
+        return installed_warn(WARN_NOT_WRITABLE);
     }
     PortableResolution::Portable { data_dir }
 }
@@ -126,11 +120,35 @@ fn default_version() -> u32 {
     1
 }
 
+fn default_system() -> String {
+    "system".to_string()
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_scan_depth() -> u8 {
+    6
+}
+
+/// Allowed range for `custom_scan_depth`.
+const SCAN_DEPTH_RANGE: std::ops::RangeInclusive<u8> = 1..=10;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
     pub version: u32,
     pub custom_scan_paths: Vec<String>,
+    /// "system" | "en" | "it"
+    pub language: String,
+    /// "system" | "light" | "dark"
+    pub theme: String,
+    pub restore_point_default: bool,
+    pub scan_on_startup: bool,
+    /// Max folder depth for custom scans, clamped to 1..=10.
+    pub custom_scan_depth: u8,
+    pub disabled_system_paths: Vec<String>,
 }
 
 impl Default for Settings {
@@ -138,26 +156,50 @@ impl Default for Settings {
         Settings {
             version: default_version(),
             custom_scan_paths: Vec::new(),
+            language: default_system(),
+            theme: default_system(),
+            restore_point_default: default_true(),
+            scan_on_startup: default_true(),
+            custom_scan_depth: default_scan_depth(),
+            disabled_system_paths: Vec::new(),
         }
     }
 }
 
-/// Load settings; missing or corrupt files yield defaults.
+impl Settings {
+    /// Normalizes out-of-range values: invalid enums become "system", depth is clamped.
+    pub fn sanitized(mut self) -> Self {
+        if !matches!(self.language.as_str(), "system" | "en" | "it") {
+            self.language = default_system();
+        }
+        if !matches!(self.theme.as_str(), "system" | "light" | "dark") {
+            self.theme = default_system();
+        }
+        self.custom_scan_depth = self
+            .custom_scan_depth
+            .clamp(*SCAN_DEPTH_RANGE.start(), *SCAN_DEPTH_RANGE.end());
+        self
+    }
+}
+
+/// Load settings (sanitized); missing or corrupt files yield defaults.
 pub fn load(path: &Path) -> Settings {
     fs::read(path)
         .ok()
-        .and_then(|b| serde_json::from_slice(&b).ok())
+        .and_then(|b| serde_json::from_slice::<Settings>(&b).ok())
         .unwrap_or_default()
+        .sanitized()
 }
 
-/// Save settings atomically (write `.tmp`, then rename).
+/// Save sanitized settings atomically (write `.tmp`, then rename).
 pub fn save(path: &Path, settings: &Settings) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         if !parent.as_os_str().is_empty() {
             fs::create_dir_all(parent)?;
         }
     }
-    let json = serde_json::to_vec_pretty(settings).map_err(io::Error::other)?;
+    let json =
+        serde_json::to_vec_pretty(&settings.clone().sanitized()).map_err(io::Error::other)?;
     let mut tmp_name = path.as_os_str().to_owned();
     tmp_name.push(".tmp");
     let tmp = PathBuf::from(tmp_name);
@@ -265,7 +307,7 @@ mod tests {
         let base = file.join("sub");
         match resolve(&base, true) {
             PortableResolution::Installed { warning: Some(w) } => {
-                assert!(w.contains("Modalità portatile"));
+                assert_eq!(w, WARN_NOT_WRITABLE);
             }
             other => panic!("unexpected {other:?}"),
         }
@@ -279,8 +321,7 @@ mod tests {
         fs::write(base.join(MARKER), "").unwrap();
         match resolve(&base, false) {
             PortableResolution::Installed { warning: Some(w) } => {
-                assert!(w.contains("AppTranslocation"));
-                assert!(w.contains("xattr -dr com.apple.quarantine"));
+                assert_eq!(w, WARN_APP_TRANSLOCATION);
             }
             other => panic!("unexpected {other:?}"),
         }
@@ -310,6 +351,72 @@ mod tests {
         let s = Settings::default();
         assert_eq!(s.version, 1);
         assert!(s.custom_scan_paths.is_empty());
+        assert_eq!(s.language, "system");
+        assert_eq!(s.theme, "system");
+        assert!(s.restore_point_default);
+        assert!(s.scan_on_startup);
+        assert_eq!(s.custom_scan_depth, 6);
+        assert!(s.disabled_system_paths.is_empty());
+    }
+
+    #[test]
+    fn settings_depth_clamped_on_load_and_save() {
+        let d = tempdir().unwrap();
+        let p = d.path().join("s.json");
+        fs::write(&p, r#"{"customScanDepth":0}"#).unwrap();
+        assert_eq!(load(&p).custom_scan_depth, 1);
+        fs::write(&p, r#"{"customScanDepth":200}"#).unwrap();
+        assert_eq!(load(&p).custom_scan_depth, 10);
+        let s = Settings {
+            custom_scan_depth: 99,
+            ..Settings::default()
+        };
+        save(&p, &s).unwrap();
+        let raw: serde_json::Value = serde_json::from_slice(&fs::read(&p).unwrap()).unwrap();
+        assert_eq!(raw["customScanDepth"], 10);
+    }
+
+    #[test]
+    fn settings_invalid_enums_fall_back() {
+        let s = Settings {
+            language: "fr".into(),
+            theme: "blue".into(),
+            ..Settings::default()
+        }
+        .sanitized();
+        assert_eq!(s.language, "system");
+        assert_eq!(s.theme, "system");
+        let ok = Settings {
+            language: "it".into(),
+            theme: "dark".into(),
+            ..Settings::default()
+        }
+        .sanitized();
+        assert_eq!((ok.language.as_str(), ok.theme.as_str()), ("it", "dark"));
+        let d = tempdir().unwrap();
+        let p = d.path().join("s.json");
+        fs::write(&p, r#"{"language":"xx","theme":""}"#).unwrap();
+        let l = load(&p);
+        assert_eq!(
+            (l.language.as_str(), l.theme.as_str()),
+            ("system", "system")
+        );
+    }
+
+    #[test]
+    fn settings_old_file_with_only_paths_loads() {
+        let d = tempdir().unwrap();
+        let p = d.path().join("s.json");
+        fs::write(&p, r#"{"version":1,"customScanPaths":["/x"]}"#).unwrap();
+        let s = load(&p);
+        assert_eq!(s.custom_scan_paths, vec!["/x".to_string()]);
+        assert_eq!(
+            s,
+            Settings {
+                custom_scan_paths: vec!["/x".into()],
+                ..Settings::default()
+            }
+        );
     }
 
     #[test]
@@ -319,6 +426,12 @@ mod tests {
         let s = Settings {
             version: 2,
             custom_scan_paths: vec!["/a".into(), "/b".into()],
+            language: "it".into(),
+            theme: "dark".into(),
+            restore_point_default: false,
+            scan_on_startup: false,
+            custom_scan_depth: 3,
+            disabled_system_paths: vec!["/sys".into()],
         };
         save(&p, &s).unwrap();
         assert_eq!(load(&p), s);

@@ -7,31 +7,31 @@ const PLUGIN_EXTENSIONS: [&str; 6] = ["dll", "vst", "vst3", "aaxplugin", "compon
 /// Strictly validates a path before it is trashed.
 pub fn validate_plugin_path(path: &Path) -> Result<(), String> {
     if !path.is_absolute() {
-        return Err("Il percorso del plugin deve essere assoluto".into());
+        return Err("ERR_INVALID_PATH".into());
     }
     let normal_count = path
         .components()
         .filter(|c| matches!(c, Component::Normal(_)))
         .count();
     if path.components().any(|c| matches!(c, Component::ParentDir)) {
-        return Err("Percorso non valido".into());
+        return Err("ERR_INVALID_PATH".into());
     }
     if path.parent().is_none() || path.file_name().is_none() {
-        return Err("Percorso non consentito: cartella radice".into());
+        return Err("ERR_INVALID_PATH".into());
     }
     if let Some(home) = home_dir() {
         if path == home {
-            return Err("Percorso non consentito: cartella utente".into());
+            return Err("ERR_INVALID_PATH".into());
         }
     }
     // Absolute path: root/prefix components plus at least 3 total components.
     if path.components().count() < 3 || normal_count < 1 {
-        return Err("Percorso troppo corto per essere un plugin".into());
+        return Err("ERR_INVALID_PATH".into());
     }
     let name = path
         .file_name()
         .and_then(|n| n.to_str())
-        .ok_or("Nome file non valido")?;
+        .ok_or("ERR_INVALID_PATH")?;
     let ext_ok = name.rsplit_once('.').is_some_and(|(stem, ext)| {
         !stem.is_empty()
             && PLUGIN_EXTENSIONS
@@ -39,10 +39,10 @@ pub fn validate_plugin_path(path: &Path) -> Result<(), String> {
                 .any(|e| e.eq_ignore_ascii_case(ext))
     });
     if !ext_ok {
-        return Err("Il file non sembra un plugin supportato".into());
+        return Err("ERR_INVALID_PATH".into());
     }
     if !path.exists() {
-        return Err("Il plugin non esiste più".into());
+        return Err("ERR_NOT_FOUND".into());
     }
     Ok(())
 }
@@ -56,10 +56,10 @@ pub async fn trash_plugin(path: String) -> Result<(), String> {
     let p = std::path::PathBuf::from(path);
     tauri::async_runtime::spawn_blocking(move || {
         validate_plugin_path(&p)?;
-        trash::delete(&p).map_err(|e| format!("Impossibile spostare nel cestino: {e}"))
+        trash::delete(&p).map_err(|e| format!("ERR_TRASH_FAILED:{e}"))
     })
     .await
-    .map_err(|e| format!("Errore interno: {e}"))?
+    .map_err(|e| format!("ERR_INTERNAL:{e}"))?
 }
 
 /// Keeps only safe characters and limits the length to 100 chars.
@@ -85,7 +85,7 @@ pub fn sanitize_description(desc: &str) -> String {
     }
 }
 
-/// Maps PowerShell output / exit code to an Italian error message.
+/// Maps PowerShell output / exit code to a stable machine error code.
 #[cfg_attr(not(windows), allow(dead_code))]
 pub fn map_restore_error(output: &str, code: Option<i32>) -> String {
     let l = output.to_lowercase();
@@ -94,24 +94,20 @@ pub fn map_restore_error(output: &str, code: Option<i32>) -> String {
         || l.contains("frequency")
         || l.contains("24 ore")
     {
-        "Un punto di ripristino è già stato creato nelle ultime 24 ore".into()
+        "ERR_RESTORE_FREQUENCY".into()
     } else if l.contains("disabled")
         || l.contains("protezione sistema")
         || l.contains("system protection")
         || l.contains("not enabled")
     {
-        "La Protezione sistema è disattivata: attivala nelle impostazioni di Windows per creare punti di ripristino".into()
+        "ERR_RESTORE_PROTECTION_DISABLED".into()
     } else {
-        let detail = output.trim();
-        match (detail.is_empty(), code) {
-            (true, Some(c)) => {
-                format!("Creazione del punto di ripristino non riuscita (codice {c})")
-            }
-            (true, None) => "Creazione del punto di ripristino non riuscita".into(),
-            (false, _) => format!(
-                "Creazione del punto di ripristino non riuscita: {}",
-                detail.chars().take(300).collect::<String>()
-            ),
+        let exit = code.map_or_else(|| "exit ?".to_string(), |c| format!("exit {c}"));
+        let detail: String = output.trim().chars().take(300).collect();
+        if detail.is_empty() {
+            format!("ERR_RESTORE_FAILED:{exit}")
+        } else {
+            format!("ERR_RESTORE_FAILED:{exit}: {detail}")
         }
     }
 }
@@ -143,7 +139,7 @@ fn create_restore_point_blocking(description: &str) -> Result<(), String> {
         .args(["-NoProfile", "-NonInteractive", "-Command", &outer])
         .creation_flags(CREATE_NO_WINDOW)
         .output()
-        .map_err(|e| format!("Impossibile avviare PowerShell: {e}"))?;
+        .map_err(|e| format!("ERR_RESTORE_FAILED:{e}"))?;
 
     let file_out = std::fs::read(&log)
         .ok()
@@ -161,7 +157,7 @@ fn create_restore_point_blocking(description: &str) -> Result<(), String> {
     }
     let sl = stderr.to_lowercase();
     if sl.contains("canceled by the user") || sl.contains("annullata dall'utente") {
-        return Err("Operazione annullata: permessi di amministratore non concessi".into());
+        return Err("ERR_RESTORE_UAC_CANCELLED".into());
     }
     let combined = format!("{file_out}\n{stderr}");
     Err(map_restore_error(&combined, out.status.code()))
@@ -200,12 +196,12 @@ pub async fn create_restore_point(description: String) -> Result<(), String> {
     {
         tauri::async_runtime::spawn_blocking(move || create_restore_point_blocking(&description))
             .await
-            .map_err(|e| format!("Errore interno: {e}"))?
+            .map_err(|e| format!("ERR_INTERNAL:{e}"))?
     }
     #[cfg(not(windows))]
     {
         let _ = description;
-        Err("I punti di ripristino sono supportati solo su Windows".into())
+        Err("ERR_RESTORE_UNSUPPORTED".into())
     }
 }
 
@@ -243,6 +239,18 @@ mod tests {
     }
 
     #[test]
+    fn rejects_with_stable_codes() {
+        assert_eq!(
+            validate_plugin_path(Path::new("foo/bar/a.dll")),
+            Err("ERR_INVALID_PATH".to_string())
+        );
+        assert_eq!(
+            validate_plugin_path(Path::new("/nonexistent/dir/a.dll")),
+            Err("ERR_NOT_FOUND".to_string())
+        );
+    }
+
+    #[test]
     fn rejects_relative_missing_and_roots() {
         assert!(validate_plugin_path(Path::new("foo/bar/a.dll")).is_err());
         assert!(validate_plugin_path(Path::new("/nonexistent/dir/a.dll")).is_err());
@@ -266,10 +274,20 @@ mod tests {
 
     #[test]
     fn maps_errors() {
-        assert!(map_restore_error("frequency 1440 minutes", Some(1)).contains("24 ore"));
-        assert!(
-            map_restore_error("System Protection disabled", Some(1)).contains("Protezione sistema")
+        assert_eq!(
+            map_restore_error("frequency 1440 minutes", Some(1)),
+            "ERR_RESTORE_FREQUENCY"
         );
-        assert!(map_restore_error("", Some(5)).contains("codice 5"));
+        assert_eq!(
+            map_restore_error("System Protection disabled", Some(1)),
+            "ERR_RESTORE_PROTECTION_DISABLED"
+        );
+        assert_eq!(map_restore_error("", Some(5)), "ERR_RESTORE_FAILED:exit 5");
+        assert_eq!(map_restore_error("", None), "ERR_RESTORE_FAILED:exit ?");
+        let long = "x".repeat(500);
+        assert_eq!(
+            map_restore_error(&long, Some(2)),
+            format!("ERR_RESTORE_FAILED:exit 2: {}", "x".repeat(300))
+        );
     }
 }
