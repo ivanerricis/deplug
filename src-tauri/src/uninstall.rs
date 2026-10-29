@@ -79,7 +79,7 @@ pub fn sanitize_description(desc: &str) -> String {
     let limited: String = collapsed.chars().take(100).collect();
     let limited = limited.trim().to_string();
     if limited.is_empty() {
-        "Plugin Uninstaller".to_string()
+        "Deplug".to_string()
     } else {
         limited
     }
@@ -260,7 +260,7 @@ mod tests {
             sanitize_description("Rimozione 'x'; rm -rf $(a)"),
             "Rimozione x rm -rf (a)"
         );
-        assert_eq!(sanitize_description("  ;;'\"`$  "), "Plugin Uninstaller");
+        assert_eq!(sanitize_description("  ;;'\"`$  "), "Deplug");
         assert_eq!(sanitize_description(&"a".repeat(300)).chars().count(), 100);
     }
 

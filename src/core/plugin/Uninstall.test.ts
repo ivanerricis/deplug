@@ -43,7 +43,7 @@ describe("uninstallPlugin", () => {
     const backend = makeBackend()
     const r = await uninstallPlugin(plugin, { restorePoint: true, backend, confirmContinue: vi.fn() })
     expect(r).toEqual({ status: "removed", restorePoint: "created" })
-    expect(backend.createRestorePoint).toHaveBeenCalledWith("Plugin Uninstaller: Foo.vst3")
+    expect(backend.createRestorePoint).toHaveBeenCalledWith("Deplug: Foo.vst3")
   })
 
   it("continues when restore point fails and user confirms", async () => {
