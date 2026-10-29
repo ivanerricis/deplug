@@ -69,7 +69,6 @@ pub struct UninstallEntry {
     pub quiet_uninstall_string: Option<String>,
     pub display_icon: Option<String>,
     pub system_component: bool,
-    pub windows_installer: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -304,11 +303,6 @@ pub fn parse_command_line_with(
     Ok(ParsedCommand { program, args })
 }
 
-/// Same as `parse_command_line_with`, checking the real filesystem.
-pub fn parse_command_line(cmd: &str) -> Result<ParsedCommand, String> {
-    parse_command_line_with(cmd, &|p| Path::new(p).is_file())
-}
-
 fn command_preview(cmd: &ParsedCommand) -> String {
     let prog = match &cmd.program {
         Program::Msiexec => "msiexec.exe".to_string(),
@@ -388,7 +382,8 @@ fn match_score(e: &UninstallEntry, plugin_norm: &str) -> Option<usize> {
         .max()
 }
 
-/// True when the entry's install location or uninstaller folder contains the plugin.
+/// True when the entry's install location or uninstaller folder contains the plugin (used by the tests).
+#[cfg(test)]
 pub fn entry_matches_plugin(entry: &UninstallEntry, plugin_path: &str) -> bool {
     entry_is_usable(entry) && match_score(entry, &normalize_path(plugin_path)).is_some()
 }
@@ -490,6 +485,7 @@ pub fn registry_publisher(plugin: &Path) -> Option<String> {
 // ---------------------------------------------------------------------------------------------
 
 /// Extracts package ids from `pkgutil --file-info` output (`pkgid: com.vendor.product` lines).
+#[cfg(any(target_os = "macos", test))]
 pub fn parse_pkgutil_file_info(output: &str) -> Vec<String> {
     let mut ids: Vec<String> = Vec::new();
     for line in output.lines() {
@@ -564,7 +560,6 @@ mod registry {
             quiet_uninstall_string: s("QuietUninstallString"),
             display_icon: s("DisplayIcon"),
             system_component: flag("SystemComponent"),
-            windows_installer: flag("WindowsInstaller"),
         })
     }
 
