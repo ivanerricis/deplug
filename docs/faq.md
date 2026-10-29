@@ -58,7 +58,7 @@ Only one file: `settings.json`. It holds your preferences (language, theme, scan
 
 ## Is anything sent over the network?
 
-No. See [Safety and privacy](/safety-and-privacy).
+Only when you ask for it: **Settings → About → Check for updates** contacts the GitHub releases API (`api.github.com`) to read the list of published versions. Nothing else is sent, and the check never runs on its own. Your plugin list, paths and settings stay on your computer. See [Safety and privacy](/safety-and-privacy).
 
 ## Where do I report a bug?
 
