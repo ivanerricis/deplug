@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { filterPlugins, findDuplicates, folderRuns, naturalCompare, shouldGroupByFolder, normalizeBaseName, pluginKey, sortPlugins } from "./ListOps"
+import { countByArch, filterByArch, filterPlugins, findDuplicates, folderRuns, naturalCompare, shouldGroupByFolder, normalizeBaseName, pluginKey, sortPlugins } from "./ListOps"
 import type { Plugin } from "./Plugin"
+import type { MetaMap, PluginArch } from "./Meta"
+import { buildPluginPath } from "./Uninstall"
 
 const p = (name: string, installPath = "/vst3", type: Plugin["type"] = "VST3"): Plugin => ({ name, installPath, type })
 
@@ -143,5 +145,45 @@ describe("sortPlugins by size and date", () => {
   })
   it("falls back to name order without metadata", () => {
     expect(names(sortPlugins([c, a, b], { key: "size", dir: "asc" }))).toEqual(["A.vst3", "B.vst3", "C.vst3"])
+  })
+})
+
+describe("filterByArch", () => {
+  const list = [p("A.vst3", "/a"), p("B.vst3", "/b"), p("C.vst3", "/c"), p("D.vst3", "/d"), p("E.vst3", "/e"), p("F.vst3", "/f")]
+  const archs: PluginArch[] = ["x64", "x86", "arm64", "universal", "mixed", "unknown"]
+  const meta: MetaMap = new Map(
+    list.map((x, i) => [buildPluginPath(x.installPath, x.name), { path: buildPluginPath(x.installPath, x.name), size: 1, modified: 1, arch: archs[i] }]),
+  )
+  const names = (l: Plugin[]) => l.map(x => x.name[0])
+
+  it("returns the same list for all", () => {
+    expect(filterByArch(list, "all", meta)).toBe(list)
+  })
+  it("matches 64-bit, including universal and mixed bundles", () => {
+    expect(names(filterByArch(list, "x64", meta))).toEqual(["A", "D", "E"])
+  })
+  it("matches 32-bit only for x86 and mixed", () => {
+    expect(names(filterByArch(list, "x86", meta))).toEqual(["B", "E"])
+  })
+  it("matches ARM64 including universal", () => {
+    expect(names(filterByArch(list, "arm64", meta))).toEqual(["C", "D", "E"])
+  })
+  it("hides plugins without metadata under a specific filter", () => {
+    expect(filterByArch(list, "x64")).toEqual([])
+  })
+  it("composes with search and duplicates", () => {
+    const dup = [p("Twin.dll", "/x86", "VST2"), p("Twin.vst3", "/x64", "VST3"), p("Solo.vst3", "/s")]
+    const m: MetaMap = new Map(
+      dup.map((x, i) => {
+        const path = buildPluginPath(x.installPath, x.name)
+        return [path, { path, size: 1, modified: 1, arch: (["x86", "x64", "x86"] as PluginArch[])[i] }]
+      }),
+    )
+    const dups = findDuplicates(dup)
+    const result = filterByArch(filterPlugins(dup, "twin").filter(x => dups.has(pluginKey(x))), "x86", m)
+    expect(result.map(x => x.name)).toEqual(["Twin.dll"])
+  })
+  it("counts per filter", () => {
+    expect(countByArch(list, meta)).toEqual({ all: 6, x64: 3, x86: 2, arm64: 3 })
   })
 })

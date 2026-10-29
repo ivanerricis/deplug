@@ -3,6 +3,7 @@ import { Info, ScanSearch, SlidersHorizontal, Trash2, X, type LucideIcon } from 
 import { useSettings } from "@/core/settings/SettingsContext"
 import type { AppInfo } from "@/core/settings/AppSettings"
 import type { Platform } from "@/core/plugin/Path"
+import type { PluginArch } from "@/core/plugin/Meta"
 import { useI18n } from "@/i18n/I18nProvider"
 import type { MessageKey } from "@/i18n/translate"
 import { Alert, AlertDescription } from "./ui/alert"
@@ -28,12 +29,14 @@ const TABS: { id: TabId; label: MessageKey; icon: LucideIcon }[] = [
 type SettingsDialogProps = {
   platform: Platform
   systemPaths: string[]
+  /** Plugins per detected architecture, for the diagnostics text. */
+  archSummary?: Partial<Record<PluginArch, number>>
   appInfo?: AppInfo
   initialTab?: TabId
   onClose: () => void
 }
 
-export default function SettingsDialog({ platform, systemPaths, appInfo, initialTab = "general", onClose }: SettingsDialogProps) {
+export default function SettingsDialog({ platform, systemPaths, archSummary, appInfo, initialTab = "general", onClose }: SettingsDialogProps) {
   const { t, tError } = useI18n()
   const { saveError, clearSaveError } = useSettings()
   const [tab, setTab] = useState<TabId>(initialTab)
@@ -105,7 +108,7 @@ export default function SettingsDialog({ platform, systemPaths, appInfo, initial
               <TabsContent value="general" className="px-5 py-4"><GeneralSection /></TabsContent>
               <TabsContent value="scan" className="px-5 py-4"><ScanSection systemPaths={systemPaths} /></TabsContent>
               <TabsContent value="uninstall" className="px-5 py-4"><UninstallSection platform={platform} /></TabsContent>
-              <TabsContent value="about" className="px-5 py-4"><AboutSection platform={platform} appInfo={appInfo} systemPaths={systemPaths} /></TabsContent>
+              <TabsContent value="about" className="px-5 py-4"><AboutSection platform={platform} appInfo={appInfo} systemPaths={systemPaths} archSummary={archSummary} /></TabsContent>
             </ScrollArea>
           </div>
         </Tabs>

@@ -25,9 +25,23 @@ export const en = {
   "toolbar.duplicatesOnly": "Show only duplicates",
   "toolbar.duplicatesShort": "Duplicates",
   "toolbar.formatChip": "{type} plugins: {count}",
+  "toolbar.arch": "Architecture",
+  "toolbar.archLabel": "Filter plugins by architecture",
+  "toolbar.archAll": "All",
+  "toolbar.archOption": "{label} ({count})",
+
+  "arch.x86": "32-bit",
+  "arch.x64": "64-bit",
+  "arch.arm64": "ARM64",
+  "arch.universal": "Universal",
+  "arch.mixed": "Mixed",
+  "arch.x86Hint": "32-bit plugin: it needs a 32-bit host or a bridge to load in a 64-bit DAW.",
+  "arch.universalHint": "Contains code for more than one architecture (Intel and ARM).",
+  "arch.mixedHint": "The bundle contains binaries of different architectures.",
+  "arch.arm64Hint": "Native ARM64 plugin.",
 
   "list.noResults.title": "No plugins match",
-  "list.noResults.body": "Try a different search, or turn off the duplicates filter and the format filters.",
+  "list.noResults.body": "Try a different search, or turn off the duplicates, architecture and format filters.",
   "list.noResults.clear": "Clear filters",
 
   "section.name": "Name",
@@ -153,5 +167,6 @@ export const en = {
   "diagnostics.dataDir": "Data folder",
   "diagnostics.scanFolders": "Scan folders",
   "diagnostics.none": "none",
+  "diagnostics.architectures": "Plugin architectures",
 }
 export type MessageKey = keyof typeof en

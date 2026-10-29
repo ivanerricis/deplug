@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ScrollArea } from "./ui/scroll-area"
 import { Alert } from "./ui/alert"
 import type { Plugin } from "@/core/plugin/Plugin"
+import { knownArch, type MetaMap } from "@/core/plugin/Meta"
 import { detectPlatform } from "@/core/plugin/Path"
 import { useSettings } from "@/core/settings/SettingsContext"
 import { useI18n } from "@/i18n/I18nProvider"
@@ -21,6 +22,8 @@ import { pluginKey } from "@/core/plugin/ListOps"
 
 type UninstallDialogProps = {
   plugins: Plugin[]
+  /** Optional file metadata; the architecture is shown next to each plugin when known. */
+  meta?: MetaMap
   /** `removedAny` tells the caller whether the list needs a rescan. */
   onClose: (removedAny: boolean) => void
 }
@@ -29,7 +32,7 @@ const NAME_MARK = "\u0001"
 
 type Phase = "confirm" | "running" | "done"
 
-export default function UninstallDialog({ plugins, onClose }: UninstallDialogProps) {
+export default function UninstallDialog({ plugins, meta, onClose }: UninstallDialogProps) {
   const isWindows = detectPlatform() === "windows"
   const { t, tError } = useI18n()
   const { settings } = useSettings()
@@ -94,6 +97,15 @@ export default function UninstallDialog({ plugins, onClose }: UninstallDialogPro
     }
   }
 
+  const archLabel = (plugin: Plugin) => {
+    const a = knownArch(meta?.get(buildPluginPath(plugin.installPath, plugin.name)))
+    return a ? t(`arch.${a}`) : null
+  }
+  const archOf = (plugin: Plugin) => {
+    const a = archLabel(plugin)
+    return `${plugin.type}${a ? ` · ${a}` : ""} · ${plugin.installPath}`
+  }
+
   const failed = progress.completed.filter(r => r.status === "failed").length
   const removed = progress.completed.length - failed
 
@@ -149,7 +161,12 @@ export default function UninstallDialog({ plugins, onClose }: UninstallDialogPro
               <p>
                 {before}<strong className="break-all">{plugins[0].name}</strong>{after}
               </p>
-              {phase === "confirm" && <p className="break-all text-muted-foreground">{buildPluginPath(plugins[0].installPath, plugins[0].name)}</p>}
+              {phase === "confirm" && (
+                <p className="break-all text-muted-foreground">
+                  {buildPluginPath(plugins[0].installPath, plugins[0].name)}
+                  {archLabel(plugins[0]) && ` · ${archLabel(plugins[0])}`}
+                </p>
+              )}
             </>
           )}
         </div>
@@ -177,7 +194,7 @@ export default function UninstallDialog({ plugins, onClose }: UninstallDialogPro
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium" title={plugin.name}>{plugin.name}</div>
                     <div className="truncate text-xs text-muted-foreground" title={plugin.installPath}>
-                      {plugin.type} · {plugin.installPath}
+                      {archOf(plugin)}
                     </div>
                     {result?.status === "failed" && (
                       <div className="mt-0.5 break-words text-xs text-destructive">

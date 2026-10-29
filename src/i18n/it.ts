@@ -23,9 +23,23 @@ export const it: Record<MessageKey, string> = {
   "toolbar.duplicatesOnly": "Mostra solo i duplicati",
   "toolbar.duplicatesShort": "Duplicati",
   "toolbar.formatChip": "Plugin {type}: {count}",
+  "toolbar.arch": "Architettura",
+  "toolbar.archLabel": "Filtra i plugin per architettura",
+  "toolbar.archAll": "Tutte",
+  "toolbar.archOption": "{label} ({count})",
+
+  "arch.x86": "32 bit",
+  "arch.x64": "64 bit",
+  "arch.arm64": "ARM64",
+  "arch.universal": "Universal",
+  "arch.mixed": "Misto",
+  "arch.x86Hint": "Plugin a 32 bit: per caricarlo in una DAW a 64 bit serve un host a 32 bit o un bridge.",
+  "arch.universalHint": "Contiene codice per più architetture (Intel e ARM).",
+  "arch.mixedHint": "Il bundle contiene binari di architetture diverse.",
+  "arch.arm64Hint": "Plugin ARM64 nativo.",
 
   "list.noResults.title": "Nessun plugin corrisponde",
-  "list.noResults.body": "Prova un'altra ricerca, oppure disattiva il filtro dei duplicati e i filtri dei formati.",
+  "list.noResults.body": "Prova un'altra ricerca, oppure disattiva i filtri di duplicati, architettura e formato.",
   "list.noResults.clear": "Azzera i filtri",
 
   "section.name": "Nome",
@@ -151,4 +165,5 @@ export const it: Record<MessageKey, string> = {
   "diagnostics.dataDir": "Cartella dei dati",
   "diagnostics.scanFolders": "Cartelle di scansione",
   "diagnostics.none": "nessuna",
+  "diagnostics.architectures": "Architetture dei plugin",
 }
