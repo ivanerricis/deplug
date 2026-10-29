@@ -1,6 +1,7 @@
 import type { RefObject } from "react"
 import { ChevronDown, Copy, RefreshCcw, Search, Settings, X } from "lucide-react"
 import { Button } from "./ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import BrandMark from "./BrandMark"
 import { FormatDot } from "./FormatTag"
 import { useI18n } from "@/i18n/I18nProvider"
@@ -111,28 +112,32 @@ export default function Toolbar({
         className={`${chipBase} ${duplicatesOnly ? "border-signal/60 bg-signal/10 text-foreground hover:bg-signal/15" : chipOff}`}
       >
         <Copy aria-hidden className="size-3.5" />
-        <span aria-hidden>{t("toolbar.duplicatesShort")}</span>
+        <span aria-hidden className="hidden min-[900px]:inline">{t("toolbar.duplicatesShort")}</span>
         <span aria-hidden className="tabular-nums text-muted-foreground">{duplicateCount}</span>
       </button>
 
       {archAvailable && (
-        <label
-          className={`relative inline-flex h-8 shrink-0 items-center rounded-full border text-xs font-medium focus-within:ring-[3px] focus-within:ring-ring/50 focus-within:border-ring ${archFilter === "all" ? "border-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground" : "border-signal/60 bg-signal/10 text-foreground hover:bg-signal/15"}`}
-        >
-          <span className="sr-only">{t("toolbar.archLabel")}</span>
-          <select
-            value={archFilter}
-            onChange={e => onArchFilterChange(e.target.value as ArchFilter)}
-            title={t("toolbar.archLabel")}
-            className="h-full max-w-[9.5rem] cursor-pointer appearance-none rounded-full bg-transparent pl-2.5 pr-6 text-xs font-medium outline-none"
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label={t("toolbar.archLabel")}
+            className={`${chipBase} ${archFilter === "all" ? chipOff : "border-signal/60 bg-signal/10 text-foreground hover:bg-signal/15"}`}
           >
-            <option value="all">{archFilter === "all" ? t("toolbar.arch") : t("toolbar.archAll")}</option>
-            {(["x64", "x86", "arm64"] as const).map(a => (
-              <option key={a} value={a}>{t("toolbar.archOption", { label: t(`arch.${a}`), count: archCounts[a] })}</option>
-            ))}
-          </select>
-          <ChevronDown aria-hidden className="pointer-events-none absolute right-2 size-3.5" />
-        </label>
+            <span>{archFilter === "all" ? t("toolbar.arch") : t(`arch.${archFilter}`)}</span>
+            <ChevronDown aria-hidden className="size-3.5" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuRadioGroup value={archFilter} onValueChange={v => onArchFilterChange(v as ArchFilter)}>
+              <DropdownMenuRadioItem value="all">
+                {t("toolbar.archOption", { label: t("toolbar.archAll"), count: archCounts.all })}
+              </DropdownMenuRadioItem>
+              {(["x64", "x86", "arm64"] as const).map(a => (
+                <DropdownMenuRadioItem key={a} value={a}>
+                  {t("toolbar.archOption", { label: t(`arch.${a}`), count: archCounts[a] })}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
 
       <span aria-live="polite" className="whitespace-nowrap text-xs tabular-nums text-muted-foreground max-[1099px]:sr-only">
