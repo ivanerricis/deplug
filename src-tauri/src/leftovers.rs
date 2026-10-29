@@ -211,11 +211,17 @@ pub fn dir_size_capped(dir: &Path, entry_cap: usize) -> Option<u64> {
     Some(total)
 }
 
-fn find_blocking(path: &Path) -> Result<Vec<Leftover>, String> {
+/// Directories that look like leftovers of `path`. The plugin must still exist: its bundle
+/// metadata and the registry entry are part of how the vendor name is found.
+fn find_paths(path: &Path) -> Result<Vec<PathBuf>, String> {
     validate_plugin_path(path)?;
     let vendor = vendor_from_moduleinfo(path).or_else(|| crate::vendor::registry_publisher(path));
     let names = candidate_names(path, vendor.as_deref());
-    Ok(find_in_roots(path, &names, &allowed_roots())
+    Ok(find_in_roots(path, &names, &allowed_roots()))
+}
+
+fn find_blocking(path: &Path) -> Result<Vec<Leftover>, String> {
+    Ok(find_paths(path)?
         .into_iter()
         .map(|p| Leftover {
             size: dir_size_capped(&p, SIZE_ENTRY_CAP),
@@ -232,18 +238,20 @@ pub async fn find_leftovers(path: String) -> Result<Vec<Leftover>, String> {
         .map_err(|e| format!("ERR_INTERNAL:{e}"))?
 }
 
-/// Trashes each path after re-checking it against the allow-list. Returns one
-/// `ERR_...:<path>` entry per path that failed; an empty list means everything was trashed.
+/// Trashes each path after re-checking it against the allow-list and against `found`, the
+/// leftovers the backend itself derives for the plugin. Returns one `ERR_...:<path>` entry per
+/// path that failed; an empty list means everything was trashed.
 fn trash_checked(
     paths: &[String],
     roots: &[PathBuf],
+    found: &[PathBuf],
     trash: &dyn Fn(&Path) -> Result<(), String>,
 ) -> Vec<String> {
     paths
         .iter()
         .filter_map(|s| {
             let p = Path::new(s);
-            if !is_safe_leftover_root_child(p, roots) {
+            if !is_safe_leftover_root_child(p, roots) || !found.iter().any(|f| f == p) {
                 return Some(format!("ERR_LEFTOVER_INVALID:{s}"));
             }
             trash(p).err().map(|e| format!("{e}:{s}"))
@@ -251,8 +259,12 @@ fn trash_checked(
         .collect()
 }
 
+/// Moves leftovers of `plugin_path` to the trash. Only paths the backend itself would report
+/// from `find_leftovers(plugin_path)` are accepted, so the frontend cannot name arbitrary
+/// folders. Must be called while the plugin still exists (before it is uninstalled).
 #[tauri::command]
 pub async fn trash_leftovers(
+    plugin_path: String,
     paths: Vec<String>,
     mode: State<'_, AppMode>,
 ) -> Result<Vec<String>, String> {
@@ -262,13 +274,14 @@ pub async fn trash_leftovers(
     let redirected = cfg!(target_os = "linux") && mode.portable;
     let original = mode.original_xdg_data_home.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        trash_checked(&paths, &allowed_roots(), &|p| {
+        let found = find_paths(&PathBuf::from(plugin_path))?;
+        Ok(trash_checked(&paths, &allowed_roots(), &found, &|p| {
             trash_with_system_env(p, redirected, &original)
                 .map_err(|e| format!("ERR_TRASH_FAILED({e})"))
-        })
+        }))
     })
     .await
-    .map_err(|e| format!("ERR_INTERNAL:{e}"))
+    .map_err(|e| format!("ERR_INTERNAL:{e}"))?
 }
 
 #[cfg(test)]
@@ -431,15 +444,20 @@ mod tests {
         let root = base.join("root");
         std::fs::create_dir_all(root.join("Good")).unwrap();
         std::fs::create_dir_all(root.join("Bad")).unwrap();
+        std::fs::create_dir_all(root.join("Unrelated")).unwrap();
         let roots = vec![root.clone()];
+        // What the backend itself derived for the plugin: "Unrelated" is a safe root child but
+        // not one of its leftovers, so the frontend must not be able to trash it.
+        let found = vec![root.join("Good"), root.join("Bad")];
         let seen = RefCell::new(Vec::new());
         let paths = vec![
             root.join("Good").to_string_lossy().to_string(),
             root.to_string_lossy().to_string(),
             "/etc".to_string(),
+            root.join("Unrelated").to_string_lossy().to_string(),
             root.join("Bad").to_string_lossy().to_string(),
         ];
-        let res = trash_checked(&paths, &roots, &|p| {
+        let res = trash_checked(&paths, &roots, &found, &|p| {
             seen.borrow_mut().push(p.to_path_buf());
             if p.ends_with("Bad") {
                 Err("ERR_TRASH_FAILED(x)".into())
@@ -452,6 +470,7 @@ mod tests {
             vec![
                 format!("ERR_LEFTOVER_INVALID:{}", root.display()),
                 "ERR_LEFTOVER_INVALID:/etc".to_string(),
+                format!("ERR_LEFTOVER_INVALID:{}", root.join("Unrelated").display()),
                 format!("ERR_TRASH_FAILED(x):{}", root.join("Bad").display()),
             ]
         );
