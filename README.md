@@ -25,3 +25,7 @@ Each release also ships portable builds next to the installers. They need no ins
 - **macOS**: unzip `Plugin-Uninstaller_<version>_universal_portable.zip` and keep `Plugin Uninstaller.app` and `portable.txt` in the same folder. The app is not notarized, so remove the quarantine flag: `xattr -dr com.apple.quarantine "Plugin Uninstaller.app"`. Otherwise App Translocation runs the app from a random read-only location and the portable marker is not found.
 
 Some traces can still be left outside the data folder: WebView2 crash dumps on Windows and the system WebKit caches/storage on macOS.
+
+## License
+
+Copyright (c) 2026 Ivan Erricis. All rights reserved. See [LICENSE](LICENSE).
