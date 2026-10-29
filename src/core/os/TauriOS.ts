@@ -7,7 +7,7 @@ export class TauriOS implements OSApi {
     return entries.map(e => ({
       name: e.name,
       path: `${path}/${e.name}`,
-      isDirectory: !e.isFile
+      isDirectory: e.isDirectory
     }))
   }
 
