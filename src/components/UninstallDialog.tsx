@@ -29,6 +29,7 @@ import {
   type VendorUninstaller,
 } from "@/core/plugin/Uninstall"
 import { pluginKey } from "@/core/plugin/ListOps"
+import { elevationCandidates, restoreOutcomeKey, retryElevated, tauriElevatedBackend } from "@/core/plugin/Elevate"
 
 type UninstallDialogProps = {
   plugins: Plugin[]
@@ -59,6 +60,9 @@ export default function UninstallDialog({ plugins, meta, onClose }: UninstallDia
   const [method, setMethod] = useState<"trash" | "vendor">("trash")
   const [step, setStep] = useState<"restorePoint" | "leftovers" | "plugin" | null>(null)
   const [single, setSingle] = useState<SingleUninstallResult | null>(null)
+  const [batchRestore, setBatchRestore] = useState<"created" | "skipped" | "failed">("skipped")
+  const [retrying, setRetrying] = useState(false)
+  const [retryError, setRetryError] = useState<string | null>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
   // Radix only restores focus to a <DialogTrigger>; this dialog is mounted on demand, so remember the opener.
   const opener = useRef(document.activeElement as HTMLElement | null)
@@ -105,7 +109,7 @@ export default function UninstallDialog({ plugins, meta, onClose }: UninstallDia
 
   const cancel = () => {
     if (pendingConfirm) return answer(false)
-    if (running) return
+    if (running || retrying) return
     onClose(phase === "done" && removedAny)
   }
 
@@ -148,6 +152,7 @@ export default function UninstallDialog({ plugins, meta, onClose }: UninstallDia
         return
       }
       setProgress({ completed: batch.results, current: null })
+      setBatchRestore(batch.restorePoint)
       setPhase("done")
     } catch (e) {
       setStep(null)
@@ -164,6 +169,57 @@ export default function UninstallDialog({ plugins, meta, onClose }: UninstallDia
     const a = archLabel(plugin)
     return `${plugin.type}${a ? ` · ${a}` : ""} · ${plugin.installPath}`
   }
+
+  // Items an elevated retry could fix (Windows only), for both flows.
+  const singleItem: BatchItemResult[] =
+    !many && single?.plugin?.action === "trash" && single.plugin.status === "failed"
+      ? [{ plugin: plugins[0], status: "failed", error: single.plugin.error }]
+      : []
+  const retryItems = many ? progress.completed : singleItem
+  const canElevate = phase === "done" && elevationCandidates(retryItems, isWindows).length > 0
+
+  const retryWithAdmin = async () => {
+    if (retrying) return
+    setRetrying(true)
+    setRetryError(null)
+    try {
+      const outcome = await retryElevated(retryItems, isWindows, tauriElevatedBackend)
+      if (outcome.callError) {
+        setRetryError(outcome.callError)
+      } else if (many) {
+        setProgress({ completed: outcome.items, current: null })
+      } else if (single) {
+        const [item] = outcome.items
+        setSingle({
+          ...single,
+          plugin: item.status === "removed" ? { action: "trash", status: "removed" } : { action: "trash", status: "failed", error: item.error ?? "" },
+        })
+      }
+    } finally {
+      setRetrying(false)
+    }
+  }
+
+  const restoreKey = restoreOutcomeKey(many ? batchRestore : (single?.restorePoint ?? "skipped"), isWindows && restorePoint)
+  const restoreLine = phase === "done" && restoreKey && (
+    <p className="text-xs text-muted-foreground">{t(restoreKey)}</p>
+  )
+  const elevateAlert = canElevate && (
+    <Alert className="p-3">
+      <ShieldCheck aria-hidden />
+      <AlertTitle className="line-clamp-none">
+        {many ? t("uninstall.elevate.titleMany") : t("uninstall.elevate.titleOne")}
+      </AlertTitle>
+      <AlertDescription className="gap-2">
+        <p>{t("uninstall.elevate.description")}</p>
+        {retryError && <p role="alert" className="break-words text-destructive">{tError(retryError)}</p>}
+        <Button variant="outline" size="sm" className="self-start" onClick={retryWithAdmin} disabled={retrying}>
+          {retrying ? <Loader2 aria-hidden className="animate-spin" /> : <ShieldCheck aria-hidden />}
+          {retrying ? t("uninstall.elevate.retrying") : t("uninstall.elevate.retry")}
+        </Button>
+      </AlertDescription>
+    </Alert>
+  )
 
   const failed = progress.completed.filter(r => r.status === "failed").length
   const removed = progress.completed.length - failed
@@ -278,11 +334,10 @@ export default function UninstallDialog({ plugins, meta, onClose }: UninstallDia
           </ScrollArea>
         )}
 
+        {many && phase === "done" && (<>{restoreLine}{elevateAlert}</>)}
+
         {!many && phase === "done" && single && (
           <ul className="flex flex-col gap-2 rounded border border-border p-2 text-sm">
-            {single.restorePoint === "failed" && (
-              <ResultLine tone="warn">{t("uninstall.result.restorePointFailed")}</ResultLine>
-            )}
             {single.leftoversTrashed > 0 && (
               <ResultLine tone="ok">
                 {single.leftoverFailures.length === 0
@@ -318,6 +373,8 @@ export default function UninstallDialog({ plugins, meta, onClose }: UninstallDia
             )}
           </ul>
         )}
+
+        {!many && phase === "done" && single && (<>{restoreLine}{elevateAlert}</>)}
 
         {!many && phase !== "done" && vendor && (
           <Alert role="group" className="p-3">
@@ -444,7 +501,7 @@ export default function UninstallDialog({ plugins, meta, onClose }: UninstallDia
 
         <DialogFooter>
           {phase === "done" ? (
-            <Button ref={cancelRef as never} variant="outline" onClick={cancel}>
+            <Button ref={cancelRef as never} variant="outline" onClick={cancel} disabled={retrying}>
               {t("uninstall.close")}
             </Button>
           ) : (
