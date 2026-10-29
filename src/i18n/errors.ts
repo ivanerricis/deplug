@@ -7,6 +7,12 @@ const SIMPLE: Record<string, MessageKey> = {
   ERR_RESTORE_UAC_CANCELLED: "error.restoreUacCancelled",
   ERR_RESTORE_PROTECTION_DISABLED: "error.restoreProtectionDisabled",
   ERR_RESTORE_FREQUENCY: "error.restoreFrequency",
+  ERR_LEFTOVER_INVALID: "error.leftoverInvalid",
+  ERR_VENDOR_UNSUPPORTED: "error.vendorUnsupported",
+  ERR_VENDOR_NOT_FOUND: "error.vendorNotFound",
+  ERR_VENDOR_TIMEOUT: "error.vendorTimeout",
+  ERR_VENDOR_BAD_COMMAND: "error.vendorBadCommand",
+  ERR_VENDOR_ELEVATION_REQUIRED: "error.vendorElevationRequired",
   WARN_NOT_WRITABLE: "warn.notWritable",
   WARN_APP_TRANSLOCATION: "warn.appTranslocation",
 }
@@ -16,6 +22,9 @@ const WITH_DETAIL: Record<string, MessageKey> = {
   ERR_TRASH_FAILED: "error.trashFailed",
   ERR_RESTORE_FAILED: "error.restoreFailed",
   ERR_INTERNAL: "error.internal",
+  ERR_LEFTOVER_TRASH_FAILED: "error.leftoverTrashFailed",
+  ERR_VENDOR_LAUNCH: "error.vendorLaunch",
+  ERR_VENDOR_FAILED: "error.vendorFailed",
 }
 
 /** Maps a stable backend error/warning code to a localized message. Unknown strings are returned unchanged. */
