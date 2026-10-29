@@ -31,7 +31,7 @@ type SettingsDialogProps = {
 }
 
 export default function SettingsDialog({ platform, systemPaths, appInfo, initialTab = "general", onClose }: SettingsDialogProps) {
-  const { t } = useI18n()
+  const { t, tError } = useI18n()
   const { saveError, clearSaveError } = useSettings()
   const [tab, setTab] = useState<TabId>(initialTab)
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -115,7 +115,7 @@ export default function SettingsDialog({ platform, systemPaths, appInfo, initial
           <div className="flex min-w-0 flex-1 flex-col">
             {saveError && (
               <div role="alert" className="flex shrink-0 items-start justify-between gap-2 bg-destructive/10 px-5 py-2 text-sm text-destructive">
-                <span className="break-words">{t("settings.saveError", { error: saveError })}</span>
+                <span className="break-words">{t("settings.saveError", { error: tError(saveError) })}</span>
                 <button type="button" onClick={clearSaveError} className="shrink-0 cursor-pointer rounded px-1 underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
                   {t("settings.dismiss")}
                 </button>
