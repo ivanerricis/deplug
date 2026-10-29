@@ -9,9 +9,10 @@ type SectionProps = {
     items: Plugin[]
     collapsed: boolean
     onToggle: () => void
+    onUninstalled?: () => void
 }
 
-export default function Section({ type, items, collapsed, onToggle }: SectionProps) {
+export default function Section({ type, items, collapsed, onToggle, onUninstalled }: SectionProps) {
     if (items.length === 0) return null
 
     return (
@@ -26,7 +27,7 @@ export default function Section({ type, items, collapsed, onToggle }: SectionPro
                 <div className="flex flex-col divide-y-2">
                     {items.map(plugin => (
                         <div className="flex flex-col" key={`${plugin.type}-${plugin.installPath}-${plugin.name}`}>
-                            <Row plugin={plugin}></Row>
+                            <Row plugin={plugin} onUninstalled={onUninstalled}></Row>
                         </div>
                     ))}
                 </div>
