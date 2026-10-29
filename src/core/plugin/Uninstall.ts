@@ -46,7 +46,7 @@ export async function uninstallPlugin(plugin: Plugin, options: UninstallOptions)
 
   if (restorePoint) {
     try {
-      await backend.createRestorePoint(`Plugin Uninstaller: ${plugin.name}`)
+      await backend.createRestorePoint(`Deplug: ${plugin.name}`)
       rp = "created"
     } catch (e) {
       rp = "failed"
