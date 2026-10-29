@@ -254,6 +254,9 @@ fn base64_encode(data: &[u8]) -> String {
 /// Maximum number of paths accepted by one elevated trash call.
 #[cfg_attr(not(windows), allow(dead_code))]
 const MAX_ELEVATED_PATHS: usize = 100;
+/// Upper bound for the base64 script so the elevated command line stays under the Windows limit.
+#[cfg_attr(not(windows), allow(dead_code))]
+const MAX_ENCODED_SCRIPT_LEN: usize = 30_000;
 
 /// Quotes a string as a PowerShell single-quoted literal. Besides `'`, PowerShell also treats the
 /// typographic quotes U+2018, U+2019, U+201A and U+201B as quote characters, so all are doubled.
@@ -392,6 +395,11 @@ fn trash_elevated_blocking(paths: Vec<String>) -> Result<Vec<String>, String> {
     let inner = build_trash_script(&paths, &log_str);
     let utf16: Vec<u8> = inner.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
     let encoded = base64_encode(&utf16);
+    // The whole command line is limited to about 32,000 characters on Windows, and `encoded` appears in it.
+    if encoded.len() > MAX_ENCODED_SCRIPT_LEN {
+        let _ = std::fs::remove_file(&log);
+        return Err("ERR_INVALID_PATH".into());
+    }
     let outer = format!(
         "$p = Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -PassThru -ArgumentList '-NoProfile','-NonInteractive','-EncodedCommand','{encoded}'; exit $p.ExitCode"
     );
