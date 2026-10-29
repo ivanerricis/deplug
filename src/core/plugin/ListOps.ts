@@ -1,5 +1,5 @@
 import type { Plugin } from "./Plugin"
-import type { MetaMap } from "./Meta"
+import { knownArch, type MetaMap } from "./Meta"
 import { buildPluginPath } from "./Uninstall"
 
 export type SortKey = "name" | "path" | "size" | "modified"
@@ -24,6 +24,35 @@ export function filterPlugins(plugins: Plugin[], query: string): Plugin[] {
   const q = fold(query.trim())
   if (q === "") return plugins
   return plugins.filter(p => fold(p.name).includes(q) || fold(p.installPath).includes(q))
+}
+
+/** Architecture filter: everything, or plugins that are (at least partly) 64-bit / 32-bit / ARM64. */
+export type ArchFilter = "all" | "x64" | "x86" | "arm64"
+
+/**
+ * Keeps plugins whose detected architecture matches. Plugins of unknown architecture are hidden
+ * by any filter other than "all". "universal" and "mixed" bundles match each architecture they may contain.
+ */
+export function filterByArch(plugins: Plugin[], filter: ArchFilter, meta?: MetaMap): Plugin[] {
+  if (filter === "all") return plugins
+  return plugins.filter(p => {
+    const arch = knownArch(meta?.get(buildPluginPath(p.installPath, p.name)))
+    if (arch === null) return false
+    if (arch === filter) return true
+    if (arch === "universal") return filter === "x64" || filter === "arm64"
+    if (arch === "mixed") return true
+    return false
+  })
+}
+
+/** How many plugins match each architecture filter (for chip/menu counts). */
+export function countByArch(plugins: Plugin[], meta?: MetaMap): Record<ArchFilter, number> {
+  return {
+    all: plugins.length,
+    x64: filterByArch(plugins, "x64", meta).length,
+    x86: filterByArch(plugins, "x86", meta).length,
+    arm64: filterByArch(plugins, "arm64", meta).length,
+  }
 }
 
 const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" })

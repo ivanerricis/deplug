@@ -1,6 +1,9 @@
 import { Folder, Trash } from "lucide-react"
+import ArchPill from "./ArchPill"
 import { Button } from "./ui/button"
 import { Checkbox } from "./ui/checkbox"
+import { Badge } from "./ui/badge"
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip"
 import { MODIFIED_CELL, ROW_GRID } from "./listLayout"
 import type { Plugin } from "@/core/plugin/Plugin"
 import type { PluginMeta } from "@/core/plugin/Meta"
@@ -53,15 +56,21 @@ export default function Row({ plugin, selected, duplicates, meta, showPath, home
             <div role="cell" className="min-w-0 py-2 pr-2">
                 <div className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-sm font-medium" title={plugin.name}>{plugin.name}</span>
+                    <ArchPill arch={meta?.arch} />
                     {tip && (
-                        <span
-                            title={tip}
-                            className="inline-flex shrink-0 cursor-help items-center gap-1 rounded bg-signal/12 px-1.5 py-px text-[11px] font-medium text-foreground"
-                        >
-                            <span aria-hidden className="size-1.5 rounded-full bg-signal" />
-                            {t("row.duplicate")}
-                            <span className="sr-only">. {tip.replace(/\n/g, ". ")}</span>
-                        </span>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Badge
+                                    variant="outline"
+                                    className="cursor-help gap-1 border-transparent bg-signal/12 px-1.5 py-px text-[11px] text-foreground"
+                                >
+                                    <span aria-hidden className="size-1.5 rounded-full bg-signal" />
+                                    {t("row.duplicate")}
+                                    <span className="sr-only">. {tip.replace(/\n/g, ". ")}</span>
+                                </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent className="whitespace-pre-line text-left">{tip}</TooltipContent>
+                        </Tooltip>
                     )}
                 </div>
                 {folder !== null && (
@@ -84,26 +93,34 @@ export default function Row({ plugin, selected, duplicates, meta, showPath, home
                 // Revealed on hover/focus; always visible on touch devices. Space is reserved so nothing shifts.
                 className="flex items-center justify-end pr-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 motion-reduce:transition-none [@media(hover:none)]:opacity-100"
             >
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className={actionBase}
-                    aria-label={t("row.openFolder", { name: plugin.name })}
-                    title={t("row.openFolder", { name: plugin.name })}
-                    onClick={() => { openPath(plugin.installPath).catch(console.error) }}
-                >
-                    <Folder aria-hidden />
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`${actionBase} hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive`}
-                    aria-label={t("row.uninstall", { name: plugin.name })}
-                    title={t("row.uninstall", { name: plugin.name })}
-                    onClick={onUninstall}
-                >
-                    <Trash aria-hidden />
-                </Button>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={actionBase}
+                            aria-label={t("row.openFolder", { name: plugin.name })}
+                            onClick={() => { openPath(plugin.installPath).catch(console.error) }}
+                        >
+                            <Folder aria-hidden />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("row.openFolder", { name: plugin.name })}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`${actionBase} hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive`}
+                            aria-label={t("row.uninstall", { name: plugin.name })}
+                            onClick={onUninstall}
+                        >
+                            <Trash aria-hidden />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("row.uninstall", { name: plugin.name })}</TooltipContent>
+                </Tooltip>
             </div>
         </div>
     )

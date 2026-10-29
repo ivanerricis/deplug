@@ -6,9 +6,11 @@ On startup (unless you turned that off in [Settings](/settings#scan)), and whene
 
 | System | Folders |
 | --- | --- |
-| Windows | `C:\Program Files\Common Files\VST2`, `C:\Program Files\Steinberg\VSTPlugins`, `C:\Program Files (x86)\Steinberg\VstPlugins`, `C:\Program Files\Common Files\VST3`, `C:\Program Files\Common Files\Avid\Audio\Plug-Ins` |
-| macOS | `/Library/Audio/Plug-Ins/VST`, `.../VST3`, `.../Components`, `/Library/Application Support/Avid/Audio/Plug-Ins`, and the same `VST`, `VST3` and `Components` folders under `~/Library/Audio/Plug-Ins` |
+| Windows | VST2: `Program Files\VstPlugins`, `Program Files (x86)\VstPlugins`, `Common Files\VST2` (both), `Program Files\Steinberg\VSTPlugins`, `Program Files (x86)\Steinberg\VstPlugins`. VST3: `Common Files\VST3` (both), `%LOCALAPPDATA%\Programs\Common\VST3`. AAX: `Common Files\Avid\Audio\Plug-Ins` (both). See below. |
+| macOS | `/Library/Audio/Plug-Ins/VST`, `.../VST3`, `.../Components`, `/Library/Application Support/Avid/Audio/Plug-Ins`, and the same `VST`, `VST3` and `Components` folders under `~/Library/Audio/Plug-Ins` plus `~/Library/Application Support/Avid/Audio/Plug-Ins` |
 | Linux | `/usr/lib/vst`, `/usr/local/lib/vst`, `~/.vst`, `/usr/lib/vst3`, `/usr/local/lib/vst3`, `~/.vst3` |
+
+On Windows the roots are read from the system (the `ProgramFiles`, `ProgramFiles(x86)`, `CommonProgramFiles` and `CommonProgramFiles(x86)` locations), so a relocated or localised Program Files works. "Both" means the 64-bit and the 32-bit (`Program Files (x86)`) variant of the folder.
 
 Anything you add as a [custom folder](/custom-folders) is scanned too, by default up to six levels deep (you can change this between 1 and 10 in [Settings](/settings#scan)). You can also switch off individual standard folders there.
 
@@ -23,13 +25,25 @@ Anything you add as a [custom folder](/custom-folders) is scanned too, by defaul
 
 A plugin bundle (a folder such as `Something.vst3`) is listed as one plugin; Deplug does not look inside it.
 
+## AAX, 32-bit and 64-bit
+
+**AAX** (Pro Tools) plugins are `.aaxplugin` bundles and get a section of their own that works like the others: sorting, selection, duplicates and uninstall. On Windows they live in `Common Files\Avid\Audio\Plug-Ins`, on macOS in `/Library/Application Support/Avid/Audio/Plug-Ins` and the same folder under your home. AU is macOS only.
+
+Deplug reads the architecture of each plugin file. Next to the name you may see a small pill:
+
+- **32-bit** (amber): the plugin will not load in a 64-bit DAW without a bridge. Typical for plugins under `Program Files (x86)`.
+- **ARM64**, **Universal** (Intel and ARM) and **Mixed** (a bundle holding different architectures), in muted grey.
+- Plain 64-bit plugins, the norm, show no pill, and neither do plugins whose architecture could not be determined.
+
+The **Architecture** menu in the toolbar (All, 64-bit, 32-bit, ARM64) narrows the list to one architecture. It works together with search, the format checkboxes and the duplicates filter, and its counts follow them. Plugins of unknown architecture are hidden while a specific architecture is chosen. The menu appears once at least one architecture is known. The architecture is also shown in the uninstall dialog and in the copied diagnostics.
+
 ## Filter by format
 
 The four checkboxes in the toolbar (VST2, VST3, AAX, AU) show or hide the section of that format. Filtering only changes what you see; it does not rescan. Each section can also be collapsed on its own, and a format with no plugins has no section.
 
 ## Search
 
-The search field in the toolbar filters the list as you type. It matches the plugin name or its path, ignoring case and accents. Press **Ctrl+F** (**Cmd+F** on macOS) to jump to it from anywhere in the window. **Esc** clears the search; use the cross inside the field for the same. If nothing matches, a **Clear filters** button resets the search, the duplicates filter and the format filters in one go.
+The search field in the toolbar filters the list as you type. It matches the plugin name or its path, ignoring case and accents. Press **Ctrl+F** (**Cmd+F** on macOS) to jump to it from anywhere in the window. **Esc** clears the search; use the cross inside the field for the same. If nothing matches, a **Clear filters** button resets the search, the duplicates, architecture and format filters in one go.
 
 ## Sorting
 

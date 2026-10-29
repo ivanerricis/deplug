@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
+import { invoke } from "@tauri-apps/api/core"
 import { homeDir } from "@tauri-apps/api/path"
 import { PluginScanner } from "./core/plugin/PluginScanner"
 import { TauriOS } from "./core/os/TauriOS"
-import { detectPlatform, getPluginPaths } from "./core/plugin/Path"
+import { detectPlatform, getPluginPaths, type SystemPaths } from "./core/plugin/Path"
 import UpdatePage from "./LoadingComponent"
 import Toolbar from "./components/Toolbar"
 import Section from "./components/Section"
@@ -13,13 +14,13 @@ import SettingsDialog from "./components/SettingsDialog"
 import { Button } from "./components/ui/button"
 import BrandMark from "./components/BrandMark"
 import { buildPluginPath } from "./core/plugin/Uninstall"
-import { fetchPluginMeta, type PluginMeta } from "./core/plugin/Meta"
+import { fetchPluginMeta, knownArch, type PluginMeta } from "./core/plugin/Meta"
 import { getAppInfo, type AppInfo } from "./core/settings/AppSettings"
 import { useSettings } from "./core/settings/SettingsContext"
 import { useI18n } from "./i18n/I18nProvider"
 import type { Plugin } from "@/core/plugin/Plugin"
 import type { ScanResult } from "./core/plugin/PluginScanner"
-import { filterPlugins, findDuplicates, pluginKey, sortPlugins, type SortKey, type SortState } from "./core/plugin/ListOps"
+import { countByArch, filterByArch, filterPlugins, findDuplicates, type ArchFilter, pluginKey, sortPlugins, type SortKey, type SortState } from "./core/plugin/ListOps"
 
 type SectionType = "VST2" | "VST3" | "AAX" | "AU"
 const SECTION_ORDER: SectionType[] = ["VST2", "VST3", "AAX", "AU"]
@@ -45,13 +46,16 @@ export default function App() {
   const [sorts, setSorts] = useState<Record<SectionType, SortState>>({
     VST2: DEFAULT_SORT, VST3: DEFAULT_SORT, AAX: DEFAULT_SORT, AU: DEFAULT_SORT,
   })
+  const [archFilter, setArchFilter] = useState<ArchFilter>("all")
+  const [sysPaths, setSysPaths] = useState<SystemPaths | null>(null)
+  const sysPathsRef = useRef<SystemPaths | null>(null)
   const [meta, setMeta] = useState<ReadonlyMap<string, PluginMeta>>(new Map())
   const metaRun = useRef(0)
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [uninstallTargets, setUninstallTargets] = useState<Plugin[] | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const systemPaths = useMemo(() => getPluginPaths(platform, home), [platform, home])
+  const systemPaths = useMemo(() => getPluginPaths(platform, home, sysPaths), [platform, home, sysPaths])
   // What the last scan used, so closing settings only rescans when it would change the list.
   const lastScanKey = useRef<string>("")
   const settingsRef = useRef(settings)
@@ -59,6 +63,19 @@ export default function App() {
 
   const scanKey = (s: typeof settings) =>
     JSON.stringify([s.customScanPaths, s.customScanDepth, s.disabledSystemPaths])
+
+  // Windows known folders from the backend; null (dev mode, other OS) falls back to the C:/ defaults.
+  const loadSystemPaths = useCallback(async () => {
+    if (sysPathsRef.current) return sysPathsRef.current
+    try {
+      const sys = await invoke<SystemPaths>("system_paths")
+      sysPathsRef.current = sys ?? null
+      setSysPaths(sys ?? null)
+    } catch {
+      // Keep the defaults.
+    }
+    return sysPathsRef.current
+  }, [])
 
   const scanPlugins = useCallback(async () => {
     const s = settingsRef.current
@@ -69,7 +86,7 @@ export default function App() {
       setHome(homePath)
       const scanner = new PluginScanner(
         new TauriOS(),
-        getPluginPaths(platform, homePath),
+        getPluginPaths(platform, homePath, await loadSystemPaths()),
         platform,
         s.customScanPaths,
         { customDepth: s.customScanDepth, disabledPaths: s.disabledSystemPaths },
@@ -94,9 +111,10 @@ export default function App() {
     } finally {
       setScanning(false)
     }
-  }, [platform])
+  }, [platform, loadSystemPaths])
 
   useEffect(() => {
+    void loadSystemPaths()
     getAppInfo().then(setAppInfo, () => {})
     homeDir().then(h => setHome(h.replace(/[\\/]+$/, "")), () => {})
   }, [])
@@ -116,6 +134,20 @@ export default function App() {
   }, [queryInput])
 
   const duplicates = useMemo(() => findDuplicates(result.all), [result.all])
+  const archCounts = useMemo(() => countByArch(result.all, meta), [result.all, meta])
+  const archAvailable = useMemo(
+    () => result.all.some(p => knownArch(meta.get(buildPluginPath(p.installPath, p.name))) !== null),
+    [result.all, meta],
+  )
+  // Plugin count per detected architecture, for the diagnostics text.
+  const archSummary = useMemo(() => {
+    const counts: Partial<Record<NonNullable<PluginMeta["arch"]>, number>> = {}
+    for (const p of result.all) {
+      const a = knownArch(meta.get(buildPluginPath(p.installPath, p.name)))
+      if (a) counts[a] = (counts[a] ?? 0) + 1
+    }
+    return counts
+  }, [result.all, meta])
 
   const view = useMemo(() => {
     const byType: Record<SectionType, Plugin[]> = { VST2: result.vst2, VST3: result.vst3, AAX: result.aax, AU: result.au }
@@ -123,10 +155,11 @@ export default function App() {
     for (const type of SECTION_ORDER) {
       let list = filterPlugins(byType[type], query)
       if (duplicatesOnly) list = list.filter(p => duplicates.has(pluginKey(p)))
+      list = filterByArch(list, archFilter, meta)
       out[type] = { shown: sortPlugins(list, sorts[type], meta), total: byType[type].length }
     }
     return out
-  }, [result, query, duplicatesOnly, duplicates, sorts, meta])
+  }, [result, query, duplicatesOnly, archFilter, duplicates, sorts, meta])
 
   const visibleShown = useMemo(
     () => SECTION_ORDER.filter(type => visible[type]).flatMap(type => view[type].shown),
@@ -170,6 +203,7 @@ export default function App() {
     setQueryInput("")
     setQuery("")
     setDuplicatesOnly(false)
+    setArchFilter("all")
     setVisible({ VST2: true, VST3: true, AAX: true, AU: true })
   }
 
@@ -227,10 +261,14 @@ export default function App() {
         duplicatesOnly={duplicatesOnly}
         onToggleDuplicatesOnly={setDuplicatesOnly}
         duplicateCount={duplicates.size}
+        archFilter={archFilter}
+        onArchFilterChange={setArchFilter}
+        archCounts={archCounts}
+        archAvailable={archAvailable}
       />
 
       {showSettings && (
-        <SettingsDialog platform={platform} systemPaths={systemPaths} appInfo={appInfo} onClose={closeSettings} />
+        <SettingsDialog platform={platform} systemPaths={systemPaths} archSummary={archSummary} appInfo={appInfo} onClose={closeSettings} />
       )}
 
       {result.all.length === 0 ? (
@@ -287,7 +325,7 @@ export default function App() {
         />
       )}
 
-      {uninstallTargets && <UninstallDialog plugins={uninstallTargets} onClose={closeUninstall} />}
+      {uninstallTargets && <UninstallDialog plugins={uninstallTargets} meta={meta} onClose={closeUninstall} />}
     </div>
   )
 }

@@ -1,4 +1,6 @@
 import type { PluginType } from "@/core/plugin/Plugin"
+import { Badge } from "./ui/badge"
+import { cn } from "@/lib/utils"
 
 /** Static class names so Tailwind can see them. Tones are desaturated; each passes AA on its tint. */
 const TAG: Record<PluginType, string> = {
@@ -16,9 +18,9 @@ const DOT: Record<PluginType, string> = {
 
 export function FormatTag({ type, className = "" }: { type: PluginType; className?: string }) {
   return (
-    <span className={`inline-flex h-[18px] shrink-0 items-center rounded px-1.5 text-[11px] font-semibold leading-none ${TAG[type]} ${className}`}>
+    <Badge variant="secondary" className={cn("h-[18px] border-transparent px-1.5 py-0 text-[11px] font-semibold leading-none", TAG[type], className)}>
       {type}
-    </span>
+    </Badge>
   )
 }
 

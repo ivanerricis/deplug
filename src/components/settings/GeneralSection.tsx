@@ -1,61 +1,52 @@
 import { useSettings } from "@/core/settings/SettingsContext"
 import type { LanguageSetting, ThemeSetting } from "@/core/settings/AppSettings"
 import { useI18n } from "@/i18n/I18nProvider"
-import { Select } from "../ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group"
+import { Separator } from "../ui/separator"
 import { SettingRow } from "./SettingRow"
-import { cn } from "@/lib/utils"
 
 const THEMES: ThemeSetting[] = ["system", "light", "dark"]
+const LANGUAGES: LanguageSetting[] = ["system", "en", "it"]
 
 export default function GeneralSection() {
   const { t } = useI18n()
   const { settings, update } = useSettings()
   return (
-    <div className="flex flex-col divide-y divide-border">
+    <div className="flex flex-col">
       <SettingRow label={t("settings.general.language")} hint={t("settings.general.languageHint")} labelId="set-lang" hintId="set-lang-h">
-        <Select
-          aria-labelledby="set-lang"
-          aria-describedby="set-lang-h"
-          value={settings.language}
-          onChange={e => update({ language: e.target.value as LanguageSetting })}
-        >
-          <option value="system">{t("settings.language.system")}</option>
-          <option value="en">{t("settings.language.en")}</option>
-          <option value="it">{t("settings.language.it")}</option>
+        <Select value={settings.language} onValueChange={v => update({ language: v as LanguageSetting })}>
+          <SelectTrigger aria-labelledby="set-lang" aria-describedby="set-lang-h" className="min-w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent position="popper" align="end">
+            {LANGUAGES.map(value => (
+              <SelectItem key={value} value={value}>{t(`settings.language.${value}`)}</SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       </SettingRow>
+      <Separator />
       <SettingRow label={t("settings.general.theme")} hint={t("settings.general.themeHint")} labelId="set-theme" hintId="set-theme-h">
-        <div role="radiogroup" aria-labelledby="set-theme" aria-describedby="set-theme-h" className="inline-flex rounded border border-input p-0.5">
-          {THEMES.map(value => {
-            const active = settings.theme === value
-            return (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                tabIndex={active ? 0 : -1}
-                onClick={() => update({ theme: value })}
-                onKeyDown={e => {
-                  const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0
-                  if (!step) return
-                  e.preventDefault()
-                  const next = THEMES[(THEMES.indexOf(value) + step + THEMES.length) % THEMES.length]
-                  update({ theme: next })
-                  ;(e.currentTarget.parentElement?.querySelector(`[data-theme="${next}"]`) as HTMLElement | null)?.focus()
-                }}
-                data-theme={value}
-                className={cn(
-                  "h-8 cursor-pointer rounded-sm px-3 text-sm outline-none transition-colors",
-                  "focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                )}
-              >
-                {t(`settings.theme.${value}`)}
-              </button>
-            )
-          })}
-        </div>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          value={settings.theme}
+          // Radix reports "" when the active item is clicked again; a theme is always required.
+          onValueChange={v => { if (v) update({ theme: v as ThemeSetting }) }}
+          aria-labelledby="set-theme"
+          aria-describedby="set-theme-h"
+        >
+          {THEMES.map(value => (
+            <ToggleGroupItem
+              key={value}
+              value={value}
+              className="px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              {t(`settings.theme.${value}`)}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       </SettingRow>
     </div>
   )
