@@ -24,6 +24,8 @@ describe("pluginTypeOf", () => {
     expect(pluginTypeOf("vstlib-notes.txt", "windows")).toBeNull()
     expect(pluginTypeOf("Foo.dll", "linux")).toBeNull()
     expect(pluginTypeOf("Foo.vst", "macos")).toBe("VST2")
+    expect(pluginTypeOf("Foo.component", "macos")).toBe("AU")
+    expect(pluginTypeOf("Foo.component", "windows")).toBeNull()
   })
 })
 
@@ -55,9 +57,27 @@ describe("PluginScanner", () => {
   })
 })
 
+describe("custom paths", () => {
+  it("scans manually added folders deeper than system ones", async () => {
+    const d = (n: number) => Array.from({ length: n }, (_, i) => `/c${"/x".repeat(i)}`)
+    const tree: Record<string, DirEntry[]> = {}
+    for (let i = 0; i < 5; i++) {
+      const dir = d(5)[i]
+      tree[dir] = [folder(dir, "x")]
+    }
+    tree["/c/x/x/x/x"] = [file("/c/x/x/x/x", "deep.dll")]
+    tree["/c/x/x/x"] = [folder("/c/x/x/x", "x")]
+    const system = await new PluginScanner(fakeOS(tree), ["/c"], "windows").search()
+    expect(system.all).toHaveLength(0)
+    const custom = await new PluginScanner(fakeOS(tree), [], "windows", ["/c"]).search()
+    expect(custom.vst2.map(p => p.name)).toEqual(["deep.dll"])
+  })
+})
+
 describe("getPluginPaths", () => {
   it("uses the home dir on macOS and linux", () => {
     expect(getPluginPaths("macos", "/Users/me")).toContain("/Users/me/Library/Audio/Plug-Ins/VST3")
+    expect(getPluginPaths("macos", "/Users/me")).toContain("/Library/Audio/Plug-Ins/Components")
     expect(getPluginPaths("linux", "/home/me")).toContain("/home/me/.vst3")
   })
 })

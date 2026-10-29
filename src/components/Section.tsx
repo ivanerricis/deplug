@@ -2,7 +2,7 @@ import Row from "./Row"
 import HeaderRow from "./HeaderRow"
 import { Plugin } from "@/core/plugin/Plugin"
 
-type SectionType = "VST2" | "VST3" | "AAX"
+type SectionType = "VST2" | "VST3" | "AAX" | "AU"
 
 type SectionProps = {
     type: SectionType
