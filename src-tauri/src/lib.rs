@@ -1,6 +1,7 @@
 mod meta;
 mod portable;
 mod settings;
+mod syspaths;
 mod uninstall;
 
 use tauri::Manager;
@@ -32,6 +33,7 @@ pub fn run() {
         .manage(mode.clone())
         .invoke_handler(tauri::generate_handler![
             meta::plugin_meta,
+            syspaths::system_paths,
             settings::get_settings,
             settings::save_custom_paths,
             settings::save_settings,
