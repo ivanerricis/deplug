@@ -37,3 +37,7 @@ export function getPluginPaths(platform: Platform, home: string): string[] {
       ]
   }
 }
+
+export function osLabel(platform: Platform): string {
+  return platform === "windows" ? "Windows" : platform === "macos" ? "macOS" : "Linux"
+}

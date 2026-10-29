@@ -32,6 +32,12 @@ pub fn save_custom_paths(paths: Vec<String>, path: State<'_, SettingsPath>) -> R
     portable_core::save(&path.0, &settings).map_err(|e| e.to_string())
 }
 
+/// Persists the whole settings struct after sanitizing it.
+#[tauri::command]
+pub fn save_settings(settings: Settings, path: State<'_, SettingsPath>) -> Result<(), String> {
+    portable_core::save(&path.0, &settings.sanitized()).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn app_info(mode: State<'_, AppMode>) -> AppInfo {
     AppInfo {

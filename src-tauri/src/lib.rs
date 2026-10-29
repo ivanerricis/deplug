@@ -32,6 +32,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             settings::get_settings,
             settings::save_custom_paths,
+            settings::save_settings,
             settings::app_info,
             uninstall::trash_plugin,
             uninstall::create_restore_point
