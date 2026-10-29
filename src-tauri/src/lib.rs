@@ -1,3 +1,4 @@
+mod meta;
 mod portable;
 mod settings;
 mod uninstall;
@@ -30,6 +31,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(mode.clone())
         .invoke_handler(tauri::generate_handler![
+            meta::plugin_meta,
             settings::get_settings,
             settings::save_custom_paths,
             settings::save_settings,
