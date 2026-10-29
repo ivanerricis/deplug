@@ -1,6 +1,12 @@
 //! Plugin uninstall backend: move plugins to the trash and create restore points.
 
+use std::ffi::OsString;
 use std::path::{Component, Path};
+use std::sync::Mutex;
+
+use tauri::State;
+
+use crate::portable::AppMode;
 
 const PLUGIN_EXTENSIONS: [&str; 6] = ["dll", "vst", "vst3", "aaxplugin", "component", "so"];
 
@@ -51,12 +57,43 @@ fn home_dir() -> Option<std::path::PathBuf> {
     std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" }).map(Into::into)
 }
 
+/// Serializes the temporary environment swap done by `trash_with_system_env`.
+static TRASH_ENV_LOCK: Mutex<()> = Mutex::new(());
+
+/// Moves `path` to the system trash. In portable mode on Linux `XDG_DATA_HOME` points into
+/// the app's data folder, which would hide the trashed file inside it, so the original value is
+/// put back for the duration of the call.
+fn trash_with_system_env(
+    path: &Path,
+    redirected: bool,
+    original: &Option<OsString>,
+) -> Result<(), trash::Error> {
+    if !redirected {
+        return trash::delete(path);
+    }
+    let _guard = TRASH_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let current = std::env::var_os("XDG_DATA_HOME");
+    match original {
+        Some(v) => std::env::set_var("XDG_DATA_HOME", v),
+        None => std::env::remove_var("XDG_DATA_HOME"),
+    }
+    let result = trash::delete(path);
+    match current {
+        Some(v) => std::env::set_var("XDG_DATA_HOME", v),
+        None => std::env::remove_var("XDG_DATA_HOME"),
+    }
+    result
+}
+
 #[tauri::command]
-pub async fn trash_plugin(path: String) -> Result<(), String> {
+pub async fn trash_plugin(path: String, mode: State<'_, AppMode>) -> Result<(), String> {
     let p = std::path::PathBuf::from(path);
+    let redirected = cfg!(target_os = "linux") && mode.portable;
+    let original = mode.original_xdg_data_home.clone();
     tauri::async_runtime::spawn_blocking(move || {
         validate_plugin_path(&p)?;
-        trash::delete(&p).map_err(|e| format!("ERR_TRASH_FAILED:{e}"))
+        trash_with_system_env(&p, redirected, &original)
+            .map_err(|e| format!("ERR_TRASH_FAILED:{e}"))
     })
     .await
     .map_err(|e| format!("ERR_INTERNAL:{e}"))?
@@ -207,6 +244,28 @@ pub async fn create_restore_point(description: String) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn portable_trash_uses_the_original_data_home() {
+        use super::*;
+        let dir = std::env::temp_dir().join(format!("deplug-trash-test-{}", std::process::id()));
+        let original = dir.join("system-data");
+        let redirected = dir.join("portable-data");
+        std::fs::create_dir_all(&original).unwrap();
+        std::fs::create_dir_all(&redirected).unwrap();
+        let file = dir.join("Plugin.vst3");
+        std::fs::write(&file, b"x").unwrap();
+
+        std::env::set_var("XDG_DATA_HOME", &redirected);
+        trash_with_system_env(&file, true, &Some(original.clone().into())).unwrap();
+
+        assert!(!file.exists());
+        assert!(original.join("Trash/files/Plugin.vst3").exists());
+        assert!(!redirected.join("Trash").exists());
+        assert_eq!(std::env::var_os("XDG_DATA_HOME"), Some(redirected.into()));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     use super::*;
     use std::path::PathBuf;
 
