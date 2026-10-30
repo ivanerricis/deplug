@@ -16,7 +16,7 @@ jobs:
   frontend:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -34,7 +34,7 @@ jobs:
         os: [ubuntu-22.04, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install Linux dependencies
         if: startsWith(matrix.os, 'ubuntu')
         run: |
@@ -59,7 +59,7 @@ jobs:
   rust-core:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Check for portable-core crate
         id: detect
         run: |

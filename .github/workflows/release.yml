@@ -21,7 +21,7 @@ jobs:
   verify-version:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: ./packaging/check-version.sh "$RELEASE_TAG"
       - name: Check updater signing key
         env:
@@ -46,7 +46,7 @@ jobs:
             args: "--target universal-apple-darwin"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install Linux dependencies
         if: startsWith(matrix.os, 'ubuntu')
         run: |
