@@ -5,16 +5,19 @@ import { buildPluginPath, errorMessage, type BatchItemResult } from "./Uninstall
 export interface ElevatedBackend {
   /** Returns one `<code>:<path>` entry per failed path; an empty array means everything was moved. */
   trashPluginsElevated(paths: string[]): Promise<string[]>
+  /** Same for a permanent deletion (no Recycle Bin). Needed to retry items removed with the "permanent" method. */
+  deletePluginsElevated?(paths: string[]): Promise<string[]>
 }
 
 export const tauriElevatedBackend: ElevatedBackend = {
   trashPluginsElevated: paths => invoke<string[]>("trash_plugins_elevated", { paths }),
+  deletePluginsElevated: paths => invoke<string[]>("delete_plugins_elevated", { paths }),
 }
 
 /** True for the stable access-denied code and for the raw text older builds returned. */
 export function isAccessDeniedError(error: string | undefined): boolean {
   if (!error) return false
-  return error.includes("ERR_TRASH_ACCESS_DENIED") || error.includes("Some operations were aborted")
+  return error.includes("ERR_TRASH_ACCESS_DENIED") || error.includes("ERR_DELETE_ACCESS_DENIED") || error.includes("Some operations were aborted")
 }
 
 /** Failed items that an elevated retry could fix. Never any off Windows or when the process is already elevated. */
@@ -28,7 +31,7 @@ export function parseElevatedFailure(entry: string): { path: string; error: stri
   const m = /^(ERR_[A-Z_]+)(?:\(([^]*?)\))?:([^]*)$/.exec(entry)
   if (!m) return { path: entry, error: entry }
   const [, code, detail, path] = m
-  return { path, error: code === "ERR_TRASH_FAILED" ? `ERR_TRASH_FAILED:${detail ?? ""}` : code }
+  return { path, error: code === "ERR_TRASH_FAILED" || code === "ERR_DELETE_FAILED" ? `${code}:${detail ?? ""}` : code }
 }
 
 export interface ElevatedRetryResult {
@@ -45,21 +48,32 @@ export async function retryElevated(items: BatchItemResult[], isWindows: boolean
   const candidates = elevationCandidates(items, isWindows, alreadyElevated)
   if (candidates.length === 0) return { items }
   const pathOf = (i: BatchItemResult) => buildPluginPath(i.plugin.installPath, i.plugin.name)
-  let failures: string[]
-  try {
-    failures = await backend.trashPluginsElevated(candidates.map(pathOf))
-  } catch (e) {
-    return { items, callError: errorMessage(e) }
-  }
-  const failed = new Map(failures.map(parseElevatedFailure).map(f => [f.path, f.error]))
-  const retried = new Set(candidates)
-  return {
-    items: items.map(item => {
-      if (!retried.has(item)) return item
+  // Items removed with the "permanent" method are retried with the elevated delete, the others with the elevated trash.
+  const groups = [
+    { items: candidates.filter(i => i.action !== "delete"), call: backend.trashPluginsElevated.bind(backend), action: undefined },
+    { items: candidates.filter(i => i.action === "delete"), call: backend.deletePluginsElevated?.bind(backend), action: "delete" as const },
+  ]
+  const replacements = new Map<BatchItemResult, BatchItemResult>()
+  let callError: string | undefined
+  for (const group of groups) {
+    if (group.items.length === 0) continue
+    let failures: string[]
+    try {
+      if (!group.call) throw new Error("ERR_ELEVATION_UNSUPPORTED")
+      failures = await group.call(group.items.map(pathOf))
+    } catch (e) {
+      callError ??= errorMessage(e)
+      continue
+    }
+    const failed = new Map(failures.map(parseElevatedFailure).map(f => [f.path, f.error]))
+    const extra = group.action ? { action: group.action } : {}
+    for (const item of group.items) {
       const error = failed.get(pathOf(item))
-      return error === undefined ? { plugin: item.plugin, status: "removed" } : { plugin: item.plugin, status: "failed", error }
-    }),
+      replacements.set(item, error === undefined ? { plugin: item.plugin, status: "removed", ...extra } : { plugin: item.plugin, status: "failed", error, ...extra })
+    }
   }
+  if (replacements.size === 0) return { items, callError }
+  return { items: items.map(item => replacements.get(item) ?? item), ...(callError !== undefined && { callError }) }
 }
 
 /** Message key for the restore point line of the results summary, or null when there is nothing to say. */

@@ -7,7 +7,7 @@ import HeaderRow from "./HeaderRow"
 import type { Plugin } from "@/core/plugin/Plugin"
 import type { MetaMap } from "@/core/plugin/Meta"
 import { folderRuns, pluginKey, shouldGroupByFolder, type SortKey, type SortState } from "@/core/plugin/ListOps"
-import { buildPluginPath } from "@/core/plugin/Uninstall"
+import { buildPluginPath, totalKnownSize } from "@/core/plugin/Uninstall"
 import { shortenPath } from "@/core/format"
 
 type SectionType = "VST2" | "VST3" | "AAX" | "AU"
@@ -69,6 +69,7 @@ export default function Section({ type, items, total, sort, onSort, collapsed, o
                     onToggle={onToggle}
                     sort={sort}
                     onSort={onSort}
+                    sizeTotal={totalKnownSize(items, p => meta.get(buildPluginPath(p.installPath, p.name))?.size)}
                     shown={items.length}
                     total={total}
                     selectState={selectState}

@@ -48,6 +48,16 @@ describe("normalizeSettings", () => {
     expect(s.disabledSystemPaths).toEqual(["/x"])
   })
 
+  it("defaults and validates the uninstall flow settings", () => {
+    expect(DEFAULT_SETTINGS.deleteMethod).toBe("trash")
+    expect(DEFAULT_SETTINGS.confirmUninstall).toBe(true)
+    expect(normalizeSettings({ version: 1 }).deleteMethod).toBe("trash")
+    expect(normalizeSettings({ deleteMethod: "permanent" }).deleteMethod).toBe("permanent")
+    expect(normalizeSettings({ deleteMethod: "shred" }).deleteMethod).toBe("trash")
+    expect(normalizeSettings({ confirmUninstall: false }).confirmUninstall).toBe(false)
+    expect(normalizeSettings({ confirmUninstall: "no" }).confirmUninstall).toBe(true)
+  })
+
   it("clamps the scan depth to 1-10", () => {
     expect(normalizeSettings({ customScanDepth: 0 }).customScanDepth).toBe(1)
     expect(normalizeSettings({ customScanDepth: 99 }).customScanDepth).toBe(10)

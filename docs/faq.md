@@ -35,6 +35,10 @@ If your DAW (or a plugin host) has the plugin loaded, the operating system may k
 
 Folders such as `C:\Program Files` can also need administrator rights. If removal is refused for that reason, start Deplug as administrator, or delete that one file from the file manager.
 
+## Can I force the removal of a plugin that will not go away?
+
+Yes. When a removal fails, or the publisher's uninstaller leaves the plugin behind, the result dialog shows **Force removal** for that plugin. After a second confirmation with the exact path, Deplug deletes it permanently (it does not go to the trash, and restore points do not cover it), asking for administrator permission on Windows if needed. If another program holds the file open, close it first; the error from the system is shown if the deletion still fails.
+
 ## Uninstall fails with "administrator permission is needed"
 
 Plugins in protected folders such as `C:\Program Files\Common Files\VST2`, `VST3` or `Avid` can only be changed with administrator rights, and Deplug normally runs without them, so Windows denies the move to the Recycle Bin. When this happens the results list shows a notice and a **Retry with administrator permission** button. Press it and approve the single Windows permission prompt (UAC): all the plugins that were denied are retried together. The files still go to the Recycle Bin, so you can restore them. If you cancel the prompt nothing changes and you can press the button again.

@@ -3,6 +3,7 @@ import { normalizeExclusions } from "../plugin/Exclude"
 
 export type LanguageSetting = "system" | "en" | "it"
 export type ThemeSetting = "system" | "light" | "dark"
+export type DeleteMethodSetting = "trash" | "permanent"
 export type UpdateChannel = "stable" | "prerelease"
 
 export type ColumnKey = "path" | "size" | "modified" | "arch"
@@ -25,6 +26,10 @@ export type AppSettings = {
   disabledSystemPaths: string[]
   /** Windows only: relaunch elevated at startup. Takes effect on the next start. */
   runAsAdmin: boolean
+  /** How uninstalled plugins are deleted: moved to the trash (default) or deleted for good. */
+  deleteMethod: DeleteMethodSetting
+  /** Ask for confirmation before uninstalling (default on; always asked when the delete method is "permanent"). */
+  confirmUninstall: boolean
   /** Opt-in: check for a newer release shortly after startup. */
   checkUpdatesOnStartup: boolean
   /** "stable" ignores GitHub pre-releases; "prerelease" also offers release candidates. */
@@ -69,6 +74,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customScanDepth: DEFAULT_SCAN_DEPTH,
   disabledSystemPaths: [],
   runAsAdmin: true,
+  deleteMethod: "trash",
+  confirmUninstall: true,
   checkUpdatesOnStartup: false,
   updateChannel: "stable",
   lastUpdateCheck: 0,
@@ -118,6 +125,8 @@ export function normalizeSettings(raw: unknown): AppSettings {
     customScanDepth: r.customScanDepth === undefined ? d.customScanDepth : clampDepth(r.customScanDepth),
     disabledSystemPaths: onlyStrings(r.disabledSystemPaths),
     runAsAdmin: typeof r.runAsAdmin === "boolean" ? r.runAsAdmin : d.runAsAdmin,
+    deleteMethod: oneOf(r.deleteMethod, ["trash", "permanent"], d.deleteMethod),
+    confirmUninstall: typeof r.confirmUninstall === "boolean" ? r.confirmUninstall : d.confirmUninstall,
     checkUpdatesOnStartup: typeof r.checkUpdatesOnStartup === "boolean" ? r.checkUpdatesOnStartup : d.checkUpdatesOnStartup,
     updateChannel: oneOf(r.updateChannel, ["stable", "prerelease"], d.updateChannel),
     lastUpdateCheck:

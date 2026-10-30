@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, ChevronDown } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 import { FormatDot } from "./FormatTag"
 import { MODIFIED_CELL, rowGrid, type ListColumns } from "./listLayout"
+import { formatBytes } from "@/core/format"
 import { useI18n } from "@/i18n/I18nProvider"
 import type { SortKey, SortState } from "@/core/plugin/ListOps"
 import type { PluginType } from "@/core/plugin/Plugin"
@@ -16,6 +17,8 @@ type HeaderRowProps = {
   total: number
   selectState: boolean | "indeterminate"
   onSelectAll: () => void
+  /** Total size of the shown plugins when known; shown next to the count. */
+  sizeTotal?: number | null
   columns: ListColumns
 }
 
@@ -45,8 +48,8 @@ function SortButton({ column, label, sort, onSort, className = "" }: { column: S
 }
 
 /** Sticky section header: collapse toggle, count and the sortable column labels. */
-export default function HeaderRow({ type, expanded, onToggle, sort, onSort, shown, total, selectState, onSelectAll, columns }: HeaderRowProps) {
-  const { t } = useI18n()
+export default function HeaderRow({ type, expanded, onToggle, sort, onSort, shown, total, selectState, onSelectAll, columns, sizeTotal = null }: HeaderRowProps) {
+  const { t, language } = useI18n()
   return (
     <div role="row" className={`${rowGrid(columns)} sticky top-0 z-10 items-center border-b border-border bg-background`}>
       <div role="columnheader" className="flex h-10 items-center justify-center">
@@ -78,6 +81,14 @@ export default function HeaderRow({ type, expanded, onToggle, sort, onSort, show
         >
           {shown === total ? total : t("section.count", { shown, total })}
         </span>
+        {sizeTotal !== null && (
+          <span
+            aria-label={t("section.sizeTotalLabel", { type, size: formatBytes(sizeTotal, language) })}
+            className="mr-2 hidden shrink-0 text-[11px] tabular-nums text-muted-foreground sm:inline"
+          >
+            {t("section.sizeTotal", { size: formatBytes(sizeTotal, language) })}
+          </span>
+        )}
         <SortButton column="name" label={t("section.name")} sort={sort} onSort={onSort} />
         {columns.path && <SortButton column="path" label={t("section.path")} sort={sort} onSort={onSort} />}
       </div>

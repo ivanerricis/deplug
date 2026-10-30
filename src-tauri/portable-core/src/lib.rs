@@ -124,6 +124,10 @@ fn default_system() -> String {
     "system".to_string()
 }
 
+fn default_delete_method() -> String {
+    "trash".to_string()
+}
+
 fn default_stable() -> String {
     "stable".to_string()
 }
@@ -223,6 +227,10 @@ pub struct Settings {
     pub disabled_system_paths: Vec<String>,
     /// Windows only: relaunch Deplug elevated at startup (default on).
     pub run_as_admin: bool,
+    /// "trash" | "permanent": how uninstalled plugins are deleted.
+    pub delete_method: String,
+    /// Ask for confirmation before uninstalling (default on).
+    pub confirm_uninstall: bool,
     /// Opt-in: look for a newer release shortly after startup (default off).
     pub check_updates_on_startup: bool,
     /// "stable" | "prerelease"
@@ -256,6 +264,8 @@ impl Default for Settings {
             custom_scan_depth: default_scan_depth(),
             disabled_system_paths: Vec::new(),
             run_as_admin: true,
+            delete_method: default_delete_method(),
+            confirm_uninstall: default_true(),
             check_updates_on_startup: false,
             update_channel: default_stable(),
             last_update_check: 0,
@@ -279,6 +289,9 @@ impl Settings {
         }
         if !matches!(self.theme.as_str(), "system" | "light" | "dark") {
             self.theme = default_system();
+        }
+        if !matches!(self.delete_method.as_str(), "trash" | "permanent") {
+            self.delete_method = default_delete_method();
         }
         if !matches!(self.update_channel.as_str(), "stable" | "prerelease") {
             self.update_channel = default_stable();
@@ -485,6 +498,8 @@ mod tests {
         assert_eq!(s.custom_scan_depth, 6);
         assert!(s.disabled_system_paths.is_empty());
         assert!(s.run_as_admin);
+        assert_eq!(s.delete_method, "trash");
+        assert!(s.confirm_uninstall);
         assert!(s.scan_exclusions.is_empty());
         assert_eq!(s.visible_columns, ["path", "size", "modified", "arch"]);
         assert_eq!(s.density, "comfortable");
@@ -589,6 +604,16 @@ mod tests {
     }
 
     #[test]
+    fn settings_invalid_delete_method_falls_back_to_trash() {
+        let s = Settings {
+            delete_method: "shred".into(),
+            ..Settings::default()
+        }
+        .sanitized();
+        assert_eq!(s.delete_method, "trash");
+    }
+
+    #[test]
     fn settings_old_file_with_only_paths_loads() {
         let d = tempdir().unwrap();
         let p = d.path().join("s.json");
@@ -602,6 +627,24 @@ mod tests {
                 ..Settings::default()
             }
         );
+    }
+
+    #[test]
+    fn settings_uninstall_flow_fields_default_for_old_files() {
+        let d = tempdir().unwrap();
+        let p = d.path().join("s.json");
+        fs::write(&p, r#"{"version":1,"runAsAdmin":false}"#).unwrap();
+        let s = load(&p);
+        assert_eq!(s.delete_method, "trash");
+        assert!(s.confirm_uninstall);
+        fs::write(
+            &p,
+            r#"{"deleteMethod":"permanent","confirmUninstall":false}"#,
+        )
+        .unwrap();
+        let s = load(&p);
+        assert_eq!(s.delete_method, "permanent");
+        assert!(!s.confirm_uninstall);
     }
 
     #[test]
@@ -657,6 +700,8 @@ mod tests {
             custom_scan_depth: 3,
             disabled_system_paths: vec!["/sys".into()],
             run_as_admin: true,
+            delete_method: "permanent".into(),
+            confirm_uninstall: false,
             check_updates_on_startup: true,
             update_channel: "prerelease".into(),
             last_update_check: 1_700_000_000_000,
