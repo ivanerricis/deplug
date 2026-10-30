@@ -39,13 +39,21 @@ describe("normalizeSettings", () => {
       scanOnStartup: false,
       disabledSystemPaths: ["/x", 4],
       runAsAdmin: "yes",
+      searchRegistryLeftovers: "yes",
     })
     expect(s.runAsAdmin).toBe(true)
+    expect(s.searchRegistryLeftovers).toBe(false)
     expect(s.language).toBe("system")
     expect(s.theme).toBe("system")
     expect(s.restorePointDefault).toBe(true)
     expect(s.scanOnStartup).toBe(false)
     expect(s.disabledSystemPaths).toEqual(["/x"])
+  })
+
+  it("keeps the registry search off unless it is explicitly on", () => {
+    expect(DEFAULT_SETTINGS.searchRegistryLeftovers).toBe(false)
+    expect(normalizeSettings({ version: 1, runAsAdmin: false }).searchRegistryLeftovers).toBe(false)
+    expect(normalizeSettings({ searchRegistryLeftovers: true }).searchRegistryLeftovers).toBe(true)
   })
 
   it("defaults and validates the uninstall flow settings", () => {

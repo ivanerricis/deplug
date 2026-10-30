@@ -227,6 +227,8 @@ pub struct Settings {
     pub disabled_system_paths: Vec<String>,
     /// Windows only: relaunch Deplug elevated at startup (default on).
     pub run_as_admin: bool,
+    /// Windows only: also search the registry for leftover keys when uninstalling (default off).
+    pub search_registry_leftovers: bool,
     /// "trash" | "permanent": how uninstalled plugins are deleted.
     pub delete_method: String,
     /// Ask for confirmation before uninstalling (default on).
@@ -264,6 +266,7 @@ impl Default for Settings {
             custom_scan_depth: default_scan_depth(),
             disabled_system_paths: Vec::new(),
             run_as_admin: true,
+            search_registry_leftovers: false,
             delete_method: default_delete_method(),
             confirm_uninstall: default_true(),
             check_updates_on_startup: false,
@@ -498,6 +501,7 @@ mod tests {
         assert_eq!(s.custom_scan_depth, 6);
         assert!(s.disabled_system_paths.is_empty());
         assert!(s.run_as_admin);
+        assert!(!s.search_registry_leftovers);
         assert_eq!(s.delete_method, "trash");
         assert!(s.confirm_uninstall);
         assert!(s.scan_exclusions.is_empty());
@@ -665,6 +669,23 @@ mod tests {
     }
 
     #[test]
+    fn settings_search_registry_leftovers_defaults_off_and_serializes_camel_case() {
+        let d = tempdir().unwrap();
+        let p = d.path().join("s.json");
+        fs::write(&p, r#"{"version":1,"runAsAdmin":false}"#).unwrap();
+        assert!(!load(&p).search_registry_leftovers);
+        fs::write(&p, r#"{"searchRegistryLeftovers":true}"#).unwrap();
+        assert!(load(&p).search_registry_leftovers);
+        let s = Settings {
+            search_registry_leftovers: true,
+            ..Settings::default()
+        };
+        save(&p, &s).unwrap();
+        let raw: serde_json::Value = serde_json::from_slice(&fs::read(&p).unwrap()).unwrap();
+        assert_eq!(raw["searchRegistryLeftovers"], true);
+    }
+
+    #[test]
     fn settings_update_fields_default_off_and_sanitize() {
         let d = tempdir().unwrap();
         let p = d.path().join("s.json");
@@ -700,6 +721,7 @@ mod tests {
             custom_scan_depth: 3,
             disabled_system_paths: vec!["/sys".into()],
             run_as_admin: true,
+            search_registry_leftovers: true,
             delete_method: "permanent".into(),
             confirm_uninstall: false,
             check_updates_on_startup: true,

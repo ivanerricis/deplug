@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { parseLeftoverFailure, uninstallSingle, type SingleUninstallBackend } from "./Uninstall"
+import { parseLeftoverFailure, parseRegistryFailure, pluginWasRemoved, removeRegistryKeys, uninstallSingle, type RegistryDeleteResult, type SingleUninstallBackend } from "./Uninstall"
 import { localizeBackendError } from "@/i18n/errors"
 import { makeT } from "@/i18n/translate"
 import type { Plugin } from "./Plugin"
@@ -143,5 +143,56 @@ describe("parseLeftoverFailure", () => {
   })
   it("passes unknown entries through", () => {
     expect(parseLeftoverFailure("weird")).toEqual({ path: "weird", error: "weird" })
+  })
+})
+
+describe("registry keys left behind", () => {
+  const PATH_KEYS = [String.raw`HKCU\Software\Acme`, String.raw`HKLM\SOFTWARE\Acme`]
+
+  it("removes the ticked keys and reports the backup folder", async () => {
+    const remove = vi.fn(async (_p: string, keys: string[]): Promise<RegistryDeleteResult> => ({ deleted: keys.length, failures: [], backupDir: "C:/data/registry-backups/1-Foo" }))
+    const r = await removeRegistryKeys(PATH, PATH_KEYS, remove)
+    expect(remove).toHaveBeenCalledWith(PATH, PATH_KEYS)
+    expect(r).toEqual({ deleted: 2, failures: [], backupDir: "C:/data/registry-backups/1-Foo" })
+  })
+
+  it("reports per-key failures", async () => {
+    const remove = async (): Promise<RegistryDeleteResult> => ({
+      deleted: 1,
+      failures: [String.raw`ERR_REGISTRY_DELETE_FAILED(Access denied):HKLM\SOFTWARE\Acme`],
+      backupDir: "C:/b",
+    })
+    const r = await removeRegistryKeys(PATH, PATH_KEYS, remove)
+    expect(r.deleted).toBe(1)
+    expect(r.failures).toEqual([{ key: String.raw`HKLM\SOFTWARE\Acme`, error: "ERR_REGISTRY_DELETE_FAILED:Access denied" }])
+  })
+
+  it("counts every key as failed when the call is refused, for instance when the backup fails", async () => {
+    const remove = async (): Promise<RegistryDeleteResult> => {
+      throw "ERR_REGISTRY_BACKUP_FAILED:disk full"
+    }
+    const r = await removeRegistryKeys(PATH, PATH_KEYS, remove)
+    expect(r).toEqual({ deleted: 0, failures: PATH_KEYS.map(key => ({ key, error: "ERR_REGISTRY_BACKUP_FAILED:disk full" })), backupDir: null })
+  })
+
+  it("only searches after the plugin itself is gone", () => {
+    expect(pluginWasRemoved({ action: "trash", status: "removed" })).toBe(true)
+    expect(pluginWasRemoved({ action: "vendor", status: "removed" })).toBe(true)
+    expect(pluginWasRemoved({ action: "vendor", status: "still-present" })).toBe(false)
+    expect(pluginWasRemoved({ action: "trash", status: "failed", error: "x" })).toBe(false)
+    expect(pluginWasRemoved(null)).toBe(false)
+  })
+
+  it("parses registry failure entries", () => {
+    expect(parseRegistryFailure(String.raw`ERR_REGISTRY_INVALID:HKCU\Software\X`)).toEqual({ key: String.raw`HKCU\Software\X`, error: "ERR_REGISTRY_INVALID" })
+    expect(parseRegistryFailure(String.raw`ERR_ELEVATION_CANCELLED:HKLM\SOFTWARE\X`)).toEqual({ key: String.raw`HKLM\SOFTWARE\X`, error: "ERR_ELEVATION_CANCELLED" })
+    expect(parseRegistryFailure("junk")).toEqual({ key: "junk", error: "junk" })
+  })
+
+  it("localizes the registry error codes", () => {
+    const t = makeT("en")
+    for (const code of ["ERR_REGISTRY_INVALID", "ERR_REGISTRY_UNSUPPORTED", "ERR_REGISTRY_DISABLED", "ERR_REGISTRY_NO_CONTEXT", "ERR_REGISTRY_DELETE_FAILED:x", "ERR_REGISTRY_BACKUP_FAILED:y"]) {
+      expect(localizeBackendError(code, t)).not.toBe(code)
+    }
   })
 })

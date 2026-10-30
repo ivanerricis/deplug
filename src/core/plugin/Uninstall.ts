@@ -29,6 +29,22 @@ export interface Leftover {
   size: number | null
 }
 
+export interface RegistryLeftover {
+  /** Full key, e.g. `HKCU\\Software\\Acme`. */
+  key: string
+  /** Subkeys and values in the whole subtree. */
+  subkeys: number
+  values: number
+}
+
+export interface RegistryDeleteResult {
+  deleted: number
+  /** `ERR_...(<detail>):<key>` entries. */
+  failures: string[]
+  /** Folder with the `.reg` backups; null when nothing was exported. */
+  backupDir: string | null
+}
+
 /** Backend for the single-plugin flow: the batch backend plus vendor uninstaller, leftovers and an existence check. */
 export interface SingleUninstallBackend extends UninstallBackend {
   /** Returns one `<code>:<path>` entry per failure; an empty array means everything was trashed. */
@@ -49,6 +65,11 @@ export const tauriSingleBackend: SingleUninstallBackend = {
 
 export const findVendorUninstaller = (path: string) => invoke<VendorUninstaller | null>("find_vendor_uninstaller", { path })
 export const findLeftovers = (path: string) => invoke<Leftover[]>("find_leftovers", { path })
+/** Windows: lets the backend remember the plugin's publisher and product while it still exists. False when nothing was kept. */
+export const captureRegistryContext = (pluginPath: string) => invoke<boolean>("capture_registry_context", { pluginPath })
+/** Registry keys left behind once the plugin is gone, derived from the context captured earlier. */
+export const findRegistryLeftoversAfter = (pluginPath: string) => invoke<RegistryLeftover[]>("find_registry_leftovers_after", { pluginPath })
+export const deleteRegistryLeftovers = (pluginPath: string, keys: string[]) => invoke<RegistryDeleteResult>("delete_registry_leftovers", { pluginPath, keys })
 
 export interface UninstallOptions {
   restorePoint: boolean
@@ -263,6 +284,24 @@ export function parseLeftoverFailure(entry: string): LeftoverFailure {
   return { path, error: code }
 }
 
+export interface RegistryFailure {
+  key: string
+  error: string
+}
+
+/**
+ * Parses one `delete_registry_leftovers` failure entry: `ERR_REGISTRY_INVALID:<key>`,
+ * `ERR_REGISTRY_DELETE_FAILED(<detail>):<key>` or `ERR_ELEVATION_CANCELLED:<key>`. Registry keys have
+ * no colon, so the first one after the optional detail separates the code from the key.
+ */
+export function parseRegistryFailure(entry: string): RegistryFailure {
+  const m = /^(ERR_[A-Z_]+)(?:\(([^]*?)\))?:([^]*)$/.exec(entry)
+  if (!m) return { key: entry, error: entry }
+  const [, code, detail, key] = m
+  if (code === "ERR_REGISTRY_DELETE_FAILED") return { key, error: `ERR_REGISTRY_DELETE_FAILED:${detail ?? ""}` }
+  return { key, error: code }
+}
+
 export type PluginOutcome =
   /** The plugin was moved to the trash. */
   | { action: "trash"; status: "removed" }
@@ -366,4 +405,33 @@ export async function uninstallSingle(plugin: Plugin, options: SingleUninstallOp
     }
   }
   return { status: "completed", restorePoint: rp, leftoversTrashed, leftoverFailures, plugin: outcome }
+}
+
+export interface RegistryOutcome {
+  deleted: number
+  failures: RegistryFailure[]
+  backupDir: string | null
+}
+
+/**
+ * Backs up and deletes the ticked registry keys through `remove`. A refused call (a failed backup, no
+ * captured context...) counts every key as failed: nothing was deleted.
+ */
+export async function removeRegistryKeys(
+  pluginPath: string,
+  keys: string[],
+  remove: (pluginPath: string, keys: string[]) => Promise<RegistryDeleteResult> = deleteRegistryLeftovers,
+): Promise<RegistryOutcome> {
+  try {
+    const r = await remove(pluginPath, keys)
+    return { deleted: r.deleted, failures: r.failures.map(parseRegistryFailure), backupDir: r.backupDir }
+  } catch (e) {
+    const error = errorMessage(e)
+    return { deleted: 0, failures: keys.map(key => ({ key, error })), backupDir: null }
+  }
+}
+
+/** True when the plugin itself is gone, so the registry can be searched for what it left behind. */
+export function pluginWasRemoved(outcome: PluginOutcome | null | undefined): boolean {
+  return !!outcome && outcome.status === "removed"
 }

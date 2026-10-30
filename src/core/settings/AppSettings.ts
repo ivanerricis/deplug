@@ -26,6 +26,8 @@ export type AppSettings = {
   disabledSystemPaths: string[]
   /** Windows only: relaunch elevated at startup. Takes effect on the next start. */
   runAsAdmin: boolean
+  /** Windows only: also search the registry for leftover keys when uninstalling a plugin. */
+  searchRegistryLeftovers: boolean
   /** How uninstalled plugins are deleted: moved to the trash (default) or deleted for good. */
   deleteMethod: DeleteMethodSetting
   /** Ask for confirmation before uninstalling (default on; always asked when the delete method is "permanent"). */
@@ -74,6 +76,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customScanDepth: DEFAULT_SCAN_DEPTH,
   disabledSystemPaths: [],
   runAsAdmin: true,
+  searchRegistryLeftovers: false,
   deleteMethod: "trash",
   confirmUninstall: true,
   checkUpdatesOnStartup: false,
@@ -125,6 +128,7 @@ export function normalizeSettings(raw: unknown): AppSettings {
     customScanDepth: r.customScanDepth === undefined ? d.customScanDepth : clampDepth(r.customScanDepth),
     disabledSystemPaths: onlyStrings(r.disabledSystemPaths),
     runAsAdmin: typeof r.runAsAdmin === "boolean" ? r.runAsAdmin : d.runAsAdmin,
+    searchRegistryLeftovers: typeof r.searchRegistryLeftovers === "boolean" ? r.searchRegistryLeftovers : d.searchRegistryLeftovers,
     deleteMethod: oneOf(r.deleteMethod, ["trash", "permanent"], d.deleteMethod),
     confirmUninstall: typeof r.confirmUninstall === "boolean" ? r.confirmUninstall : d.confirmUninstall,
     checkUpdatesOnStartup: typeof r.checkUpdatesOnStartup === "boolean" ? r.checkUpdatesOnStartup : d.checkUpdatesOnStartup,

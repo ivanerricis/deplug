@@ -61,6 +61,16 @@ export default function UninstallSection({ platform }: { platform: Platform }) {
           />
         </SettingRow>
       )}
+      {platform === "windows" && (
+        <SettingRow label={t("settings.uninstall.searchRegistry")} hint={t("settings.uninstall.searchRegistryHint")} labelId="set-registry" hintId="set-registry-h">
+          <Switch
+            checked={settings.searchRegistryLeftovers}
+            onCheckedChange={v => update({ searchRegistryLeftovers: v })}
+            aria-labelledby="set-registry"
+            aria-describedby="set-registry-h"
+          />
+        </SettingRow>
+      )}
       {platform !== "windows" && (
         <p role="note" className="rounded bg-muted px-3 py-2 text-sm text-muted-foreground">
           {t("settings.uninstall.windowsOnly", { os: osLabel(platform) })}

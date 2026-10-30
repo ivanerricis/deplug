@@ -259,7 +259,7 @@ fn create_restore_point_blocking(description: &str) -> Result<(), String> {
     Err(map_restore_error(&combined, out.status.code()))
 }
 
-#[cfg(windows)]
+#[cfg_attr(not(windows), allow(dead_code))]
 fn base64_encode(data: &[u8]) -> String {
     const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut s = String::with_capacity(data.len().div_ceil(3) * 4);
@@ -418,7 +418,7 @@ pub fn parse_op_log(log: &str, paths: &[String], code: &str) -> Vec<String> {
 
 /// Rejects paths that cannot be embedded safely in a script literal (NUL, newlines, control chars).
 #[cfg_attr(not(windows), allow(dead_code))]
-fn check_script_safe(paths: &[String]) -> Result<(), String> {
+pub(crate) fn check_script_safe(paths: &[String]) -> Result<(), String> {
     if paths.iter().any(|p| p.chars().any(char::is_control)) {
         return Err("ERR_INVALID_PATH".into());
     }
@@ -433,27 +433,34 @@ enum ElevatedOp {
     Delete,
 }
 
-/// Elevated UTF-16LE base64 launch shared by the Windows helpers.
+/// Builds the command that runs `inner` in an elevated, hidden PowerShell: the script travels as a
+/// UTF-16LE base64 `-EncodedCommand`. Fails when the whole command line would exceed the Windows
+/// limit (about 32,000 characters) because of the encoded script.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub(crate) fn elevated_launch_command(inner: &str) -> Result<String, String> {
+    let utf16: Vec<u8> = inner.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
+    let encoded = base64_encode(&utf16);
+    if encoded.len() > MAX_ENCODED_SCRIPT_LEN {
+        return Err("ERR_INVALID_PATH".into());
+    }
+    Ok(format!(
+        "$p = Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -PassThru -ArgumentList '-NoProfile','-NonInteractive','-EncodedCommand','{encoded}'; exit $p.ExitCode"
+    ))
+}
+
+/// Runs the script produced by `build_script(log_path)` elevated (one UAC prompt) and returns the
+/// log the script appended to. The log has an unpredictable name; it is created here (create_new
+/// fails if something is already there) and the elevated script only appends to it. It is output
+/// only, never read as input.
 #[cfg(windows)]
-fn elevated_blocking(paths: Vec<String>, op: ElevatedOp) -> Result<Vec<String>, String> {
+pub(crate) fn run_elevated_logged(
+    build_script: impl FnOnce(&str) -> String,
+) -> Result<String, String> {
     use std::hash::{BuildHasher, Hasher};
     use std::os::windows::process::CommandExt;
     use std::process::Command;
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
-    if paths.is_empty() {
-        return Ok(Vec::new());
-    }
-    if paths.len() > MAX_ELEVATED_PATHS {
-        return Err("ERR_INVALID_PATH".into());
-    }
-    check_script_safe(&paths)?;
-    for p in &paths {
-        validate_plugin_path(Path::new(p))?;
-    }
-
-    // Unpredictable log name; the file is created now (create_new fails if something is already
-    // there) and the elevated script only appends to it. It is output only, never read as input.
     let nonce = std::collections::hash_map::RandomState::new()
         .build_hasher()
         .finish();
@@ -466,20 +473,14 @@ fn elevated_blocking(paths: Vec<String>, op: ElevatedOp) -> Result<Vec<String>, 
         .map_err(|e| format!("ERR_INTERNAL:{e}"))?;
     let log_str = log.to_string_lossy().to_string();
 
-    let inner = match op {
-        ElevatedOp::Trash => build_trash_script(&paths, &log_str),
-        ElevatedOp::Delete => build_delete_script(&paths, &log_str),
+    let inner = build_script(&log_str);
+    let outer = match elevated_launch_command(&inner) {
+        Ok(o) => o,
+        Err(e) => {
+            let _ = std::fs::remove_file(&log);
+            return Err(e);
+        }
     };
-    let utf16: Vec<u8> = inner.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
-    let encoded = base64_encode(&utf16);
-    // The whole command line is limited to about 32,000 characters on Windows, and `encoded` appears in it.
-    if encoded.len() > MAX_ENCODED_SCRIPT_LEN {
-        let _ = std::fs::remove_file(&log);
-        return Err("ERR_INVALID_PATH".into());
-    }
-    let outer = format!(
-        "$p = Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -PassThru -ArgumentList '-NoProfile','-NonInteractive','-EncodedCommand','{encoded}'; exit $p.ExitCode"
-    );
 
     let out = Command::new("powershell")
         .args(["-NoProfile", "-NonInteractive", "-Command", &outer])
@@ -504,6 +505,26 @@ fn elevated_blocking(paths: Vec<String>, op: ElevatedOp) -> Result<Vec<String>, 
             )
         });
     }
+    Ok(content)
+}
+
+/// Elevated trash or delete of plugin paths shared by the Windows helpers.
+#[cfg(windows)]
+fn elevated_blocking(paths: Vec<String>, op: ElevatedOp) -> Result<Vec<String>, String> {
+    if paths.is_empty() {
+        return Ok(Vec::new());
+    }
+    if paths.len() > MAX_ELEVATED_PATHS {
+        return Err("ERR_INVALID_PATH".into());
+    }
+    check_script_safe(&paths)?;
+    for p in &paths {
+        validate_plugin_path(Path::new(p))?;
+    }
+    let content = run_elevated_logged(|log| match op {
+        ElevatedOp::Trash => build_trash_script(&paths, log),
+        ElevatedOp::Delete => build_delete_script(&paths, log),
+    })?;
     Ok(match op {
         ElevatedOp::Trash => parse_trash_log(&content, &paths),
         ElevatedOp::Delete => parse_op_log(&content, &paths, "ERR_DELETE_FAILED"),
