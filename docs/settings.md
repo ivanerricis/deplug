@@ -20,6 +20,7 @@ The plugin list refreshes when you close the settings, if anything here changed.
 
 - **Create a restore point by default**: sets whether the restore point checkbox starts ticked in the uninstall dialog. You can still change it for each uninstall. Restore points only exist on Windows; on macOS and Linux the setting has no effect and the dialog says so.
 - **Always run Deplug as administrator** (Windows only, on by default): Windows asks for permission each time Deplug starts. Plugins in protected folders can then be removed without extra prompts, and programs Deplug starts (such as a publisher's uninstaller) also run with administrator rights. It takes effect the next time Deplug starts. Turn it off if you would rather not see the Windows prompt at every start; if you decline the prompt, Deplug starts normally without administrator rights. The About section shows whether the current session has them.
+- **Search the registry for leftovers** (Windows only, off by default): when you uninstall a single plugin, Deplug also looks for registry keys named after its publisher or product and offers them in a separate **Registry entries** section of the uninstall dialog. While this is off, the registry is never searched and no registry key can be deleted. See [Registry entries](/using-deplug#registry-entries).
 
 ## About {#about}
 

@@ -29,6 +29,8 @@ Per un singolo plugin Deplug può proporre di eseguire il **disinstallatore che 
 
 Le **cartelle residue** sono solo suggerimenti trovati in un insieme fisso di posizioni dati per utente e condivise. Sono deselezionate in partenza e vanno nel cestino come tutto il resto; il backend rifiuta qualsiasi cartella che non abbia ricavato lui stesso per quel plugin.
 
+Le **chiavi di registro** sono disattivate finché non attivi l'impostazione nelle Impostazioni (solo Windows). Vengono proposte solo le chiavi direttamente sotto (o un livello sotto) `HKCU\Software` e `HKLM\SOFTWARE` il cui nome coincide esattamente con l'editore del plugin o con "Editore Prodotto", mai nulla sotto `Microsoft`, `Windows`, `Classes` o `Policies` e mai una chiave con più di 500 sottochiavi o valori. Sono deselezionate in partenza, il backend rifiuta qualsiasi chiave che non abbia ricavato lui stesso per quel plugin e ogni chiave selezionata viene prima esportata in un backup `.reg`: se l'esportazione fallisce, non viene eliminato nulla. L'eliminazione delle chiavi sotto `HKLM` usa lo stesso passaggio PowerShell con privilegi elevati del tentativo con permesso di amministratore per il cestino, con uno script fisso e le chiavi inserite come valori letterali.
+
 ## Punti di ripristino
 
 Su Windows il punto di ripristino facoltativo è creato da `Checkpoint-Computer` di Windows PowerShell in un processo con privilegi elevati, dopo la consueta richiesta UAC. La descrizione viene ripulita prima di essere passata. Deplug chiede l'elevazione solo per questo passaggio e non conserva mai i diritti di amministratore.

@@ -107,6 +107,15 @@ Se qualcosa non riesce, la finestra termina con un riepilogo di cosa è stato fa
 
 **Nelle disinstallazioni multiple.** Deplug cerca il disinstallatore del produttore per ogni plugin selezionato. I plugin che portano allo stesso disinstallatore vengono raggruppati e ogni gruppo è proposto una sola volta, ad esempio **Esegui il disinstallatore del produttore per Voxengo SPAN (3 plugin selezionati)**; il comando esatto compare quando lo selezioni. In partenza nulla è selezionato e tutto viene spostato nel cestino come prima. Per ogni gruppo selezionato Deplug esegue quel disinstallatore una volta, un gruppo dopo l'altro, e ne attende la fine. Poi controlla i plugin del gruppo: un plugin risulta rimosso solo se non c'è più, altrimenti compare come **Ancora presente** e non viene toccato. Se il disinstallatore non riesce, tutti i plugin del suo gruppo risultano non riusciti. I plugin che non hai selezionato vengono spostati nel cestino.
 
+#### Voci del registro (Windows) {#registry-entries}
+
+Se attivi **Cerca residui nel registro** nelle [Impostazioni](/it/settings#uninstall) (è disattivata per impostazione predefinita), la disinstallazione di un singolo plugin cerca anche le chiavi di registro lasciate dal plugin. Compaiono in una sezione **Voci del registro** a parte, compressa, con il numero di sottochiavi e valori di ciascuna. **Nessuna è selezionata in partenza.** Le chiavi possono contenere licenze o dati di attivazione e altri plugin dello stesso editore potrebbero condividerle: l'eliminazione è definitiva, quindi spunta solo quelle di cui sei sicuro.
+
+- Sono proposte solo le chiavi direttamente sotto `HKCU\Software` o `HKLM\SOFTWARE` (incluso `WOW6432Node`), o un livello più in basso, il cui nome coincide esattamente con l'editore o con "Editore Prodotto". Non vengono mai proposte chiavi sotto `Microsoft`, `Windows`, `Classes` o `Policies`, la chiave condivisa di Steinberg e le chiavi con più di 500 sottochiavi o valori. La voce dell'editore in "App installate" è proposta solo se il suo disinstallatore non esiste più.
+- Prima di eliminare qualsiasi cosa, ogni chiave selezionata viene esportata in un file `.reg` nella cartella `registry-backups` accanto alle impostazioni (la cartella dati in modalità portatile). La finestra indica dove si trova il backup. Se il backup non può essere scritto, non viene eliminato nulla. Per ripristinare una chiave basta fare doppio clic sul suo file `.reg`.
+- Le chiavi sotto `HKLM` richiedono il permesso di amministratore: se Deplug non è in esecuzione come amministratore, Windows mostra una richiesta di permesso.
+- Se la casella del punto di ripristino è disattivata, la finestra avverte che il backup `.reg` è l'unico modo per tornare indietro.
+
 ## Punto di ripristino su Windows
 
 Su Windows la finestra ha una casella attiva di default (il valore iniziale si cambia nelle [Impostazioni](/it/settings#uninstall)): **Crea un punto di ripristino di sistema prima di disinstallare**. È la stessa rete di sicurezza offerta da Revo Uninstaller. Se dopo aver rimosso un plugin qualcosa nel sistema non va, puoi tornare indietro con Ripristino configurazione di sistema di Windows.

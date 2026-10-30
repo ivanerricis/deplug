@@ -11,6 +11,9 @@ const SIMPLE: Record<string, MessageKey> = {
   ERR_RESTORE_PROTECTION_DISABLED: "error.restoreProtectionDisabled",
   ERR_RESTORE_FREQUENCY: "error.restoreFrequency",
   ERR_LEFTOVER_INVALID: "error.leftoverInvalid",
+  ERR_REGISTRY_INVALID: "error.registryInvalid",
+  ERR_REGISTRY_UNSUPPORTED: "error.registryUnsupported",
+  ERR_REGISTRY_DISABLED: "error.registryDisabled",
   ERR_VENDOR_UNSUPPORTED: "error.vendorUnsupported",
   ERR_VENDOR_NOT_FOUND: "error.vendorNotFound",
   ERR_VENDOR_TIMEOUT: "error.vendorTimeout",
@@ -26,6 +29,8 @@ const WITH_DETAIL: Record<string, MessageKey> = {
   ERR_RESTORE_FAILED: "error.restoreFailed",
   ERR_INTERNAL: "error.internal",
   ERR_LEFTOVER_TRASH_FAILED: "error.leftoverTrashFailed",
+  ERR_REGISTRY_DELETE_FAILED: "error.registryDeleteFailed",
+  ERR_REGISTRY_BACKUP_FAILED: "error.registryBackupFailed",
   ERR_VENDOR_LAUNCH: "error.vendorLaunch",
   ERR_VENDOR_FAILED: "error.vendorFailed",
 }

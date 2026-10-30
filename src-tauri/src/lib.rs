@@ -2,6 +2,7 @@ mod elevation;
 mod leftovers;
 mod meta;
 mod portable;
+mod registry_leftovers;
 mod settings;
 mod syspaths;
 mod uninstall;
@@ -55,7 +56,9 @@ pub fn run() {
             vendor::find_vendor_uninstaller,
             vendor::run_vendor_uninstaller,
             leftovers::find_leftovers,
-            leftovers::trash_leftovers
+            leftovers::trash_leftovers,
+            registry_leftovers::find_registry_leftovers,
+            registry_leftovers::delete_registry_leftovers
         ])
         .setup(move |app| {
             let settings_path = match &mode.data_dir {

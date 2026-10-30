@@ -29,6 +29,8 @@ For a single plugin, Deplug can offer to run the **uninstaller the publisher reg
 
 **Leftover folders** are only suggestions found in a fixed set of per-user and shared data locations. They are unselected by default and go to the trash, like everything else; the backend refuses any folder it did not derive itself for that plugin.
 
+**Registry keys** are off unless you turn on the setting in Settings (Windows only). Only keys directly under (or one level below) `HKCU\Software` and `HKLM\SOFTWARE` whose name is exactly the plugin's publisher or "Publisher Product" are ever suggested, never anything under `Microsoft`, `Windows`, `Classes` or `Policies`, and never a key with more than 500 subkeys or values. They are unselected by default, the backend refuses any key it did not derive itself for that plugin, and every selected key is exported to a `.reg` backup first: if the export fails, nothing is deleted. Deleting keys under `HKLM` uses the same elevated PowerShell step as the Recycle Bin retry, with a fixed script and the keys embedded as literals.
+
 ## Restore points
 
 On Windows the optional restore point is created by Windows PowerShell's `Checkpoint-Computer` in an elevated process after the usual UAC prompt. The description is sanitised before it is passed on. Deplug asks for elevation only for this step and never keeps administrator rights.

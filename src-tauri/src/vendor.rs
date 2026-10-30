@@ -177,7 +177,7 @@ fn is_too_generic_dir(norm: &str) -> bool {
 }
 
 /// Generic folder/stem names that must never be matched by name.
-fn is_generic_name(norm_name: &str) -> bool {
+pub(crate) fn is_generic_name(norm_name: &str) -> bool {
     norm_name.chars().count() < 3 || GENERIC_DIR_NAMES.contains(&norm_name)
 }
 
@@ -302,6 +302,18 @@ pub fn parse_command_line_with(
         args = args.iter().map(|a| rewrite_msi_arg(a)).collect();
     }
     Ok(ParsedCommand { program, args })
+}
+
+/// Absolute `.exe` path of the program in a command line (None for msiexec, relative or
+/// unparsable programs). Nothing is expanded or checked on disk.
+pub fn command_program(cmd: &str) -> Option<String> {
+    let (prog, _) = split_program(cmd)?;
+    let norm = normalize_path(&prog);
+    (is_windows_absolute(&prog)
+        && !prog.contains('%')
+        && norm.ends_with(".exe")
+        && last_segment(&norm) != "msiexec.exe")
+        .then_some(prog)
 }
 
 fn command_preview(cmd: &ParsedCommand) -> String {
@@ -619,7 +631,7 @@ fn lookup(_plugin: &Path) -> Result<Option<Resolved>, String> {
 }
 
 #[cfg(windows)]
-mod registry {
+pub(crate) mod registry {
     use super::UninstallEntry;
     use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ};
     use winreg::RegKey;
@@ -642,18 +654,25 @@ mod registry {
     }
 
     pub fn read_entries() -> Vec<UninstallEntry> {
+        read_keyed_entries().into_iter().map(|(_, e)| e).collect()
+    }
+
+    /// Like `read_entries`, with the full key of each entry (`HKLM\SOFTWARE\...\Uninstall\<name>`).
+    pub fn read_keyed_entries() -> Vec<(String, UninstallEntry)> {
         let mut out = Vec::new();
-        for (hive, sub) in [
-            (HKEY_LOCAL_MACHINE, UNINSTALL),
-            (HKEY_LOCAL_MACHINE, UNINSTALL_WOW),
-            (HKEY_CURRENT_USER, UNINSTALL),
+        for (hive, hive_name, sub) in [
+            (HKEY_LOCAL_MACHINE, "HKLM", UNINSTALL),
+            (HKEY_LOCAL_MACHINE, "HKLM", UNINSTALL_WOW),
+            (HKEY_CURRENT_USER, "HKCU", UNINSTALL),
         ] {
             let Ok(root) = RegKey::predef(hive).open_subkey_with_flags(sub, KEY_READ) else {
                 continue;
             };
             for name in root.enum_keys().flatten() {
                 if let Ok(key) = root.open_subkey_with_flags(&name, KEY_READ) {
-                    out.extend(read_one(&key));
+                    if let Some(entry) = read_one(&key) {
+                        out.push((format!("{hive_name}\\{sub}\\{name}"), entry));
+                    }
                 }
             }
         }

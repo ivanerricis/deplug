@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { parseLeftoverFailure, uninstallSingle, type SingleUninstallBackend } from "./Uninstall"
+import { parseLeftoverFailure, parseRegistryFailure, uninstallSingle, type RegistryDeleteResult, type SingleUninstallBackend } from "./Uninstall"
 import { localizeBackendError } from "@/i18n/errors"
 import { makeT } from "@/i18n/translate"
 import type { Plugin } from "./Plugin"
@@ -8,7 +8,7 @@ const plugin: Plugin = { name: "Foo.vst3", installPath: "C:/VST3", type: "VST3" 
 const PATH = "C:/VST3/Foo.vst3"
 const LEFT = ["C:/Users/me/AppData/Roaming/Foo", "C:/ProgramData/Foo"]
 
-function makeBackend(opts: { rp?: unknown; trash?: unknown; vendor?: unknown; left?: string[] | { throws: unknown }; exists?: boolean } = {}) {
+function makeBackend(opts: { rp?: unknown; trash?: unknown; vendor?: unknown; left?: string[] | { throws: unknown }; exists?: boolean; registry?: RegistryDeleteResult | { throws: unknown } } = {}) {
   const calls: string[] = []
   const backend = {
     createRestorePoint: vi.fn(async (_d: string) => {
@@ -23,6 +23,11 @@ function makeBackend(opts: { rp?: unknown; trash?: unknown; vendor?: unknown; le
       calls.push("leftovers")
       if (opts.left && !Array.isArray(opts.left)) throw opts.left.throws
       return (opts.left as string[] | undefined) ?? []
+    }),
+    deleteRegistryLeftovers: vi.fn(async (_p: string, _keys: string[]): Promise<RegistryDeleteResult> => {
+      calls.push("registry")
+      if (opts.registry && "throws" in opts.registry) throw opts.registry.throws
+      return opts.registry ?? { deleted: _keys.length, failures: [], backupDir: "C:/data/registry-backups/1-Foo" }
     }),
     runVendorUninstaller: vi.fn(async (_p: string) => {
       calls.push("vendor")
@@ -128,7 +133,7 @@ describe("uninstallSingle", () => {
   it("touches nothing when the restore point fails and the user declines", async () => {
     const { backend, calls } = makeBackend({ rp: "ERR_RESTORE_FAILED:x" })
     const r = await uninstallSingle(plugin, { ...base, backend, restorePoint: true, confirmContinue: async () => false, leftovers: LEFT, method: "vendor" })
-    expect(r).toEqual({ status: "cancelled", restorePoint: "failed", leftoversTrashed: 0, leftoverFailures: [], plugin: null })
+    expect(r).toEqual({ status: "cancelled", restorePoint: "failed", leftoversTrashed: 0, leftoverFailures: [], registryDeleted: 0, registryFailures: [], registryBackupDir: null, plugin: null })
     expect(calls).toEqual(["rp"])
   })
 })
@@ -143,5 +148,56 @@ describe("parseLeftoverFailure", () => {
   })
   it("passes unknown entries through", () => {
     expect(parseLeftoverFailure("weird")).toEqual({ path: "weird", error: "weird" })
+  })
+})
+
+describe("uninstallSingle registry keys", () => {
+  const KEYS = [String.raw`HKCU\Software\Acme`, String.raw`HKLM\SOFTWARE\Acme`]
+
+  it("deletes registry keys after the leftover folders and before the plugin", async () => {
+    const { backend, calls } = makeBackend()
+    const r = await uninstallSingle(plugin, { ...base, backend, leftovers: LEFT, registryKeys: KEYS })
+    expect(calls).toEqual(["leftovers", "registry", "trash"])
+    expect(backend.deleteRegistryLeftovers).toHaveBeenCalledWith(PATH, KEYS)
+    expect(r).toMatchObject({ registryDeleted: 2, registryFailures: [], registryBackupDir: "C:/data/registry-backups/1-Foo" })
+  })
+
+  it("does not touch the registry when no key is ticked", async () => {
+    const { backend } = makeBackend()
+    const r = await uninstallSingle(plugin, { ...base, backend })
+    expect(backend.deleteRegistryLeftovers).not.toHaveBeenCalled()
+    expect(r).toMatchObject({ registryDeleted: 0, registryFailures: [], registryBackupDir: null })
+  })
+
+  it("reports per-key failures and still removes the plugin", async () => {
+    const { backend, calls } = makeBackend({
+      registry: { deleted: 1, failures: [String.raw`ERR_REGISTRY_DELETE_FAILED(Access denied):HKLM\SOFTWARE\Acme`], backupDir: "C:/b" },
+    })
+    const r = await uninstallSingle(plugin, { ...base, backend, registryKeys: KEYS })
+    expect(r.registryDeleted).toBe(1)
+    expect(r.registryFailures).toEqual([{ key: String.raw`HKLM\SOFTWARE\Acme`, error: "ERR_REGISTRY_DELETE_FAILED:Access denied" }])
+    expect(calls).toEqual(["registry", "trash"])
+    expect(r.plugin).toEqual({ action: "trash", status: "removed" })
+  })
+
+  it("counts every key as failed when the whole call is refused (for instance a failed backup)", async () => {
+    const { backend } = makeBackend({ registry: { throws: "ERR_REGISTRY_BACKUP_FAILED:disk full" } })
+    const r = await uninstallSingle(plugin, { ...base, backend, registryKeys: KEYS })
+    expect(r.registryDeleted).toBe(0)
+    expect(r.registryFailures).toEqual(KEYS.map(key => ({ key, error: "ERR_REGISTRY_BACKUP_FAILED:disk full" })))
+    expect(r.plugin).toEqual({ action: "trash", status: "removed" })
+  })
+
+  it("parses registry failure entries", () => {
+    expect(parseRegistryFailure(String.raw`ERR_REGISTRY_INVALID:HKCU\Software\X`)).toEqual({ key: String.raw`HKCU\Software\X`, error: "ERR_REGISTRY_INVALID" })
+    expect(parseRegistryFailure(String.raw`ERR_ELEVATION_CANCELLED:HKLM\SOFTWARE\X`)).toEqual({ key: String.raw`HKLM\SOFTWARE\X`, error: "ERR_ELEVATION_CANCELLED" })
+    expect(parseRegistryFailure("junk")).toEqual({ key: "junk", error: "junk" })
+  })
+
+  it("localizes the registry error codes", () => {
+    const t = makeT("en")
+    for (const code of ["ERR_REGISTRY_INVALID", "ERR_REGISTRY_UNSUPPORTED", "ERR_REGISTRY_DISABLED", "ERR_REGISTRY_DELETE_FAILED:x", "ERR_REGISTRY_BACKUP_FAILED:y"]) {
+      expect(localizeBackendError(code, t)).not.toBe(code)
+    }
   })
 })

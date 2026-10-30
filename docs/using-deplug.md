@@ -107,6 +107,15 @@ If something fails, the dialog ends with a summary of what was done and what was
 
 **In a batch.** Deplug looks up the publisher's uninstaller for each selected plugin. Plugins that resolve to the same uninstaller are grouped, and each group is offered once, for example **Run the publisher's uninstaller for Voxengo SPAN (3 selected plugins)**, with the exact command shown once you tick it. By default nothing is ticked and everything is moved to the trash as before. For each ticked group Deplug runs that uninstaller once, one group after another, and waits for it to finish. The plugins in the group are then checked: a plugin is reported as removed only if it is gone, otherwise it is listed as **Still present** and left alone. If the uninstaller fails, every plugin of its group is reported as failed. Plugins you did not tick are moved to the trash.
 
+#### Registry entries (Windows) {#registry-entries}
+
+If you turn on **Search the registry for leftovers** in [Settings](/settings#uninstall) (it is off by default), a single-plugin uninstall also looks for registry keys left by the plugin. They appear in a separate, collapsed **Registry entries** section with the number of subkeys and values of each key. **None is selected by default.** The keys can hold licenses or activation data, and other plugins of the same publisher may share them, so deletion is permanent and you should tick only keys you are sure about.
+
+- Only keys directly under `HKCU\Software` or `HKLM\SOFTWARE` (including `WOW6432Node`), or one level below them, whose name is exactly the publisher or "Publisher Product" are offered. Anything under `Microsoft`, `Windows`, `Classes` or `Policies`, Steinberg's shared key, and keys with more than 500 subkeys or values are never offered. The publisher's own entry in "Installed apps" is only offered when its uninstaller no longer exists.
+- Before anything is deleted, every selected key is exported to a `.reg` file in the `registry-backups` folder next to the settings (the data folder in portable mode). The dialog tells you where the backup is. If a backup cannot be written, nothing is deleted. To restore a key, double-click its `.reg` file.
+- Keys under `HKLM` need administrator permission: if Deplug is not running as administrator, Windows shows one permission prompt.
+- If the restore point checkbox is off, the dialog warns that the `.reg` backup is the only way back.
+
 ## Restore point on Windows
 
 On Windows the dialog has a checkbox, on by default (you can change the default in [Settings](/settings#uninstall)): **Create a system restore point before uninstalling**. This is the same safety net Revo Uninstaller offers. If something goes wrong with your system after removing a plugin, you can roll back from Windows' System Restore.

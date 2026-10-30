@@ -14,6 +14,8 @@ export type AppSettings = {
   disabledSystemPaths: string[]
   /** Windows only: relaunch elevated at startup. Takes effect on the next start. */
   runAsAdmin: boolean
+  /** Windows only: also search the registry for leftover keys when uninstalling a plugin. */
+  searchRegistryLeftovers: boolean
 }
 
 export type AppInfo = {
@@ -39,6 +41,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customScanDepth: DEFAULT_SCAN_DEPTH,
   disabledSystemPaths: [],
   runAsAdmin: true,
+  searchRegistryLeftovers: false,
 }
 
 const onlyStrings = (value: unknown): string[] =>
@@ -67,6 +70,7 @@ export function normalizeSettings(raw: unknown): AppSettings {
     customScanDepth: r.customScanDepth === undefined ? d.customScanDepth : clampDepth(r.customScanDepth),
     disabledSystemPaths: onlyStrings(r.disabledSystemPaths),
     runAsAdmin: typeof r.runAsAdmin === "boolean" ? r.runAsAdmin : d.runAsAdmin,
+    searchRegistryLeftovers: typeof r.searchRegistryLeftovers === "boolean" ? r.searchRegistryLeftovers : d.searchRegistryLeftovers,
   }
 }
 
