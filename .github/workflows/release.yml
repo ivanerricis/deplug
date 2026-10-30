@@ -1,8 +1,8 @@
 name: Release
 
+# Started by hand (Actions > Release > Run workflow). It is deliberately not triggered by tag pushes:
+# publishing the draft creates the tag, and a build on that push would touch the published release.
 on:
-  push:
-    tags: ["v*.*.*"]
   workflow_dispatch:
     inputs:
       tag:
@@ -11,8 +11,8 @@ on:
         type: string
 
 env:
-  # The tag being released: the pushed tag, or the manual input.
-  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+  # The tag being released (manual input).
+  RELEASE_TAG: ${{ inputs.tag }}
 
 permissions:
   contents: write
