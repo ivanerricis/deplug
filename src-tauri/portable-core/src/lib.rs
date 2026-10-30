@@ -637,7 +637,11 @@ mod tests {
         let s = load(&p);
         assert_eq!(s.delete_method, "trash");
         assert!(s.confirm_uninstall);
-        fs::write(&p, r#"{"deleteMethod":"permanent","confirmUninstall":false}"#).unwrap();
+        fs::write(
+            &p,
+            r#"{"deleteMethod":"permanent","confirmUninstall":false}"#,
+        )
+        .unwrap();
         let s = load(&p);
         assert_eq!(s.delete_method, "permanent");
         assert!(!s.confirm_uninstall);
