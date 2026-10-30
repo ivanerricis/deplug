@@ -46,7 +46,7 @@
     "publisher": "Ivan Erricis",
     "copyright": "Copyright (c) 2026 Ivan Erricis. All rights reserved.",
     "shortDescription": "Find and remove audio plugins",
-    "longDescription": "Deplug finds the VST2, VST3, AAX and AU plugins installed on your computer and uninstalls the ones you choose."
+    "longDescription": "Deplug finds the VST2, VST3, AAX, AU and CLAP plugins installed on your computer and uninstalls the ones you choose."
   },
   "plugins": {
     "updater": {

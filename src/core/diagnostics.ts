@@ -35,7 +35,7 @@ export interface DiagnosticsInput {
   errors: ErrorEntry[]
 }
 
-const FORMATS = ["VST2", "VST3", "AAX", "AU"]
+const FORMATS = ["VST2", "VST3", "AAX", "AU", "CLAP"]
 const ARCHS = ["x64", "x86", "arm64", "universal", "mixed"] as const
 
 /** Builds the text behind "Copy diagnostics". It lists the scanned folders but never plugin names. */

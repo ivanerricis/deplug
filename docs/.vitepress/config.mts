@@ -92,7 +92,7 @@ export default defineConfig({
       label: 'English',
       lang: 'en',
       description:
-        'Find installed audio plugins (VST2, VST3, AAX, AU) and uninstall them safely, to the system trash.',
+        'Find installed audio plugins (VST2, VST3, AAX, AU, CLAP) and uninstall them safely, to the system trash.',
       themeConfig: {
         nav: [
           { text: 'Guide', link: '/getting-started', activeMatch: '^/(getting-started|using-deplug|custom-folders|portable-mode|settings)' },
@@ -108,7 +108,7 @@ export default defineConfig({
       lang: 'it',
       link: '/it/',
       description:
-        'Trova i plugin audio installati (VST2, VST3, AAX, AU) e disinstallali in sicurezza, nel cestino di sistema.',
+        'Trova i plugin audio installati (VST2, VST3, AAX, AU, CLAP) e disinstallali in sicurezza, nel cestino di sistema.',
       themeConfig: {
         nav: [
           { text: 'Guida', link: '/it/getting-started', activeMatch: '^/it/(getting-started|using-deplug|custom-folders|portable-mode|settings)' },

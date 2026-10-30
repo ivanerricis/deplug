@@ -6,7 +6,7 @@ titleTemplate: Uninstall audio plugins, cleanly
 hero:
   name: Deplug
   text: Find audio plugins. Remove them cleanly.
-  tagline: A desktop app that lists every installed VST2, VST3, AAX and AU plugin on your computer and moves the ones you pick to the system trash.
+  tagline: A desktop app that lists every installed VST2, VST3, AAX, AU and CLAP plugin on your computer and moves the ones you pick to the system trash.
   image:
     src: /hero.svg
     alt: The Deplug logo, a D whose two prongs have been pulled out
@@ -20,7 +20,7 @@ hero:
 
 features:
   - title: One list, every format
-    details: Deplug scans the standard plugin folders on Windows, macOS and Linux and groups what it finds by format. Filter VST2, VST3, AAX and AU with one click, and open any plugin's folder.
+    details: Deplug scans the standard plugin folders on Windows, macOS and Linux and groups what it finds by format. Filter VST2, VST3, AAX, AU and CLAP with one click, and open any plugin's folder.
     link: /using-deplug
     linkText: How scanning works
   - title: Trash, not delete

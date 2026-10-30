@@ -655,6 +655,13 @@ mod tests {
         write(&zero.join("Contents/x64/Zero.aaxplugin"), 0);
         assert_eq!(health(&zero).as_deref(), Some("missing-binary"));
 
+        let clap = d.join("Good.clap");
+        write(&clap.join("Contents/MacOS/Good"), 10);
+        assert_eq!(health(&clap).as_deref(), Some("ok"));
+        let clap_file = d.join("Single.clap");
+        write(&clap_file, 10);
+        assert_eq!(health(&clap_file).as_deref(), Some("ok"));
+
         let nomacos = d.join("NoMac.vst");
         fs::create_dir_all(nomacos.join("Contents/MacOS")).unwrap();
         assert_eq!(health(&nomacos).as_deref(), Some("missing-binary"));

@@ -39,7 +39,7 @@ Preferisci non installare nulla? Usa la [versione portatile](/it/portable-mode).
 ## La prima scansione
 
 1. Avvia Deplug. Analizza da solo le cartelle standard dei plugin e mostra un indicatore di caricamento finché non ha finito.
-2. La barra degli strumenti mostra **quanti plugin sono stati trovati** e quattro caselle di formato: VST2, VST3, AAX e AU.
+2. La barra degli strumenti mostra **quanti plugin sono stati trovati** e le schede di formato: Tutti, VST2, VST3, AAX, AU e CLAP.
 3. I plugin sono elencati in una sezione comprimibile per ciascun formato. Espandi una sezione per vederne i plugin.
 4. Cerca per nome con il campo nella barra degli strumenti (Ctrl+F o Cmd+F) e usa il pulsante di nuova scansione dopo aver installato o rimosso qualcosa al di fuori di Deplug.
 

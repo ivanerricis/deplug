@@ -397,7 +397,7 @@ export const it: Record<MessageKey, string> = {
   "empty.tab.all": "Passa a Tutti",
   "welcome.title": "Benvenuto in Deplug",
   "welcome.purpose": "Trova i plugin audio installati su questo computer e rimuovi quelli che non ti servono più.",
-  "welcome.item.find": "Trova i plugin VST2, VST3, AAX e AU nelle cartelle standard e in quelle personalizzate.",
+  "welcome.item.find": "Trova i plugin VST2, VST3, AAX, AU e CLAP nelle cartelle standard e in quelle personalizzate.",
   "welcome.item.safe": "Sicuro per impostazione predefinita: i plugin vanno nel cestino, con un punto di ripristino di Windows opzionale.",
   "welcome.item.choose": "Scegli tu cosa rimuovere. Nulla viene eliminato senza la tua conferma.",
   "welcome.scan": "Cerca i plugin",

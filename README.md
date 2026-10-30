@@ -15,7 +15,7 @@
 
 ## Features
 
-- Finds VST2, VST3, AAX and AU plugins in the standard folders on Windows, macOS and Linux, grouped by format, with per-format filters.
+- Finds VST2, VST3, AAX, AU and CLAP plugins in the standard folders on Windows, macOS and Linux, grouped by format, with per-format filters.
 - Search by name or path (Ctrl/Cmd+F) and sortable columns.
 - Flags duplicates (the same plugin in several formats or folders) and can show only those.
 - Opens a plugin's folder in your file manager.
@@ -42,7 +42,7 @@ Builds are not code-signed, so Windows SmartScreen and macOS Gatekeeper warn on 
 ## Quick start
 
 1. Start Deplug. It scans the standard plugin folders on launch.
-2. Search, sort, or use the VST2 / VST3 / AAX / AU checkboxes and **Show only duplicates** to filter. The folder button opens a plugin's location.
+2. Search, sort, or use the VST2 / VST3 / AAX / AU / CLAP tabs and **Show only duplicates** to filter. The folder button opens a plugin's location.
 3. Press the trash button on a plugin, or select several and press **Uninstall selected**. Confirm (and on Windows choose whether to create a restore point), and the plugins move to the system trash.
 4. Plugins in other places? Add the folder as a custom scan folder in Settings, Scan.
 

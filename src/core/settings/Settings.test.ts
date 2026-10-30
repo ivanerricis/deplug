@@ -112,6 +112,11 @@ describe("normalizeSettings (scan exclusions and view)", () => {
     expect(s.lastSort).toEqual({ key: "name", dir: "asc" })
   })
 
+  it("accepts CLAP as a tab", () => {
+    const s = normalizeSettings({ defaultTab: "CLAP", lastTab: "CLAP" })
+    expect([s.defaultTab, s.lastTab]).toEqual(["CLAP", "CLAP"])
+  })
+
   it("accepts valid view values", () => {
     const s = normalizeSettings({
       density: "compact",

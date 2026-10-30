@@ -8,7 +8,7 @@ Apri le impostazioni con il pulsante a forma di ingranaggio a destra nella barra
 - **Tema**: *Sistema*, *Chiaro* o *Scuro*. *Sistema* segue l'impostazione chiaro o scuro del sistema operativo.
 - **Elenco**: spunta le colonne facoltative dell'elenco dei plugin: **Percorso**, **Dimensione**, **Modificato** e **Architettura** (l'etichetta 32/64 bit accanto al nome). Il nome è sempre visibile. Le colonne nascoste perdono anche l'intestazione di ordinamento e il layout si adatta senza lasciare spazi vuoti. La **Densità delle righe** è *Comoda* (predefinita) o *Compatta*, che mostra più plugin sullo schermo.
 - **Ricorda l'ultima scheda e l'ordinamento**: attiva di default. Deplug salva la scheda e l'ordinamento usati per ultimi e si riapre con quelli. Disattivala per aprire sempre con le due scelte qui sotto.
-- **Scheda iniziale**: *Tutti*, *VST2*, *VST3*, *AAX* o *AU*; vale quando il ricordo è disattivato.
+- **Scheda iniziale**: *Tutti*, *VST2*, *VST3*, *AAX*, *AU* o *CLAP*; vale quando il ricordo è disattivato.
 - **Ordinamento predefinito**: la colonna (*Nome*, *Percorso*, *Dimensione* o *Modificato*) e la direzione (*Crescente* o *Decrescente*) con cui parte ogni sezione quando il ricordo è disattivato.
 
 ## Scansione {#scan}

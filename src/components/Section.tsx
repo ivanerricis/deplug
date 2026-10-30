@@ -10,7 +10,7 @@ import { folderRuns, pluginKey, shouldGroupByFolder, type SortKey, type SortStat
 import { buildPluginPath, totalKnownSize } from "@/core/plugin/Uninstall"
 import { shortenPath } from "@/core/format"
 
-type SectionType = "VST2" | "VST3" | "AAX" | "AU"
+type SectionType = "VST2" | "VST3" | "AAX" | "AU" | "CLAP"
 
 type SectionProps = {
     type: SectionType

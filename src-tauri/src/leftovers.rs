@@ -19,7 +19,7 @@ const MAX_TRASH_BATCH: usize = 100;
 /// Entries visited at most when summing a folder size.
 const SIZE_ENTRY_CAP: usize = 20_000;
 /// Folder names that must never be reported or trashed, even as a direct child of a root.
-const PROTECTED_NAMES: [&str; 17] = [
+const PROTECTED_NAMES: [&str; 18] = [
     "microsoft",
     "windows",
     "apple",
@@ -31,6 +31,7 @@ const PROTECTED_NAMES: [&str; 17] = [
     "caches",
     "vst",
     "vst3",
+    "clap",
     "plugins",
     "adobe",
     "nvidia",

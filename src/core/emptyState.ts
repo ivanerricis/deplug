@@ -17,7 +17,7 @@ export type EmptyStateInput = {
 
 export function emptyStateKind({ welcome, scanned, counts, tab, shown }: EmptyStateInput): EmptyStateKind | null {
   if (welcome) return "welcome"
-  const total = counts.VST2 + counts.VST3 + counts.AAX + counts.AU
+  const total = counts.VST2 + counts.VST3 + counts.AAX + counts.AU + counts.CLAP
   if (total === 0) return scanned ? "none" : "idle"
   // A format tab with no plugins at all is not a filter problem: say so, and offer All.
   if (tab !== "all" && counts[tab] === 0) return "tab-empty"

@@ -8,11 +8,11 @@ export type UpdateChannel = "stable" | "prerelease"
 
 export type ColumnKey = "path" | "size" | "modified" | "arch"
 export type DensitySetting = "comfortable" | "compact"
-export type TabSetting = "all" | "VST2" | "VST3" | "AAX" | "AU"
+export type TabSetting = "all" | "VST2" | "VST3" | "AAX" | "AU" | "CLAP"
 export type SortSetting = { key: "name" | "path" | "size" | "modified"; dir: "asc" | "desc" }
 
 export const COLUMN_KEYS: readonly ColumnKey[] = ["path", "size", "modified", "arch"]
-export const TAB_SETTINGS: readonly TabSetting[] = ["all", "VST2", "VST3", "AAX", "AU"]
+export const TAB_SETTINGS: readonly TabSetting[] = ["all", "VST2", "VST3", "AAX", "AU", "CLAP"]
 export const SORT_KEYS: readonly SortSetting["key"][] = ["name", "path", "size", "modified"]
 
 export type AppSettings = {

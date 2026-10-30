@@ -8,12 +8,14 @@ const TAG: Record<PluginType, string> = {
   VST3: "bg-fmt-vst3/12 text-fmt-vst3",
   AAX: "bg-fmt-aax/12 text-fmt-aax",
   AU: "bg-fmt-au/12 text-fmt-au",
+  CLAP: "bg-fmt-clap/12 text-fmt-clap",
 }
 const DOT: Record<PluginType, string> = {
   VST2: "bg-fmt-vst2",
   VST3: "bg-fmt-vst3",
   AAX: "bg-fmt-aax",
   AU: "bg-fmt-au",
+  CLAP: "bg-fmt-clap",
 }
 
 export function FormatTag({ type, className = "" }: { type: PluginType; className?: string }) {

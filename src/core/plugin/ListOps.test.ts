@@ -55,6 +55,7 @@ describe("naturalCompare / sortPlugins", () => {
 describe("normalizeBaseName", () => {
   it("strips extension, case and x64 suffixes", () => {
     expect(normalizeBaseName("Serum.vst3")).toBe("serum")
+    expect(normalizeBaseName("Serum.clap")).toBe("serum")
     expect(normalizeBaseName("SERUM.dll")).toBe("serum")
     expect(normalizeBaseName("Serum x64.dll")).toBe("serum")
     expect(normalizeBaseName("Serum_x64.dll")).toBe("serum")

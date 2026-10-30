@@ -91,7 +91,7 @@ export function sortPlugins(plugins: Plugin[], sort: SortState, meta?: MetaMap):
   return [...plugins].sort((a, b) => sign * cmp(a, b))
 }
 
-const KNOWN_EXTENSIONS = /\.(vst3|vst|dll|so|component|aaxplugin)$/i
+const KNOWN_EXTENSIONS = /\.(vst3|vst|dll|so|component|aaxplugin|clap)$/i
 const ARCH_SUFFIX = /(?:[ _]x64|[ _]\(x64\))$/i
 
 /** Name without extension and 64-bit suffix, case-folded: the identity used to spot duplicates. */

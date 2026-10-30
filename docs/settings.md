@@ -8,7 +8,7 @@ Open the settings with the gear button at the right of the toolbar. The dialog h
 - **Theme**: *System*, *Light* or *Dark*. *System* follows your operating system's light or dark setting.
 - **List**: tick the optional columns of the plugin list: **Path**, **Size**, **Modified** and **Architecture** (the 32/64-bit pill next to the name). The name is always shown. Hidden columns also lose their sort header, and the layout adjusts so nothing is left empty. **Row density** is *Comfortable* (default) or *Compact*, which fits more plugins on screen.
 - **Remember the last tab and sort**: on by default. Deplug saves the tab and sort you used last and opens on them next time. Turn it off to always open on the two choices below.
-- **Start on tab**: *All*, *VST2*, *VST3*, *AAX* or *AU*; used when remembering is off.
+- **Start on tab**: *All*, *VST2*, *VST3*, *AAX*, *AU* or *CLAP*; used when remembering is off.
 - **Default sort**: the column (*Name*, *Path*, *Size* or *Modified*) and direction (*Ascending* or *Descending*) every section starts with when remembering is off.
 
 ## Scan {#scan}
