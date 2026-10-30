@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Installs the third-party Claude Code skills used for UI work into .claude/skills/.
 # Each skill is pinned to a reviewed commit; bump the SHA only after reviewing the diff.
-# The installed copies are git-ignored (see .gitignore) to keep the repository small.
+# The installed copies are git-ignored (see .gitignore) to keep the repository small; the project's own
+# skills (.claude/skills/deplug-*) are committed and never touched by this script.
 #
 #   ./scripts/install-skills.sh
 set -euo pipefail
