@@ -13,12 +13,28 @@
     "fs:allow-write-text-file",
     "fs:default",
     {
-      "identifier": "fs:scope",
-      "allow": [{"path": "**/*"}]
+      "identifier": "fs:allow-read-dir",
+      "allow": [
+        {
+          "path": "**/*"
+        }
+      ]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [
+        {
+          "path": "**/*"
+        }
+      ]
     },
     {
       "identifier": "opener:allow-open-path",
-      "allow": [{"path": "**/*"}]
+      "allow": [
+        {
+          "path": "**/*"
+        }
+      ]
     }
   ]
 }
