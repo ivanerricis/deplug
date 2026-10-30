@@ -25,6 +25,8 @@ The plugin list refreshes when you close the settings, if anything here changed.
 
 The About section shows the app name, the **Version**, and the **Mode** (*Standard* or *Portable*). In portable mode it also shows the **Data folder**, and a warning if portable mode could not start, for example because the folder is read-only. See [Portable mode](/portable-mode).
 
+Under **Updates**, **Check for updates** looks for a newer published version. On a normal (installed) copy, Deplug can then download and install it for you: press **Download and install**, watch the progress bar, then press **Restart now**. Updates are verified with a signature before they are installed. If the in-app update is not available for your install (for example some Linux packages), or you run a [portable](/portable-mode) copy, which never updates itself because portable copies are replaced by hand, the button **Open release page** takes you to the download instead.
+
 It also has:
 
 - links to the **GitHub page**, the **Documentation**, **Report an issue** and **Release notes**, which open in your browser;

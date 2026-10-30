@@ -1,8 +1,19 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { getVersion } from "@tauri-apps/api/app"
 import { openUrl } from "@tauri-apps/plugin-opener"
 import { Copy, ExternalLink, RefreshCw } from "lucide-react"
 import { checkForUpdate, type UpdateResult } from "@/core/update"
+import {
+  downloadPercent,
+  initialSelfUpdateState,
+  runCheck,
+  runInstall,
+  selfUpdateReducer,
+  tauriUpdaterBackend,
+  type PendingUpdate,
+  type SelfUpdateAction,
+  type SelfUpdateState,
+} from "@/core/selfUpdate"
 import { DOCS_AVAILABLE, DOCS_URL, ISSUES_URL, RELEASES_URL, REPO_URL } from "@/core/appInfo"
 import type { PluginArch } from "@/core/plugin/Meta"
 import { osLabel, type Platform } from "@/core/plugin/Path"
@@ -11,6 +22,7 @@ import type { AppInfo } from "@/core/settings/AppSettings"
 import { useI18n } from "@/i18n/I18nProvider"
 import { Alert, AlertDescription } from "../ui/alert"
 import { Button } from "../ui/button"
+import { Progress } from "../ui/progress"
 import markLight from "../../../assets/brand/deplug-mark-color.svg"
 import markDark from "../../../assets/brand/deplug-mark-color-on-dark.svg"
 
@@ -27,6 +39,8 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
   const [version, setVersion] = useState<string | null>(null)
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle")
   const [update, setUpdate] = useState<UpdateResult | "checking" | null>(null)
+  const [self, setSelf] = useState<SelfUpdateState>(initialSelfUpdateState)
+  const pending = useRef<PendingUpdate | null>(null)
 
   useEffect(() => {
     getVersion().then(setVersion, () => setVersion(null))
@@ -44,11 +58,32 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
     { label: t("settings.about.releases"), url: RELEASES_URL },
   ]
 
+  // Installed (non-portable) copies can update themselves; portable ones are replaced by hand.
+  const portable = appInfo?.portable === true
+  const canSelfUpdate = appInfo?.portable === false
+
+  const dispatchSelf = (a: SelfUpdateAction) => setSelf(prev => selfUpdateReducer(prev, a))
+
   const runUpdateCheck = async () => {
     setUpdate("checking")
+    pending.current = null
+    setSelf(initialSelfUpdateState)
     // Without a known running version (plain browser dev mode) there is nothing to compare.
-    setUpdate(version ? await checkForUpdate(version) : { status: "error", reason: "invalid-version" })
+    const result = version ? await checkForUpdate(version) : ({ status: "error", reason: "invalid-version" } as const)
+    // The GitHub check is the base (it knows pre-releases); the plugin then confirms it can install the update.
+    if (result.status === "available" && canSelfUpdate) pending.current = await runCheck(tauriUpdaterBackend, dispatchSelf)
+    setUpdate(result)
   }
+
+  const installUpdate = async () => {
+    if (pending.current) await runInstall(pending.current, dispatchSelf)
+  }
+
+  const restart = () => {
+    tauriUpdaterBackend.relaunch().catch(e => dispatchSelf({ type: "failed", message: String(e) }))
+  }
+
+  const percent = downloadPercent(self)
 
   const copyDiagnostics = async () => {
     const folders = [...systemPaths.filter(p => !settings.disabledSystemPaths.includes(p)), ...settings.customScanPaths]
@@ -123,12 +158,53 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
           <Alert variant={update.status === "error" ? "destructive" : "default"} role="status">
             <AlertDescription className="flex flex-col gap-2 text-foreground">
               {update.status === "up-to-date" && <span>{t("settings.about.upToDate", { version: update.current })}</span>}
-              {update.status === "available" && (
+              {update.status === "available" && (self.phase === "available" || self.phase === "downloading" || self.phase === "ready") && (
                 <>
                   <span className="font-medium">{t("settings.about.updateAvailable", { version: update.latest })}</span>
-                  <span className="text-muted-foreground">{t("settings.about.updateHint")}</span>
+                  {self.phase === "available" && (
+                    <>
+                      <span className="text-muted-foreground">{t("settings.about.autoHint")}</span>
+                      <div>
+                        <Button size="sm" onClick={installUpdate}>{t("settings.about.install")}</Button>
+                      </div>
+                    </>
+                  )}
+                  {self.phase === "downloading" && (
+                    <>
+                      <span className="text-muted-foreground">
+                        {percent === null ? t("settings.about.downloadingUnknown") : t("settings.about.downloading", { percent })}
+                      </span>
+                      <Progress value={percent ?? 0} aria-label={t("settings.about.downloadingUnknown")} />
+                    </>
+                  )}
+                  {self.phase === "ready" && (
+                    <>
+                      <span className="text-muted-foreground">{t("settings.about.readyToRestart", { version: self.version })}</span>
+                      <div>
+                        <Button size="sm" onClick={restart}>{t("settings.about.restart")}</Button>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+              {update.status === "available" && (self.phase === "idle" || self.phase === "manual") && (
+                <>
+                  <span className="font-medium">{t("settings.about.updateAvailable", { version: update.latest })}</span>
+                  <span className="text-muted-foreground">
+                    {portable ? t("settings.about.portableHint") : t("settings.about.updateHint")}
+                  </span>
                   <div>
                     <Button size="sm" onClick={() => { openUrl(update.url).catch(console.error) }}>
+                      {t("settings.about.openRelease")} <ExternalLink aria-hidden />
+                    </Button>
+                  </div>
+                </>
+              )}
+              {update.status === "available" && self.phase === "error" && (
+                <>
+                  <span>{t("settings.about.installError", { message: self.message })}</span>
+                  <div>
+                    <Button variant="outline" size="sm" onClick={() => { openUrl(update.url).catch(console.error) }}>
                       {t("settings.about.openRelease")} <ExternalLink aria-hidden />
                     </Button>
                   </div>
