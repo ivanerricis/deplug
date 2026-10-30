@@ -439,7 +439,11 @@ export default function App() {
       )}
 
       {emptyKind === "welcome" ? (
-        <Welcome onScan={() => void scanPlugins()} onSettings={openScanSettings} />
+        <Welcome
+          onScan={() => void scanPlugins()}
+          onSettings={openScanSettings}
+          folderCount={systemPaths.filter(p => !settings.disabledSystemPaths.includes(p)).length + settings.customScanPaths.length}
+        />
       ) : emptyKind === "idle" || emptyKind === "none" ? (
         <EmptyState
           icon={<BrandMark className="size-20 text-foreground/80" />}
