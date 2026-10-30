@@ -1,8 +1,19 @@
 import { invoke } from "@tauri-apps/api/core"
+import { normalizeExclusions } from "../plugin/Exclude"
 
 export type LanguageSetting = "system" | "en" | "it"
 export type ThemeSetting = "system" | "light" | "dark"
 export type DeleteMethodSetting = "trash" | "permanent"
+export type UpdateChannel = "stable" | "prerelease"
+
+export type ColumnKey = "path" | "size" | "modified" | "arch"
+export type DensitySetting = "comfortable" | "compact"
+export type TabSetting = "all" | "VST2" | "VST3" | "AAX" | "AU"
+export type SortSetting = { key: "name" | "path" | "size" | "modified"; dir: "asc" | "desc" }
+
+export const COLUMN_KEYS: readonly ColumnKey[] = ["path", "size", "modified", "arch"]
+export const TAB_SETTINGS: readonly TabSetting[] = ["all", "VST2", "VST3", "AAX", "AU"]
+export const SORT_KEYS: readonly SortSetting["key"][] = ["name", "path", "size", "modified"]
 
 export type AppSettings = {
   version: number
@@ -19,6 +30,23 @@ export type AppSettings = {
   deleteMethod: DeleteMethodSetting
   /** Ask for confirmation before uninstalling (default on; always asked when the delete method is "permanent"). */
   confirmUninstall: boolean
+  /** Opt-in: check for a newer release shortly after startup. */
+  checkUpdatesOnStartup: boolean
+  /** "stable" ignores GitHub pre-releases; "prerelease" also offers release candidates. */
+  updateChannel: UpdateChannel
+  /** Unix time in ms of the last automatic update check (0 = never). */
+  lastUpdateCheck: number
+  /** Name patterns (`*` wildcard) of plugins and folders the scan skips. */
+  scanExclusions: string[]
+  /** Optional list columns shown, in canonical order. Name is always shown. */
+  visibleColumns: ColumnKey[]
+  density: DensitySetting
+  defaultTab: TabSetting
+  defaultSort: SortSetting
+  /** Restore the last used tab and sort at startup instead of the defaults. */
+  rememberView: boolean
+  lastTab: TabSetting
+  lastSort: SortSetting
 }
 
 export type AppInfo = {
@@ -28,6 +56,8 @@ export type AppInfo = {
   portableWarning: string | null
   /** True when the process already runs with administrator rights (Windows only). */
   elevated: boolean
+  /** CPU architecture and OS family from the backend, e.g. "x86_64 / windows". */
+  osInfo?: string
 }
 
 export const MIN_SCAN_DEPTH = 1
@@ -46,6 +76,17 @@ export const DEFAULT_SETTINGS: AppSettings = {
   runAsAdmin: true,
   deleteMethod: "trash",
   confirmUninstall: true,
+  checkUpdatesOnStartup: false,
+  updateChannel: "stable",
+  lastUpdateCheck: 0,
+  scanExclusions: [],
+  visibleColumns: [...COLUMN_KEYS],
+  density: "comfortable",
+  defaultTab: "all",
+  defaultSort: { key: "name", dir: "asc" },
+  rememberView: true,
+  lastTab: "all",
+  lastSort: { key: "name", dir: "asc" },
 }
 
 const onlyStrings = (value: unknown): string[] =>
@@ -53,6 +94,16 @@ const onlyStrings = (value: unknown): string[] =>
 
 const oneOf = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
   allowed.includes(value as T) ? (value as T) : fallback
+
+function normalizeSort(value: unknown): SortSetting {
+  const r = (value && typeof value === "object" ? value : {}) as Record<string, unknown>
+  return { key: oneOf(r.key, SORT_KEYS, "name"), dir: oneOf(r.dir, ["asc", "desc"], "asc") }
+}
+
+function normalizeColumns(value: unknown): ColumnKey[] {
+  if (!Array.isArray(value)) return [...COLUMN_KEYS]
+  return COLUMN_KEYS.filter(c => value.includes(c))
+}
 
 export function clampDepth(value: unknown): number {
   const n = typeof value === "number" ? value : Number.NaN
@@ -76,6 +127,20 @@ export function normalizeSettings(raw: unknown): AppSettings {
     runAsAdmin: typeof r.runAsAdmin === "boolean" ? r.runAsAdmin : d.runAsAdmin,
     deleteMethod: oneOf(r.deleteMethod, ["trash", "permanent"], d.deleteMethod),
     confirmUninstall: typeof r.confirmUninstall === "boolean" ? r.confirmUninstall : d.confirmUninstall,
+    checkUpdatesOnStartup: typeof r.checkUpdatesOnStartup === "boolean" ? r.checkUpdatesOnStartup : d.checkUpdatesOnStartup,
+    updateChannel: oneOf(r.updateChannel, ["stable", "prerelease"], d.updateChannel),
+    lastUpdateCheck:
+      typeof r.lastUpdateCheck === "number" && Number.isFinite(r.lastUpdateCheck) && r.lastUpdateCheck > 0
+        ? Math.floor(r.lastUpdateCheck)
+        : d.lastUpdateCheck,
+    scanExclusions: normalizeExclusions(r.scanExclusions),
+    visibleColumns: normalizeColumns(r.visibleColumns),
+    density: oneOf(r.density, ["comfortable", "compact"], d.density),
+    defaultTab: oneOf(r.defaultTab, TAB_SETTINGS, d.defaultTab),
+    defaultSort: normalizeSort(r.defaultSort),
+    rememberView: typeof r.rememberView === "boolean" ? r.rememberView : d.rememberView,
+    lastTab: oneOf(r.lastTab, TAB_SETTINGS, d.lastTab),
+    lastSort: normalizeSort(r.lastSort),
   }
 }
 

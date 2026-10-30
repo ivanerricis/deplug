@@ -51,7 +51,7 @@ The download button in the toolbar saves the plugin list to a file. It exports w
 
 ## Sorting
 
-Each section has **Name** and **Path** column headers. Click one to sort by it, click it again to reverse the order. Sorting is natural, so "Plug 2" comes before "Plug 10", and every format section keeps its own order.
+Each section has column headers (**Name**, plus **Path**, **Size** and **Modified** when those columns are shown; see [Settings](/settings#general)). Click one to sort by it, click it again to reverse the order. The tab and sort you used last are remembered for the next start (or set a fixed start in the settings). Sorting is natural, so "Plug 2" comes before "Plug 10", and every format section keeps its own order.
 
 ## Duplicates
 
@@ -136,3 +136,18 @@ If it fails, Deplug shows the reason and asks whether to **continue without a re
 A batch asks only once: if the restore point fails, you choose whether to continue for all the selected plugins.
 
 Other errors show the message reported by Windows PowerShell.
+
+## Keyboard shortcuts
+
+Shortcuts that act on the list do nothing while a dialog or menu is open, and the plain keys are ignored while you type in a field. On macOS use **Cmd** instead of **Ctrl**. Press **?** to show this list in the app.
+
+| Keys | Action |
+| --- | --- |
+| **Ctrl+F** | Focus the search field |
+| **Ctrl+A** | Select every plugin shown in the current view |
+| **Esc** | Clear the search, then the selection |
+| **Del** | Uninstall the selected plugins (opens the uninstall dialog) |
+| **Ctrl+E** | Open the export menu |
+| **Ctrl+,** | Open settings |
+| **F5** or **Ctrl+R** | Rescan plugins |
+| **?** | Show the shortcuts |

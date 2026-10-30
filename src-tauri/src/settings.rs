@@ -17,6 +17,8 @@ pub struct AppInfo {
     pub portable_warning: Option<String>,
     /// True when the process runs with administrator rights (Windows only).
     pub elevated: bool,
+    /// CPU architecture and OS family from `std::env::consts`, e.g. "x86_64 / windows".
+    pub os_info: String,
 }
 
 #[tauri::command]
@@ -50,5 +52,6 @@ pub fn app_info(mode: State<'_, AppMode>) -> AppInfo {
             .map(|p| p.to_string_lossy().into_owned()),
         portable_warning: mode.warning.clone(),
         elevated: crate::elevation::is_elevated(),
+        os_info: format!("{} / {}", std::env::consts::ARCH, std::env::consts::FAMILY),
     }
 }

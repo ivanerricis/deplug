@@ -1,4 +1,5 @@
 import { OSApi } from "../os/OSApi"
+import { createExcludeMatcher } from "./Exclude"
 import { Plugin, PluginType } from "./Plugin"
 
 const MAX_DEPTH = 3
@@ -9,6 +10,8 @@ export interface ScannerOptions {
   customDepth?: number
   /** Built-in system folders the user switched off. */
   disabledPaths?: string[]
+  /** Name patterns (see Exclude.ts) for plugins and folders to skip. */
+  exclusions?: string[]
 }
 
 export interface ScanResult {
@@ -37,7 +40,11 @@ export class PluginScanner {
     private platform: string,
     private customPaths: string[] = [],
     private options: ScannerOptions = {},
-  ) {}
+  ) {
+    this.isExcluded = createExcludeMatcher(options.exclusions)
+  }
+
+  private isExcluded: (name: string) => boolean
 
   async search(): Promise<ScanResult> {
     const result: ScanResult = { all: [], vst2: [], vst3: [], aax: [], au: [] }
@@ -76,6 +83,7 @@ export class PluginScanner {
 
     const found: Plugin[] = []
     for (const entry of entries) {
+      if (this.isExcluded(entry.name)) continue
       const type = pluginTypeOf(entry.name, this.platform)
       if (type) {
         // plugin bundles are directories too: report them, don't descend
