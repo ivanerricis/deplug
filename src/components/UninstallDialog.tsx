@@ -19,6 +19,7 @@ import {
   buildPluginPath,
   tauriUninstallBackend,
   tauriSingleBackend,
+  groupVendorUninstallers,
   uninstallPlugins,
   uninstallSingle,
   findVendorUninstaller,
@@ -26,6 +27,7 @@ import {
   type BatchItemResult,
   type Leftover,
   type SingleUninstallResult,
+  type VendorGroup,
   type VendorUninstaller,
 } from "@/core/plugin/Uninstall"
 import { pluginKey } from "@/core/plugin/ListOps"
@@ -53,13 +55,17 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
   const [restorePoint, setRestorePoint] = useState(settings.restorePointDefault)
   const [phase, setPhase] = useState<Phase>("confirm")
   const [error, setError] = useState<string | null>(null)
-  const [progress, setProgress] = useState<{ completed: BatchItemResult[]; current: Plugin | null }>({ completed: [], current: null })
+  const [progress, setProgress] = useState<{ completed: BatchItemResult[]; current: Plugin | null; active: Plugin[] }>({ completed: [], current: null, active: [] })
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; resolve: (v: boolean) => void } | null>(null)
   // Single-plugin extras, discovered in the background; failures just mean "nothing extra".
   const [vendor, setVendor] = useState<VendorUninstaller | null>(null)
   const [leftovers, setLeftovers] = useState<Leftover[]>([])
   const [leftoversSearched, setLeftoversSearched] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  // Batch: plugins grouped by the publisher's uninstaller they resolve to, and the groups the user chose to run.
+  const [vendorGroups, setVendorGroups] = useState<VendorGroup[]>([])
+  const [vendorSearched, setVendorSearched] = useState(false)
+  const [chosenGroups, setChosenGroups] = useState<Set<string>>(new Set())
   const [method, setMethod] = useState<"trash" | "vendor">("trash")
   const [step, setStep] = useState<"restorePoint" | "leftovers" | "plugin" | null>(null)
   const [single, setSingle] = useState<SingleUninstallResult | null>(null)
@@ -78,7 +84,27 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
     single.leftoversTrashed > 0 || (!!single.plugin && single.plugin.status !== "failed" && single.plugin.action === "trash") ||
     (single.plugin?.action === "vendor" && single.plugin.status !== "failed")
   )
-  const removedAny = many ? progress.completed.some(r => r.status === "removed") : singleTouched
+  const removedAny = many ? progress.completed.some(r => r.status === "removed" || r.action === "vendor") : singleTouched
+  const runGroups = vendorGroups.filter(g => chosenGroups.has(g.key))
+  const vendorPlugins = new Set(runGroups.flatMap(g => g.plugins))
+  const batchVendor = many && runGroups.length > 0
+
+  useEffect(() => {
+    if (!many) return
+    let alive = true
+    // One lookup per plugin, one after the other; a failed lookup just means "no uninstaller for this one".
+    ;(async () => {
+      const entries: { plugin: Plugin; vendor: VendorUninstaller | null }[] = []
+      for (const plugin of plugins) {
+        const vendor = await findVendorUninstaller(buildPluginPath(plugin.installPath, plugin.name)).catch(() => null)
+        if (!alive) return
+        entries.push({ plugin, vendor: vendor ?? null })
+      }
+      setVendorGroups(groupVendorUninstallers(entries))
+      setVendorSearched(true)
+    })()
+    return () => { alive = false }
+  }, [])
 
   useEffect(() => {
     if (many) return
@@ -91,6 +117,14 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
       .finally(() => { if (alive) setLeftoversSearched(true) })
     return () => { alive = false }
   }, [])
+
+  const toggleGroup = (key: string, on: boolean) =>
+    setChosenGroups(prev => {
+      const next = new Set(prev)
+      if (on) next.add(key)
+      else next.delete(key)
+      return next
+    })
 
   const toggleLeftover = (path: string, on: boolean) =>
     setSelected(prev => {
@@ -122,7 +156,7 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
   const confirm = async () => {
     setPhase("running")
     setError(null)
-    setProgress({ completed: [], current: null })
+    setProgress({ completed: [], current: null, active: [] })
     try {
       if (!many) {
         const result = await uninstallSingle(plugins[0], {
@@ -151,13 +185,14 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
         restorePoint: isWindows && restorePoint,
         backend: tauriUninstallBackend,
         confirmContinue: message => new Promise<boolean>(resolve => setPendingConfirm({ message, resolve })),
-        onProgress: (completed, current) => setProgress({ completed, current }),
+        onProgress: (completed, current, active) => setProgress({ completed, current, active }),
+        vendor: runGroups.length > 0 ? { groups: runGroups, backend: tauriSingleBackend } : undefined,
       })
       if (batch.status === "cancelled") {
         setPhase("confirm")
         return
       }
-      setProgress({ completed: batch.results, current: null })
+      setProgress({ completed: batch.results, current: null, active: [] })
       setBatchRestore(batch.restorePoint)
       setPhase("done")
     } catch (e) {
@@ -193,7 +228,7 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
       if (outcome.callError) {
         setRetryError(outcome.callError)
       } else if (many) {
-        setProgress({ completed: outcome.items, current: null })
+        setProgress({ completed: outcome.items, current: null, active: [] })
       } else if (single) {
         const [item] = outcome.items
         setSingle({
@@ -227,19 +262,24 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
     </Alert>
   )
 
-  const failed = progress.completed.filter(r => r.status === "failed").length
+  const failed = progress.completed.filter(r => r.status !== "removed").length
   const removed = progress.completed.length - failed
+  const usedVendor = progress.completed.some(r => r.action === "vendor")
 
-  const statusOf = (plugin: Plugin, index: number): BatchItemResult | "running" | "pending" => {
-    if (index < progress.completed.length) return progress.completed[index]
-    return progress.current === plugin ? "running" : "pending"
+  // Results are matched by plugin, not by position: a publisher's uninstaller settles several plugins at once.
+  const statusOf = (plugin: Plugin): BatchItemResult | "running" | "pending" => {
+    const done = progress.completed.find(r => r.plugin === plugin)
+    if (done) return done
+    return progress.active.includes(plugin) ? "running" : "pending"
   }
 
   // Once finished, failures come first so their errors are visible without scrolling.
   const ordered = plugins.map((plugin, index) => ({ plugin, index }))
   if (phase === "done") {
-    ordered.sort((a, b) => Number(progress.completed[b.index]?.status === "failed") - Number(progress.completed[a.index]?.status === "failed"))
+    const bad = (plugin: Plugin) => Number(progress.completed.find(r => r.plugin === plugin)?.status === "failed")
+    ordered.sort((a, b) => bad(b.plugin) - bad(a.plugin))
   }
+  const vendorWaiting = running && many && progress.active.some(p => vendorPlugins.has(p))
 
   return (
     <Dialog open onOpenChange={open => { if (!open) cancel() }}>
@@ -269,7 +309,9 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
             <p role="status">{t("uninstall.result.title")}</p>
           ) : phase === "done" ? (
             <p role="status">
-              {failed === 0 ? t("uninstall.summaryOk", { removed }) : t("uninstall.summary", { removed, failed })}
+              {usedVendor
+                ? (failed === 0 ? t("uninstall.summaryVendorOk", { removed }) : t("uninstall.summaryVendor", { removed, failed }))
+                : (failed === 0 ? t("uninstall.summaryOk", { removed }) : t("uninstall.summary", { removed, failed }))}
             </p>
           ) : many ? (
             running ? (
@@ -277,7 +319,11 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
                 {t("uninstall.progress", { current: Math.min(progress.completed.length + 1, plugins.length), total: plugins.length })}
               </p>
             ) : (
-              <p>{t("uninstall.descriptionMany", { count: plugins.length })}</p>
+              <p>
+                {batchVendor
+                  ? t("uninstall.descriptionManyVendor", { vendorCount: vendorPlugins.size, count: plugins.length })
+                  : t("uninstall.descriptionMany", { count: plugins.length })}
+              </p>
             )
           ) : (
             <>
@@ -302,14 +348,15 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
             className="flex flex-col divide-y outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
             tabIndex={0}
           >
-            {ordered.map(({ plugin, index: i }) => {
-              const st = phase === "confirm" ? "pending" : statusOf(plugin, i)
+            {ordered.map(({ plugin }) => {
+              const st = phase === "confirm" ? "pending" : statusOf(plugin)
               const result = typeof st === "object" ? st : null
               return (
                 <li key={pluginKey(plugin)} className="flex items-start gap-2 px-2 py-1.5 text-sm">
                   {phase !== "confirm" && (
                     <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
                       {result?.status === "removed" && <Check aria-hidden className="size-4" />}
+                      {result?.status === "still-present" && <AlertTriangle aria-hidden className="size-4 text-amber-600 dark:text-amber-400" />}
                       {result?.status === "failed" && <X aria-hidden className="size-4 text-destructive" />}
                       {st === "running" && <Loader2 aria-hidden className="size-4 animate-spin" />}
                     </span>
@@ -324,10 +371,14 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
                         {tError(result.error ?? t("uninstall.unknownError"))}
                       </div>
                     )}
+                    {result?.status === "still-present" && (
+                      <div className="mt-0.5 break-words text-xs text-muted-foreground">{t("uninstall.resultStillPresentHint")}</div>
+                    )}
                   </div>
                   {phase !== "confirm" && (
                     <Badge variant="outline" className={result?.status === "failed" ? "border-destructive/50 text-destructive" : "border-transparent text-muted-foreground"}>
-                      {result?.status === "removed" && t("uninstall.resultOk")}
+                      {result?.status === "removed" && (result.action === "vendor" ? t("uninstall.resultVendorOk") : t("uninstall.resultOk"))}
+                      {result?.status === "still-present" && t("uninstall.resultStillPresent")}
                       {result?.status === "failed" && t("uninstall.resultFailed")}
                       {st === "running" && t("uninstall.resultRunning")}
                       {st === "pending" && t("uninstall.resultPending")}
@@ -341,6 +392,50 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
         )}
 
         {many && phase === "done" && (<>{restoreLine}{elevateAlert}</>)}
+
+        {many && phase !== "done" && !vendorSearched && (
+          <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 aria-hidden className="size-3.5 shrink-0 animate-spin" />
+            {t("uninstall.batchVendor.searching")}
+          </p>
+        )}
+        {many && phase !== "done" && vendorGroups.length > 0 && (
+          <Alert role="group" className="p-3">
+            <ShieldCheck aria-hidden />
+            <AlertTitle className="line-clamp-none">{t("uninstall.batchVendor.title")}</AlertTitle>
+            <AlertDescription className="gap-2">
+              <p>{t("uninstall.batchVendor.hint")}</p>
+              <ul className="flex w-full flex-col gap-2">
+                {vendorGroups.map((g, i) => (
+                  <li key={g.key} className="flex items-start gap-2">
+                    <Checkbox
+                      id={`${checkboxId}-v${i}`}
+                      checked={chosenGroups.has(g.key)}
+                      disabled={running}
+                      onCheckedChange={v => toggleGroup(g.key, v === true)}
+                      className="mt-0.5"
+                    />
+                    <Label htmlFor={`${checkboxId}-v${i}`} className="min-w-0 flex-1 flex-col items-start gap-0.5 font-normal">
+                      <span className="break-words font-medium text-foreground">
+                        {g.plugins.length === 1
+                          ? t("uninstall.batchVendor.optionOne", { name: g.vendor.displayName })
+                          : t("uninstall.batchVendor.option", { name: g.vendor.displayName, count: g.plugins.length })}
+                      </span>
+                      {g.vendor.publisher && <span className="text-xs text-muted-foreground">{g.vendor.publisher}</span>}
+                      <span className="break-words text-xs text-muted-foreground">{g.plugins.map(p => p.name).join(", ")}</span>
+                      {chosenGroups.has(g.key) && (
+                        <code className="mt-1 block max-h-24 w-full overflow-auto break-all rounded bg-muted px-2 py-1.5 font-mono text-xs text-foreground">
+                          {g.vendor.commandPreview}
+                        </code>
+                      )}
+                    </Label>
+                  </li>
+                ))}
+              </ul>
+              {batchVendor && <p className="text-xs text-foreground">{t("uninstall.vendor.warning")}</p>}
+            </AlertDescription>
+          </Alert>
+        )}
 
         {!many && phase === "done" && single && (
           <ul className="flex flex-col gap-2 rounded border border-border p-2 text-sm">
@@ -492,6 +587,12 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
           </div>
         )}
 
+        {vendorWaiting && !pendingConfirm && (
+          <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 aria-hidden className="size-4 shrink-0 animate-spin" />
+            {t("uninstall.step.vendor")}
+          </p>
+        )}
         {running && !many && step && !pendingConfirm && (
           <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 aria-hidden className="size-4 shrink-0 animate-spin" />
@@ -527,7 +628,7 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
               <Button variant="destructive" onClick={confirm} disabled={running}>
                 {running
                   ? (useVendor ? t("uninstall.runningVendor") : t("uninstall.running"))
-                  : (useVendor ? t("uninstall.confirmVendor") : t("uninstall.confirm"))}
+                  : (useVendor ? t("uninstall.confirmVendor") : batchVendor ? t("uninstall.confirmMixed") : t("uninstall.confirm"))}
               </Button>
             </>
           )}

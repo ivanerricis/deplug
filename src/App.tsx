@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { invoke } from "@tauri-apps/api/core"
+import { save } from "@tauri-apps/plugin-dialog"
+import { writeTextFile } from "@tauri-apps/plugin-fs"
 import { homeDir } from "@tauri-apps/api/path"
 import { PluginScanner } from "./core/plugin/PluginScanner"
 import { TauriOS } from "./core/os/TauriOS"
@@ -12,7 +14,10 @@ import SelectionBar from "./components/SelectionBar"
 import UninstallDialog from "./components/UninstallDialog"
 import SettingsDialog from "./components/SettingsDialog"
 import { Button } from "./components/ui/button"
+import { X } from "lucide-react"
+import { Alert, AlertDescription } from "./components/ui/alert"
 import BrandMark from "./components/BrandMark"
+import { exportFileName, exportPlugins, type ExportFormat } from "./core/plugin/Export"
 import { buildPluginPath } from "./core/plugin/Uninstall"
 import { fetchPluginMeta, knownArch, type PluginMeta } from "./core/plugin/Meta"
 import { getAppInfo, type AppInfo } from "./core/settings/AppSettings"
@@ -188,6 +193,28 @@ export default function App() {
     [visibleShown, selected],
   )
 
+  const exportList = selectedPlugins.length > 0 ? selectedPlugins : visibleShown
+  const [exportStatus, setExportStatus] = useState<{ ok: boolean; text: string } | null>(null)
+  useEffect(() => {
+    if (!exportStatus?.ok) return
+    const id = window.setTimeout(() => setExportStatus(null), 6000)
+    return () => window.clearTimeout(id)
+  }, [exportStatus])
+
+  const runExport = async (format: ExportFormat) => {
+    try {
+      const path = await save({
+        defaultPath: exportFileName(format),
+        filters: [{ name: t(format === "csv" ? "export.filterCsv" : "export.filterTxt"), extensions: [format] }],
+      })
+      if (!path) return // cancelled
+      await writeTextFile(path, exportPlugins(format, exportList, meta))
+      setExportStatus({ ok: true, text: t("export.done", { count: exportList.length, path }) })
+    } catch (e) {
+      setExportStatus({ ok: false, text: t("export.failed", { error: e instanceof Error ? e.message : String(e) }) })
+    }
+  }
+
   const selectKeys = useCallback((keys: string[], select: boolean) => {
     setSelected(prev => {
       const next = new Set(prev)
@@ -275,6 +302,9 @@ export default function App() {
         onArchFilterChange={setArchFilter}
         archCounts={archCounts}
         archAvailable={archAvailable}
+        exportCount={exportList.length}
+        exportSelection={selectedPlugins.length > 0}
+        onExport={format => void runExport(format)}
       />
 
       {showSettings && (
@@ -333,6 +363,20 @@ export default function App() {
           onUninstall={() => setUninstallTargets(selectedPlugins)}
           onClear={() => setSelected(new Set())}
         />
+      )}
+
+      {exportStatus && (
+        <Alert
+          variant={exportStatus.ok ? "default" : "destructive"}
+          className="fixed bottom-4 left-1/2 z-50 w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 p-3 shadow-lg"
+        >
+          <AlertDescription className="flex items-start gap-2">
+            <span className="min-w-0 flex-1 break-words">{exportStatus.text}</span>
+            <Button variant="ghost" size="icon-sm" className="-my-1 -mr-1 size-6" onClick={() => setExportStatus(null)} aria-label={t("export.dismiss")}>
+              <X aria-hidden />
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
       {uninstallTargets && <UninstallDialog plugins={uninstallTargets} meta={meta} onClose={closeUninstall} elevated={appInfo?.elevated ?? false} />}

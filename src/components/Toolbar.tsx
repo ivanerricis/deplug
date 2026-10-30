@@ -1,16 +1,17 @@
 import type { RefObject } from "react"
-import { ChevronDown, Copy, OctagonAlert, RefreshCcw, Search, Settings, X } from "lucide-react"
+import { ChevronDown, Copy, Download, OctagonAlert, RefreshCcw, Search, Settings, X } from "lucide-react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Toggle } from "./ui/toggle"
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs"
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import BrandMark from "./BrandMark"
 import { FormatDot } from "./FormatTag"
 import { useI18n } from "@/i18n/I18nProvider"
 import type { PluginType } from "@/core/plugin/Plugin"
 import type { ArchFilter } from "@/core/plugin/ListOps"
+import type { ExportFormat } from "@/core/plugin/Export"
 
 type ToolbarProps = {
   pluginsCount: number
@@ -34,6 +35,10 @@ type ToolbarProps = {
   onArchFilterChange: (value: ArchFilter) => void
   archCounts: Record<ArchFilter, number>
   archAvailable: boolean
+  /** How many plugins an export would write: the selection when there is one, otherwise what is shown. */
+  exportCount: number
+  exportSelection: boolean
+  onExport: (format: ExportFormat) => void
 }
 
 const TYPES: PluginType[] = ["VST2", "VST3", "AAX", "AU"]
@@ -63,6 +68,9 @@ export default function Toolbar({
   onArchFilterChange,
   archCounts,
   archAvailable,
+  exportCount,
+  exportSelection,
+  onExport,
 }: ToolbarProps) {
   const { t } = useI18n()
   return (
@@ -167,6 +175,25 @@ export default function Toolbar({
       </span>
 
       <div className="flex items-center">
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label={t("toolbar.export")} disabled={exportCount === 0}>
+                  <Download aria-hidden />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent>{t("toolbar.export")}</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+              {t(exportSelection ? "toolbar.exportSelection" : "toolbar.exportShown", { count: exportCount })}
+            </DropdownMenuLabel>
+            <DropdownMenuItem onSelect={() => onExport("csv")}>{t("toolbar.exportCsv")}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onExport("txt")}>{t("toolbar.exportTxt")}</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" onClick={onRefresh} aria-label={t("toolbar.rescan")}>
