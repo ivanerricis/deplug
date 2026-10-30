@@ -26,8 +26,14 @@ import {
   uninstallSingle,
   findVendorUninstaller,
   findLeftovers,
+  captureRegistryContext,
+  findRegistryLeftoversAfter,
+  removeRegistryKeys,
+  pluginWasRemoved,
   type BatchItemResult,
   type Leftover,
+  type RegistryLeftover,
+  type RegistryOutcome,
   type SingleUninstallResult,
   type VendorGroup,
   type VendorUninstaller,
@@ -70,6 +76,14 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
   const [leftovers, setLeftovers] = useState<Leftover[]>([])
   const [leftoversSearched, setLeftoversSearched] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  // Windows only, and only when the "Search the registry" setting is on.
+  const searchRegistry = isWindows && settings.searchRegistryLeftovers
+  // The backend keeps the plugin's publisher/product while it exists; the search itself runs after the uninstall.
+  const [registryReady, setRegistryReady] = useState(false)
+  const [registryKeys, setRegistryKeys] = useState<RegistryLeftover[] | null>(null)
+  const [registrySelected, setRegistrySelected] = useState<Set<string>>(new Set())
+  const [registryOutcome, setRegistryOutcome] = useState<RegistryOutcome | null>(null)
+  const [removingRegistry, setRemovingRegistry] = useState(false)
   // Batch: plugins grouped by the publisher's uninstaller they resolve to, and the groups the user chose to run.
   const [vendorGroups, setVendorGroups] = useState<VendorGroup[]>([])
   const [vendorSearched, setVendorSearched] = useState(false)
@@ -123,6 +137,11 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
       .then(l => { if (alive) setLeftovers(Array.isArray(l) ? l : []) })
       .catch(() => {})
       .finally(() => { if (alive) setLeftoversSearched(true) })
+    if (searchRegistry) {
+      captureRegistryContext(path)
+        .then(ok => { if (alive) setRegistryReady(ok === true) })
+        .catch(() => {})
+    }
     return () => { alive = false }
   }, [])
 
@@ -150,6 +169,14 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
       return next
     })
 
+  const toggleRegistryKey = (key: string, on: boolean) =>
+    setRegistrySelected(prev => {
+      const next = new Set(prev)
+      if (on) next.add(key)
+      else next.delete(key)
+      return next
+    })
+
   useEffect(() => {
     if (pendingConfirm) cancelRef.current?.focus()
   }, [pendingConfirm])
@@ -158,6 +185,27 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
     if (phase === "done") cancelRef.current?.focus()
   }, [phase])
 
+  // Revo-style: once the plugin is gone, look for what it left in the registry. Nothing is removed without a click.
+  useEffect(() => {
+    if (phase !== "done" || many || !registryReady || !pluginWasRemoved(single?.plugin)) return
+    let alive = true
+    findRegistryLeftoversAfter(buildPluginPath(plugins[0].installPath, plugins[0].name))
+      .then(l => { if (alive) setRegistryKeys(Array.isArray(l) ? l : []) })
+      .catch(() => { if (alive) setRegistryKeys([]) })
+    return () => { alive = false }
+  }, [phase, single])
+
+  const removeRegistry = async () => {
+    if (removingRegistry || !registryKeys) return
+    setRemovingRegistry(true)
+    try {
+      const keys = registryKeys.map(k => k.key).filter(k => registrySelected.has(k))
+      setRegistryOutcome(await removeRegistryKeys(buildPluginPath(plugins[0].installPath, plugins[0].name), keys))
+    } finally {
+      setRemovingRegistry(false)
+    }
+  }
+
   const answer = (value: boolean) => {
     pendingConfirm?.resolve(value)
     setPendingConfirm(null)
@@ -165,7 +213,7 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
 
   const cancel = () => {
     if (pendingConfirm) return answer(false)
-    if (running || retrying || forcing) return
+    if (running || retrying || forcing || removingRegistry) return
     onClose(phase === "done" && removedAny)
   }
 
@@ -189,8 +237,9 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
           setPhase("confirm")
           return
         }
-        // A clean run needs no summary unless there is a size to report or the confirmation was skipped.
-        if (result.plugin?.status === "removed" && result.leftoverFailures.length === 0 && !autoRun && totalKnownSize(plugins, sizeOf) === null) {
+        // A clean run needs no summary unless there is a size to report, the confirmation was skipped
+        // or the registry search is on (the result view then offers the keys left behind).
+        if (result.plugin?.status === "removed" && result.leftoverFailures.length === 0 && !autoRun && !registryReady && totalKnownSize(plugins, sizeOf) === null) {
           onClose(true)
           return
         }
@@ -580,6 +629,35 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
 
         {!many && phase === "done" && single && (<>{freedLine}{restoreLine}{elevateAlert}{forceAlert}</>)}
 
+        {!many && phase === "done" && registryReady && pluginWasRemoved(single?.plugin) && registryKeys === null && (
+          <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 aria-hidden className="size-3.5 shrink-0 animate-spin" />
+            {t("uninstall.registry.searching")}
+          </p>
+        )}
+        {!many && phase === "done" && registryKeys !== null && registryKeys.length === 0 && (
+          <p role="status" className="text-xs text-muted-foreground">{t("uninstall.registry.none")}</p>
+        )}
+        {!many && phase === "done" && registryOutcome && (
+          <ul className="flex flex-col gap-2 rounded border border-border p-2 text-sm">
+            {registryOutcome.deleted > 0 && (
+              <ResultLine tone="ok">
+                {registryOutcome.failures.length === 0
+                  ? t("uninstall.result.registryOk", { count: registryOutcome.deleted })
+                  : t("uninstall.result.registryPartial", { done: registryOutcome.deleted, total: registryOutcome.deleted + registryOutcome.failures.length })}
+              </ResultLine>
+            )}
+            {registryOutcome.failures.map(f => (
+              <ResultLine key={f.key} tone="fail" detail={tError(f.error)}>
+                {t("uninstall.result.registryFailed", { key: f.key })}
+              </ResultLine>
+            ))}
+            {registryOutcome.backupDir && (
+              <ResultLine tone="ok">{t("uninstall.result.registryBackup", { path: registryOutcome.backupDir })}</ResultLine>
+            )}
+          </ul>
+        )}
+
         {!many && phase !== "done" && vendor && (
           <Alert role="group" className="p-3">
             <ShieldCheck aria-hidden />
@@ -718,9 +796,51 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
           <p role="alert" className="text-sm text-destructive break-words">{tError(error)}</p>
         )}
 
+        {!many && phase === "done" && !registryOutcome && registryKeys !== null && registryKeys.length > 0 && (
+          <Collapsible defaultOpen className="rounded-lg border border-border">
+            <CollapsibleTrigger className="group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+              <ChevronRight aria-hidden className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+              {t("uninstall.registry.title", { count: registryKeys.length })}
+              {registrySelected.size > 0 && <Badge variant="secondary" className="ml-auto">{registrySelected.size}</Badge>}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="flex flex-col gap-2 px-3 pb-3">
+              <Alert variant="destructive" className="p-2 text-sm">
+                <AlertTriangle aria-hidden />
+                <AlertDescription className="gap-1">
+                  <p>{t("uninstall.registry.hint")}</p>
+                  {!restorePoint && <p className="font-medium">{t("uninstall.registry.noRestorePoint")}</p>}
+                </AlertDescription>
+              </Alert>
+              <p className="text-xs text-muted-foreground">{t("uninstall.registry.backup")}</p>
+              <ul className="flex flex-col gap-1.5">
+                {registryKeys.map((k, i) => (
+                  <li key={k.key} className="flex items-start gap-2">
+                    <Checkbox
+                      id={`${checkboxId}-r${i}`}
+                      aria-label={t("uninstall.registry.select", { key: k.key })}
+                      checked={registrySelected.has(k.key)}
+                      disabled={removingRegistry}
+                      onCheckedChange={v => toggleRegistryKey(k.key, v === true)}
+                      className="mt-0.5"
+                    />
+                    <Label htmlFor={`${checkboxId}-r${i}`} className="min-w-0 flex-1 flex-col items-start gap-0 font-normal">
+                      <span className="break-all text-sm">{k.key}</span>
+                      <span className="text-xs text-muted-foreground">{t("uninstall.registry.counts", { subkeys: k.subkeys, values: k.values })}</span>
+                    </Label>
+                  </li>
+                ))}
+              </ul>
+              <Button variant="destructive" size="sm" className="self-start" onClick={removeRegistry} disabled={removingRegistry || registrySelected.size === 0}>
+                {removingRegistry ? <Loader2 aria-hidden className="animate-spin" /> : <Trash2 aria-hidden />}
+                {removingRegistry ? t("uninstall.registry.removing") : t("uninstall.registry.remove")}
+              </Button>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
         <DialogFooter>
           {phase === "done" ? (
-            <Button ref={cancelRef as never} variant="outline" onClick={cancel} disabled={retrying}>
+            <Button ref={cancelRef as never} variant="outline" onClick={cancel} disabled={retrying || removingRegistry}>
               {t("uninstall.close")}
             </Button>
           ) : (

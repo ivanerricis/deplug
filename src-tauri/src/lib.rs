@@ -2,6 +2,7 @@ mod elevation;
 mod leftovers;
 mod meta;
 mod portable;
+mod registry_leftovers;
 mod settings;
 mod syspaths;
 mod uninstall;
@@ -42,6 +43,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(mode.clone())
+        .manage(registry_leftovers::RegistryContexts::default())
         .invoke_handler(tauri::generate_handler![
             meta::plugin_meta,
             syspaths::system_paths,
@@ -58,6 +60,9 @@ pub fn run() {
             vendor::run_vendor_uninstaller,
             leftovers::find_leftovers,
             leftovers::trash_leftovers,
+            registry_leftovers::capture_registry_context,
+            registry_leftovers::find_registry_leftovers_after,
+            registry_leftovers::delete_registry_leftovers,
             leftovers::delete_leftovers
         ])
         .setup(move |app| {

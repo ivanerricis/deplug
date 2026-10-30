@@ -92,7 +92,7 @@ fn same_dir(a: &Path, b: &Path) -> bool {
     }
 }
 
-fn is_protected_name(name: &str) -> bool {
+pub(crate) fn is_protected_name(name: &str) -> bool {
     PROTECTED_NAMES.contains(&normalize_name(name).as_str())
 }
 
