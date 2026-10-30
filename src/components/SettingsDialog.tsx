@@ -54,7 +54,7 @@ export default function SettingsDialog({ platform, systemPaths, archSummary, app
       <DialogContent
         showCloseButton={false}
         aria-describedby={undefined}
-        className="flex h-[600px] max-h-[calc(100%-2rem)] flex-col gap-0 overflow-hidden bg-card p-0 text-card-foreground sm:max-w-[60rem]"
+        className="flex h-[52rem] max-h-[calc(100%-2rem)] flex-col gap-0 overflow-hidden bg-card p-0 text-card-foreground sm:max-w-[60rem]"
         onCloseAutoFocus={e => {
           e.preventDefault()
           if (opener.current?.isConnected) opener.current.focus()
