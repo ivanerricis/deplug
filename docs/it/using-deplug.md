@@ -45,6 +45,10 @@ Le schede nella barra degli strumenti (Tutti, VST2, VST3, AAX, AU) mostrano tutt
 
 Il campo di ricerca nella barra degli strumenti filtra l'elenco mentre scrivi. Confronta nome e percorso del plugin, senza distinguere maiuscole e accenti. Premi **Ctrl+F** (**Cmd+F** su macOS) per raggiungerlo da qualsiasi punto della finestra. **Esc** cancella la ricerca, come la croce dentro il campo. Se nessun plugin corrisponde, il pulsante **Azzera i filtri** ripristina in un colpo solo la ricerca, i filtri di duplicati, architettura e formato.
 
+## Esportare l'elenco
+
+Il pulsante di download nella barra degli strumenti salva l'elenco dei plugin in un file. Esporta ciò che vedi nella scheda attiva, dopo i filtri di ricerca, duplicati e architettura. Se hai selezionato alcuni plugin, viene esportata solo la selezione; il menu indica quale dei due casi vale e quanti plugin sono. Scegli **CSV** per un foglio di calcolo (colonne: formato, nome, percorso, dimensione in byte, data di modifica in ISO 8601, architettura; UTF-8, si apre correttamente in Excel) oppure **testo semplice** per un percorso completo per riga. Una finestra di salvataggio propone `deplug-plugins-AAAA-MM-GG` e un messaggio conferma dove è finito il file, o perché è fallito. Dimensione, data e architettura restano vuote per i plugin i cui dettagli non sono ancora stati letti.
+
 ## Ordinare
 
 Ogni sezione ha le intestazioni di colonna **Nome** e **Percorso**. Fai clic su una per ordinare, e di nuovo per invertire l'ordine. L'ordinamento è naturale, quindi "Plug 2" viene prima di "Plug 10", e ogni sezione di formato mantiene il proprio.

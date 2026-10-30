@@ -45,6 +45,10 @@ The tabs in the toolbar (All, VST2, VST3, AAX, AU) show every format together or
 
 The search field in the toolbar filters the list as you type. It matches the plugin name or its path, ignoring case and accents. Press **Ctrl+F** (**Cmd+F** on macOS) to jump to it from anywhere in the window. **Esc** clears the search; use the cross inside the field for the same. If nothing matches, a **Clear filters** button resets the search, the duplicates, architecture and format filters in one go.
 
+## Export the list
+
+The download button in the toolbar saves the plugin list to a file. It exports what you currently see in the active tab, after search, duplicates and architecture filters. If some plugins are selected, only the selection is exported; the menu says which of the two applies and how many plugins. Choose **CSV** for a spreadsheet (columns: format, name, path, size in bytes, modified date in ISO 8601, architecture; UTF-8, opens correctly in Excel) or **plain text** for one full path per line. A save dialog proposes `deplug-plugins-YYYY-MM-DD` and a message confirms where the file went, or why it failed. Size, date and architecture stay empty for plugins whose details were not read yet.
+
 ## Sorting
 
 Each section has **Name** and **Path** column headers. Click one to sort by it, click it again to reverse the order. Sorting is natural, so "Plug 2" comes before "Plug 10", and every format section keeps its own order.
