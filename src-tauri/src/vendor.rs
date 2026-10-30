@@ -25,7 +25,6 @@ const GENERIC_DIR_NAMES: [&str; 24] = [
     "program files (x86)",
     "common files",
     "vst3",
-    "clap",
     "vst2",
     "clap",
     "vstplugins",
