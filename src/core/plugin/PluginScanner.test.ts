@@ -99,6 +99,25 @@ describe("scanner options", () => {
   })
 })
 
+describe("scanner exclusions", () => {
+  const tree: Record<string, DirEntry[]> = {
+    "/r": [folder("/r", "Backup"), folder("/r", "Vendor"), file("/r", "Reverb Demo.dll"), file("/r", "Good.dll")],
+    "/r/Backup": [file("/r/Backup", "Old.dll")],
+    "/r/Vendor": [folder("/r/Vendor", "old_stuff"), file("/r/Vendor", "Synth.vst3")],
+    "/r/Vendor/old_stuff": [file("/r/Vendor/old_stuff", "Legacy.dll")],
+  }
+
+  it("does not descend into excluded folders or list excluded plugins", async () => {
+    const scanner = new PluginScanner(fakeOS(tree), ["/r"], "windows", [], { exclusions: ["backup", "old_*", "*Demo*"] })
+    expect((await scanner.search()).all.map(p => p.name).sort()).toEqual(["Good.dll", "Synth.vst3"])
+  })
+
+  it("lists everything without exclusions", async () => {
+    const scanner = new PluginScanner(fakeOS(tree), ["/r"], "windows")
+    expect((await scanner.search()).all).toHaveLength(5)
+  })
+})
+
 describe("getPluginPaths", () => {
   it("uses the home dir on macOS and linux", () => {
     expect(getPluginPaths("macos", "/Users/me")).toContain("/Users/me/Library/Audio/Plug-Ins/VST3")

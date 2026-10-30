@@ -5,8 +5,9 @@ import { Button } from "./ui/button"
 import { Checkbox } from "./ui/checkbox"
 import { Badge } from "./ui/badge"
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip"
-import { MODIFIED_CELL, ROW_GRID } from "./listLayout"
+import { MODIFIED_CELL, rowGrid, rowPadding, type ListColumns } from "./listLayout"
 import type { Plugin } from "@/core/plugin/Plugin"
+import type { DensitySetting } from "@/core/settings/AppSettings"
 import type { PluginMeta } from "@/core/plugin/Meta"
 import { openPath } from "@tauri-apps/plugin-opener"
 import { buildPluginPath } from "@/core/plugin/Uninstall"
@@ -22,19 +23,22 @@ type RowProps = {
     /** When true, the folder is shown muted under the name (otherwise the section shows it once per group). */
     showPath?: boolean
     home?: string
+    columns: ListColumns
+    density: DensitySetting
     onSelect: (shiftKey: boolean) => void
     onUninstall: () => void
 }
 
 const actionBase =
-    "relative size-9 text-muted-foreground after:absolute after:-inset-0.5 after:content-[''] hover:text-foreground"
+    "relative text-muted-foreground after:absolute after:-inset-0.5 after:content-[''] hover:text-foreground"
 
-export default function Row({ plugin, selected, duplicates, meta, showPath, home = "", onSelect, onUninstall }: RowProps) {
+export default function Row({ plugin, selected, duplicates, meta, showPath, home = "", columns, density, onSelect, onUninstall }: RowProps) {
     const { t, language } = useI18n()
     const tip = duplicates && duplicates.length > 0
         ? `${t("row.duplicateAlso")}\n${duplicates.map(d => `${d.type} · ${d.installPath}`).join("\n")}`
         : undefined
-    const folder = showPath ? plugin.installPath : null
+    const folder = showPath && columns.path ? plugin.installPath : null
+    const actionClass = `${actionBase} ${density === "compact" ? "size-7" : "size-9"}`
     const unknown = t("row.unknown")
     const size = meta?.size ?? null
     const modified = meta?.modified ?? null
@@ -42,7 +46,7 @@ export default function Row({ plugin, selected, duplicates, meta, showPath, home
         <div
             role="row"
             aria-selected={selected}
-            className={`${ROW_GRID} group items-center rounded-lg transition-colors motion-reduce:transition-none ${selected ? "bg-accent" : "hover:bg-accent/50 focus-within:bg-accent/50"}`}
+            className={`${rowGrid(columns)} group items-center rounded-lg transition-colors motion-reduce:transition-none ${selected ? "bg-accent" : "hover:bg-accent/50 focus-within:bg-accent/50"}`}
         >
             <div role="cell" className="flex h-full items-center justify-center">
                 <Checkbox
@@ -54,10 +58,10 @@ export default function Row({ plugin, selected, duplicates, meta, showPath, home
                 />
             </div>
 
-            <div role="cell" className="min-w-0 py-2 pr-2">
+            <div role="cell" className={`min-w-0 pr-2 ${rowPadding(density)}`}>
                 <div className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-sm font-medium" title={plugin.name}>{plugin.name}</span>
-                    <ArchPill arch={meta?.arch} />
+                    {columns.arch && <ArchPill arch={meta?.arch} />}
                     <HealthPill health={meta?.health} />
                     {tip && (
                         <Tooltip>
@@ -83,12 +87,16 @@ export default function Row({ plugin, selected, duplicates, meta, showPath, home
                 )}
             </div>
 
-            <div role="cell" className="px-2 text-right text-sm tabular-nums text-muted-foreground">
-                {size === null ? <span aria-label={unknown}>—</span> : formatBytes(size, language)}
-            </div>
-            <div role="cell" className={`px-2 text-sm tabular-nums text-muted-foreground ${MODIFIED_CELL}`}>
-                {modified === null ? <span aria-label={unknown}>—</span> : formatDate(modified, language)}
-            </div>
+            {columns.size && (
+                <div role="cell" className="px-2 text-right text-sm tabular-nums text-muted-foreground">
+                    {size === null ? <span aria-label={unknown}>—</span> : formatBytes(size, language)}
+                </div>
+            )}
+            {columns.modified && (
+                <div role="cell" className={`px-2 text-sm tabular-nums text-muted-foreground ${MODIFIED_CELL}`}>
+                    {modified === null ? <span aria-label={unknown}>—</span> : formatDate(modified, language)}
+                </div>
+            )}
 
             <div
                 role="cell"
@@ -100,7 +108,7 @@ export default function Row({ plugin, selected, duplicates, meta, showPath, home
                         <Button
                             variant="ghost"
                             size="icon"
-                            className={actionBase}
+                            className={actionClass}
                             aria-label={t("row.openFolder", { name: plugin.name })}
                             onClick={() => { openPath(plugin.installPath).catch(console.error) }}
                         >
@@ -114,7 +122,7 @@ export default function Row({ plugin, selected, duplicates, meta, showPath, home
                         <Button
                             variant="ghost"
                             size="icon"
-                            className={`${actionBase} hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive`}
+                            className={`${actionClass} hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive`}
                             aria-label={t("row.uninstall", { name: plugin.name })}
                             onClick={onUninstall}
                         >

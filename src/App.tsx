@@ -20,8 +20,12 @@ import BrandMark from "./components/BrandMark"
 import { exportFileName, exportPlugins, type ExportFormat } from "./core/plugin/Export"
 import { buildPluginPath } from "./core/plugin/Uninstall"
 import { fetchPluginMeta, knownArch, type PluginMeta } from "./core/plugin/Meta"
-import { getAppInfo, type AppInfo } from "./core/settings/AppSettings"
+import { getAppInfo, type AppInfo, type SortSetting } from "./core/settings/AppSettings"
 import { useSettings } from "./core/settings/SettingsContext"
+import { useStartupUpdateCheck } from "./core/useStartupUpdateCheck"
+import { pushError } from "./core/errorLog"
+import { isEditableTarget, shortcutAction } from "./core/shortcuts"
+import ShortcutsDialog from "./components/ShortcutsDialog"
 import { useI18n } from "./i18n/I18nProvider"
 import type { Plugin } from "@/core/plugin/Plugin"
 import type { ScanResult } from "./core/plugin/PluginScanner"
@@ -34,7 +38,7 @@ const EMPTY_RESULT: ScanResult = { all: [], vst2: [], vst3: [], aax: [], au: [] 
 
 export default function App() {
   const { t } = useI18n()
-  const { settings, loaded } = useSettings()
+  const { settings, loaded, update } = useSettings()
   const platform = useMemo(() => detectPlatform(), [])
   const [home, setHome] = useState("")
   const [scanning, setScanning] = useState(false)
@@ -55,6 +59,9 @@ export default function App() {
   const [sorts, setSorts] = useState<Record<SectionType, SortState>>({
     VST2: DEFAULT_SORT, VST3: DEFAULT_SORT, AAX: DEFAULT_SORT, AU: DEFAULT_SORT,
   })
+  // Last sort the user picked in any section; saved with the tab when "remember" is on.
+  const [viewSort, setViewSort] = useState<SortSetting>(DEFAULT_SORT)
+  const [viewReady, setViewReady] = useState(false)
   const [damagedOnly, setDamagedOnly] = useState(false)
   const [archFilter, setArchFilter] = useState<ArchFilter>("all")
   const [sysPaths, setSysPaths] = useState<SystemPaths | null>(null)
@@ -64,6 +71,8 @@ export default function App() {
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [uninstallTargets, setUninstallTargets] = useState<Plugin[] | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const [showShortcuts, setShowShortcuts] = useState(false)
+  const [exportOpenSignal, setExportOpenSignal] = useState(0)
 
   const systemPaths = useMemo(() => getPluginPaths(platform, home, sysPaths), [platform, home, sysPaths])
   // What the last scan used, so closing settings only rescans when it would change the list.
@@ -72,7 +81,7 @@ export default function App() {
   settingsRef.current = settings
 
   const scanKey = (s: typeof settings) =>
-    JSON.stringify([s.customScanPaths, s.customScanDepth, s.disabledSystemPaths])
+    JSON.stringify([s.customScanPaths, s.customScanDepth, s.disabledSystemPaths, s.scanExclusions])
 
   // Windows known folders from the backend; null (dev mode, other OS) falls back to the C:/ defaults.
   const loadSystemPaths = useCallback(async () => {
@@ -99,7 +108,7 @@ export default function App() {
         getPluginPaths(platform, homePath, await loadSystemPaths()),
         platform,
         s.customScanPaths,
-        { customDepth: s.customScanDepth, disabledPaths: s.disabledSystemPaths },
+        { customDepth: s.customScanDepth, disabledPaths: s.disabledSystemPaths, exclusions: s.scanExclusions },
       )
       const found = await scanner.search()
       setResult(found)
@@ -118,6 +127,7 @@ export default function App() {
       )
     } catch (e) {
       console.error(e)
+      pushError("scan", e)
     } finally {
       setScanning(false)
     }
@@ -134,8 +144,26 @@ export default function App() {
   useEffect(() => {
     if (!loaded || started.current) return
     started.current = true
+    // Start on the remembered view, or on the explicit defaults.
+    const startTab = settings.rememberView ? settings.lastTab : settings.defaultTab
+    const startSort = settings.rememberView ? settings.lastSort : settings.defaultSort
+    setTab(startTab)
+    setViewSort(startSort)
+    setSorts({ VST2: startSort, VST3: startSort, AAX: startSort, AU: startSort })
+    setViewReady(true)
     if (settings.scanOnStartup) void scanPlugins()
   }, [loaded, settings.scanOnStartup, scanPlugins])
+
+  // Remember the last tab and sort (debounced, so quick clicking writes the file once).
+  useEffect(() => {
+    if (!viewReady || !settings.rememberView) return
+    const id = window.setTimeout(() => {
+      const cur = settingsRef.current
+      if (cur.lastTab === tab && cur.lastSort.key === viewSort.key && cur.lastSort.dir === viewSort.dir) return
+      update({ lastTab: tab, lastSort: viewSort })
+    }, 800)
+    return () => window.clearTimeout(id)
+  }, [viewReady, settings.rememberView, tab, viewSort, update])
 
   // Debounce the search so typing does not re-filter and re-render the list on every key.
   useEffect(() => {
@@ -211,6 +239,7 @@ export default function App() {
       await writeTextFile(path, exportPlugins(format, exportList, meta))
       setExportStatus({ ok: true, text: t("export.done", { count: exportList.length, path }) })
     } catch (e) {
+      pushError("export", e)
       setExportStatus({ ok: false, text: t("export.failed", { error: e instanceof Error ? e.message : String(e) }) })
     }
   }
@@ -226,12 +255,12 @@ export default function App() {
     })
   }, [])
 
-  const toggleSort = (type: SectionType, key: SortKey) =>
-    setSorts(c => {
-      const cur = c[type]
-      const next: SortState = cur.key === key ? { key, dir: cur.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
-      return { ...c, [type]: next }
-    })
+  const toggleSort = (type: SectionType, key: SortKey) => {
+    const cur = sorts[type]
+    const next: SortState = cur.key === key ? { key, dir: cur.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
+    setSorts(c => ({ ...c, [type]: next }))
+    setViewSort(next)
+  }
 
   const clearFilters = () => {
     setQueryInput("")
@@ -241,13 +270,43 @@ export default function App() {
     setArchFilter("all")
   }
 
-  // Ctrl/Cmd+F focuses the search field; Esc clears the search, then the selection.
+  const startupUpdate = useStartupUpdateCheck(loaded && !scanning && (scanned || !settings.scanOnStartup))
+
+  // Keyboard shortcuts (see core/shortcuts.ts); Esc clears the search, then the selection.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "f") {
+      const action = shortcutAction(e, {
+        inInput: isEditableTarget(document.activeElement),
+        modalOpen: !!document.querySelector('[role="dialog"], [role="menu"]'),
+        hasSelection: selectedPlugins.length > 0,
+        scanning,
+      })
+      if (action) {
         e.preventDefault()
-        searchRef.current?.focus()
-        searchRef.current?.select()
+        switch (action) {
+          case "focus-search":
+            searchRef.current?.focus()
+            searchRef.current?.select()
+            break
+          case "select-all":
+            selectKeys(visibleShown.map(pluginKey), true)
+            break
+          case "uninstall-selected":
+            setUninstallTargets(selectedPlugins)
+            break
+          case "open-export":
+            if (exportList.length > 0) setExportOpenSignal(n => n + 1)
+            break
+          case "open-settings":
+            setShowSettings(true)
+            break
+          case "rescan":
+            void scanPlugins()
+            break
+          case "open-shortcuts":
+            setShowShortcuts(true)
+            break
+        }
         return
       }
       if (e.key !== "Escape" || e.defaultPrevented) return
@@ -261,7 +320,7 @@ export default function App() {
     }
     document.addEventListener("keydown", onKey)
     return () => document.removeEventListener("keydown", onKey)
-  }, [queryInput, selected])
+  }, [queryInput, selected, selectedPlugins, visibleShown, exportList.length, scanning, selectKeys, scanPlugins])
 
   const closeUninstall = (removedAny: boolean) => {
     setUninstallTargets(null)
@@ -305,10 +364,20 @@ export default function App() {
         exportCount={exportList.length}
         exportSelection={selectedPlugins.length > 0}
         onExport={format => void runExport(format)}
+        exportOpenSignal={exportOpenSignal}
+        updateAvailable={startupUpdate !== null}
       />
 
       {showSettings && (
-        <SettingsDialog platform={platform} systemPaths={systemPaths} archSummary={archSummary} appInfo={appInfo} onClose={closeSettings} />
+        <SettingsDialog
+          platform={platform}
+          systemPaths={systemPaths}
+          archSummary={archSummary}
+          appInfo={appInfo}
+          formatCounts={{ VST2: result.vst2.length, VST3: result.vst3.length, AAX: result.aax.length, AU: result.au.length }}
+          startupUpdate={startupUpdate}
+          onClose={closeSettings}
+        />
       )}
 
       {result.all.length === 0 ? (
@@ -378,6 +447,8 @@ export default function App() {
           </AlertDescription>
         </Alert>
       )}
+
+      {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
 
       {uninstallTargets && <UninstallDialog plugins={uninstallTargets} meta={meta} onClose={closeUninstall} elevated={appInfo?.elevated ?? false} />}
     </div>

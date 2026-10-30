@@ -3,6 +3,27 @@ import { DEFAULT_SETTINGS, normalizeSettings, type AppSettings } from "./AppSett
 import { loadSettings } from "./LoadSettings"
 
 describe("normalizeSettings", () => {
+  it("defaults the update settings to off / stable / never", () => {
+    const s = normalizeSettings({ version: 1 })
+    expect(s.checkUpdatesOnStartup).toBe(false)
+    expect(s.updateChannel).toBe("stable")
+    expect(s.lastUpdateCheck).toBe(0)
+  })
+
+  it("validates the update settings", () => {
+    expect(normalizeSettings({ checkUpdatesOnStartup: true, updateChannel: "prerelease", lastUpdateCheck: 1700000000000.7 })).toMatchObject({
+      checkUpdatesOnStartup: true,
+      updateChannel: "prerelease",
+      lastUpdateCheck: 1700000000000,
+    })
+    expect(normalizeSettings({ checkUpdatesOnStartup: "yes", updateChannel: "nightly", lastUpdateCheck: -5 })).toMatchObject({
+      checkUpdatesOnStartup: false,
+      updateChannel: "stable",
+      lastUpdateCheck: 0,
+    })
+    expect(normalizeSettings({ lastUpdateCheck: "x" }).lastUpdateCheck).toBe(0)
+  })
+
   it("fills defaults for missing or garbage input", () => {
     expect(normalizeSettings(undefined)).toEqual(DEFAULT_SETTINGS)
     expect(normalizeSettings(null)).toEqual(DEFAULT_SETTINGS)
@@ -35,12 +56,68 @@ describe("normalizeSettings", () => {
     expect(normalizeSettings({ searchRegistryLeftovers: true }).searchRegistryLeftovers).toBe(true)
   })
 
+  it("defaults and validates the uninstall flow settings", () => {
+    expect(DEFAULT_SETTINGS.deleteMethod).toBe("trash")
+    expect(DEFAULT_SETTINGS.confirmUninstall).toBe(true)
+    expect(normalizeSettings({ version: 1 }).deleteMethod).toBe("trash")
+    expect(normalizeSettings({ deleteMethod: "permanent" }).deleteMethod).toBe("permanent")
+    expect(normalizeSettings({ deleteMethod: "shred" }).deleteMethod).toBe("trash")
+    expect(normalizeSettings({ confirmUninstall: false }).confirmUninstall).toBe(false)
+    expect(normalizeSettings({ confirmUninstall: "no" }).confirmUninstall).toBe(true)
+  })
+
   it("clamps the scan depth to 1-10", () => {
     expect(normalizeSettings({ customScanDepth: 0 }).customScanDepth).toBe(1)
     expect(normalizeSettings({ customScanDepth: 99 }).customScanDepth).toBe(10)
     expect(normalizeSettings({ customScanDepth: 4.6 }).customScanDepth).toBe(5)
     expect(normalizeSettings({ customScanDepth: "x" }).customScanDepth).toBe(6)
     expect(normalizeSettings({}).customScanDepth).toBe(6)
+  })
+})
+
+describe("normalizeSettings (scan exclusions and view)", () => {
+  it("cleans the exclusion list", () => {
+    expect(normalizeSettings({ scanExclusions: [" Demo ", "demo", "", 4, "old_*"] }).scanExclusions).toEqual(["Demo", "old_*"])
+    expect(normalizeSettings({ scanExclusions: "x" }).scanExclusions).toEqual([])
+    expect(normalizeSettings({ scanExclusions: Array.from({ length: 70 }, (_, i) => `p${i}`) }).scanExclusions).toHaveLength(50)
+  })
+
+  it("keeps known columns in canonical order, allows none, defaults when absent", () => {
+    expect(normalizeSettings({ visibleColumns: ["size", "bogus", "path", "size"] }).visibleColumns).toEqual(["path", "size"])
+    expect(normalizeSettings({ visibleColumns: [] }).visibleColumns).toEqual([])
+    expect(normalizeSettings({}).visibleColumns).toEqual(["path", "size", "modified", "arch"])
+    expect(normalizeSettings({ visibleColumns: "path" }).visibleColumns).toEqual(["path", "size", "modified", "arch"])
+  })
+
+  it("falls back to defaults for invalid view values", () => {
+    const s = normalizeSettings({
+      density: "tiny",
+      defaultTab: "VST9",
+      defaultSort: { key: "color", dir: "up" },
+      rememberView: "no",
+      lastTab: 3,
+      lastSort: "x",
+    })
+    expect(s.density).toBe("comfortable")
+    expect(s.defaultTab).toBe("all")
+    expect(s.defaultSort).toEqual({ key: "name", dir: "asc" })
+    expect(s.rememberView).toBe(true)
+    expect(s.lastTab).toBe("all")
+    expect(s.lastSort).toEqual({ key: "name", dir: "asc" })
+  })
+
+  it("accepts valid view values", () => {
+    const s = normalizeSettings({
+      density: "compact",
+      defaultTab: "AU",
+      defaultSort: { key: "size", dir: "desc" },
+      rememberView: false,
+      lastTab: "VST3",
+      lastSort: { key: "modified", dir: "desc" },
+    })
+    expect([s.density, s.defaultTab, s.rememberView, s.lastTab]).toEqual(["compact", "AU", false, "VST3"])
+    expect(s.defaultSort).toEqual({ key: "size", dir: "desc" })
+    expect(s.lastSort).toEqual({ key: "modified", dir: "desc" })
   })
 })
 

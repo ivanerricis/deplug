@@ -1,11 +1,13 @@
 import { Fragment, useMemo, useRef } from "react"
 import { Folder } from "lucide-react"
 import Row from "./Row"
+import { listColumns } from "./listLayout"
+import { useSettings } from "@/core/settings/SettingsContext"
 import HeaderRow from "./HeaderRow"
 import type { Plugin } from "@/core/plugin/Plugin"
 import type { MetaMap } from "@/core/plugin/Meta"
 import { folderRuns, pluginKey, shouldGroupByFolder, type SortKey, type SortState } from "@/core/plugin/ListOps"
-import { buildPluginPath } from "@/core/plugin/Uninstall"
+import { buildPluginPath, totalKnownSize } from "@/core/plugin/Uninstall"
 import { shortenPath } from "@/core/format"
 
 type SectionType = "VST2" | "VST3" | "AAX" | "AU"
@@ -32,12 +34,14 @@ type SectionProps = {
 
 export default function Section({ type, items, total, sort, onSort, collapsed, onToggle, selected, onSelectKeys, duplicates, meta, home, onUninstall }: SectionProps) {
     // Last row clicked, so Shift+click can select the range between it and the next click.
+    const { settings } = useSettings()
+    const columns = useMemo(() => listColumns(settings.visibleColumns), [settings.visibleColumns])
     const anchor = useRef<number | null>(null)
     const runs = useMemo(() => folderRuns(items), [items])
     if (items.length === 0) return null
 
     // Few long runs: print each folder once above its rows. Many short runs: show it under each name.
-    const grouped = shouldGroupByFolder(runs, items.length)
+    const grouped = columns.path && shouldGroupByFolder(runs, items.length)
     const runStarts = new Map(runs.map(r => [r.start, r.folder]))
 
     const selectedCount = items.reduce((n, p) => n + (selected.has(pluginKey(p)) ? 1 : 0), 0)
@@ -65,9 +69,11 @@ export default function Section({ type, items, total, sort, onSort, collapsed, o
                     onToggle={onToggle}
                     sort={sort}
                     onSort={onSort}
+                    sizeTotal={totalKnownSize(items, p => meta.get(buildPluginPath(p.installPath, p.name))?.size)}
                     shown={items.length}
                     total={total}
                     selectState={selectState}
+                    columns={columns}
                     onSelectAll={() => onSelectKeys(items.map(pluginKey), selectState !== true)}
                 />
             </div>
@@ -97,6 +103,8 @@ export default function Section({ type, items, total, sort, onSort, collapsed, o
                                     meta={meta.get(buildPluginPath(plugin.installPath, plugin.name))}
                                     showPath={!grouped}
                                     home={home}
+                                    columns={columns}
+                                    density={settings.density}
                                     onSelect={shift => click(i, shift)}
                                     onUninstall={() => onUninstall(plugin)}
                                 />

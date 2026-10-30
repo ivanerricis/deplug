@@ -53,6 +53,8 @@ pub fn run() {
             settings::app_info,
             uninstall::trash_plugin,
             uninstall::trash_plugins_elevated,
+            uninstall::delete_plugin_permanently,
+            uninstall::delete_plugins_elevated,
             uninstall::create_restore_point,
             vendor::find_vendor_uninstaller,
             vendor::run_vendor_uninstaller,
@@ -60,7 +62,8 @@ pub fn run() {
             leftovers::trash_leftovers,
             registry_leftovers::capture_registry_context,
             registry_leftovers::find_registry_leftovers_after,
-            registry_leftovers::delete_registry_leftovers
+            registry_leftovers::delete_registry_leftovers,
+            leftovers::delete_leftovers
         ])
         .setup(move |app| {
             let settings_path = match &mode.data_dir {

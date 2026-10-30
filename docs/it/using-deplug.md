@@ -51,7 +51,7 @@ Il pulsante di download nella barra degli strumenti salva l'elenco dei plugin in
 
 ## Ordinare
 
-Ogni sezione ha le intestazioni di colonna **Nome** e **Percorso**. Fai clic su una per ordinare, e di nuovo per invertire l'ordine. L'ordinamento è naturale, quindi "Plug 2" viene prima di "Plug 10", e ogni sezione di formato mantiene il proprio.
+Ogni sezione ha le intestazioni di colonna (**Nome**, più **Percorso**, **Dimensione** e **Modificato** quando quelle colonne sono visibili; vedi [Impostazioni](/it/settings#general)). Fai clic su una per ordinare, e di nuovo per invertire l'ordine. La scheda e l'ordinamento usati per ultimi vengono ricordati per il prossimo avvio (oppure imposta un avvio fisso nelle impostazioni). L'ordinamento è naturale, quindi "Plug 2" viene prima di "Plug 10", e ogni sezione di formato mantiene il proprio.
 
 ## Duplicati
 
@@ -86,7 +86,7 @@ Ogni riga inizia con un pulsante a forma di cartella. Apre nel file manager la c
 2. Su Windows, decidi se creare un punto di ripristino (sezione successiva).
 3. Premi **Sposta nel cestino**. I plugin finiscono nel cestino di sistema e l'elenco si aggiorna.
 
-Non succede nulla finché non confermi, e **Annulla** (o Esc) chiude la finestra senza toccare niente.
+Non succede nulla finché non confermi, e **Annulla** (o Esc) chiude la finestra senza toccare niente. Se in [Impostazioni](/settings#uninstall) hai disattivato **Chiedi conferma prima di disinstallare**, Disinstalla parte subito con le tue impostazioni predefinite (punto di ripristino, metodo di eliminazione) e va direttamente alla finestra del risultato; il disinstallatore dell'editore e le cartelle residue non vengono mai scelti in automatico. Deplug chiede sempre conferma quando il metodo di eliminazione è **Elimina definitivamente**.
 
 Deplug rimuove soltanto il file o il bundle del plugin. Non elimina preset, file di licenza, campioni o impostazioni che l'installer del plugin ha messo altrove. È voluto: spesso sono condivisi con altri prodotti o servono se reinstalli in seguito.
 
@@ -95,6 +95,18 @@ Deplug rimuove soltanto il file o il bundle del plugin. Non elimina preset, file
 Con più plugin, Deplug crea **un solo** punto di ripristino per l'intero gruppo, poi sposta i plugin nel cestino uno dopo l'altro. Se uno non riesce, gli altri proseguono. Alla fine la finestra elenca l'esito di ogni plugin (**Spostato nel cestino** oppure **Non riuscito**, con il motivo), con quelli falliti in cima. Chiudila e l'elenco si aggiorna.
 
 Per annullare, apri il cestino e ripristina l'elemento nella posizione originale, poi premi aggiorna in Deplug.
+
+### Elimina definitivamente
+
+Per impostazione predefinita i plugin vanno nel cestino. Se in [Impostazioni](/settings#uninstall) imposti **Metodo di eliminazione** su **Elimina definitivamente**, i file non passano dal cestino e vengono rimossi per sempre. Il testo di conferma lo dice chiaramente: non sono recuperabili e un punto di ripristino del sistema non li copre. Le cartelle residue che selezioni seguono la stessa scelta. Su Windows, se una cartella protetta nega l'eliminazione, compare lo stesso pulsante **Riprova con permessi di amministratore** e l'eliminazione viene ritentata da un processo con privilegi elevati.
+
+### Spazio liberato e dimensioni per formato
+
+Dopo una disinstallazione, la finestra del risultato mostra **Spazio liberato**: la dimensione totale dei plugin rimossi, calcolata con le dimensioni già mostrate nell'elenco. Se alcune dimensioni non sono note dice "almeno"; se nessuna è nota la riga non compare. Accanto al conteggio nell'intestazione di ogni formato l'elenco mostra la dimensione totale dei plugin visualizzati in quel formato.
+
+### Rimozione forzata
+
+Se un plugin non è stato rimosso, o il disinstallatore dell'editore è terminato ma l'ha lasciato al suo posto, la finestra del risultato offre il pulsante **Forza la rimozione** per quel plugin. Si apre una conferma aggiuntiva che mostra il percorso esatto, perché il plugin viene eliminato definitivamente (niente cestino, nessuna copertura dei punti di ripristino). Su Windows, se l'eliminazione viene negata, Deplug la ritenta una volta da un processo con privilegi elevati dopo una sola richiesta di autorizzazione. Se il file è bloccato o in uso, nel risultato compare l'errore del sistema.
 
 ### Il disinstallatore del produttore e le cartelle residue
 
@@ -134,3 +146,18 @@ Se non riesce, Deplug mostra il motivo e chiede se **continuare senza punto di r
 Con più plugin la domanda è una sola: se il punto di ripristino non riesce, decidi se continuare per tutti i plugin selezionati.
 
 Per gli altri errori viene mostrato il messaggio restituito da Windows PowerShell.
+
+## Scorciatoie da tastiera
+
+Le scorciatoie che agiscono sull'elenco non fanno nulla mentre è aperta una finestra o un menu, e i tasti semplici vengono ignorati mentre scrivi in un campo. Su macOS usa **Cmd** al posto di **Ctrl**. Premi **?** per mostrare questo elenco nell'app.
+
+| Tasti | Azione |
+| --- | --- |
+| **Ctrl+F** | Porta il cursore nel campo di ricerca |
+| **Ctrl+A** | Seleziona tutti i plugin mostrati nella vista corrente |
+| **Esc** | Cancella la ricerca, poi la selezione |
+| **Canc** | Disinstalla i plugin selezionati (apre la finestra di disinstallazione) |
+| **Ctrl+E** | Apre il menu di esportazione |
+| **Ctrl+,** | Apre le impostazioni |
+| **F5** o **Ctrl+R** | Riesegue la scansione |
+| **?** | Mostra le scorciatoie |

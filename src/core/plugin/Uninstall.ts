@@ -5,11 +5,14 @@ import type { Plugin } from "./Plugin"
 export interface UninstallBackend {
   createRestorePoint(description: string): Promise<void>
   trashPlugin(path: string): Promise<void>
+  /** Deletes the plugin for good (no trash). Required when the delete method is "permanent". */
+  deletePlugin?(path: string): Promise<void>
 }
 
 export const tauriUninstallBackend: UninstallBackend = {
   createRestorePoint: description => invoke<void>("create_restore_point", { description }),
   trashPlugin: path => invoke<void>("trash_plugin", { path }),
+  deletePlugin: path => invoke<void>("delete_plugin_permanently", { path }),
 }
 
 export interface VendorUninstaller {
@@ -46,6 +49,8 @@ export interface RegistryDeleteResult {
 export interface SingleUninstallBackend extends UninstallBackend {
   /** Returns one `<code>:<path>` entry per failure; an empty array means everything was trashed. */
   trashLeftovers(pluginPath: string, paths: string[]): Promise<string[]>
+  /** Same as `trashLeftovers` but deletes for good. Required when the delete method is "permanent". */
+  deleteLeftovers?(pluginPath: string, paths: string[]): Promise<string[]>
   runVendorUninstaller(path: string): Promise<void>
   pathExists(path: string): Promise<boolean>
 }
@@ -53,6 +58,7 @@ export interface SingleUninstallBackend extends UninstallBackend {
 export const tauriSingleBackend: SingleUninstallBackend = {
   ...tauriUninstallBackend,
   trashLeftovers: (pluginPath, paths) => invoke<string[]>("trash_leftovers", { pluginPath, paths }),
+  deleteLeftovers: (pluginPath, paths) => invoke<string[]>("delete_leftovers", { pluginPath, paths }),
   runVendorUninstaller: path => invoke<void>("run_vendor_uninstaller", { path }),
   pathExists: path => exists(path),
 }
@@ -98,8 +104,8 @@ export interface BatchItemResult {
   plugin: Plugin
   /** "still-present": the publisher's uninstaller finished successfully but the plugin is still on disk. */
   status: "removed" | "failed" | "still-present"
-  /** How the plugin was handled; absent means moved to the trash. */
-  action?: "trash" | "vendor"
+  /** How the plugin was handled; absent means moved to the trash. "delete" is a permanent deletion. */
+  action?: "trash" | "vendor" | "delete"
   error?: string
 }
 
@@ -133,7 +139,12 @@ export interface BatchResult {
   results: BatchItemResult[]
 }
 
+/** How plugins are removed when the publisher's uninstaller is not used. */
+export type DeleteMethod = "trash" | "permanent"
+
 export interface BatchOptions extends UninstallOptions {
+  /** Defaults to "trash". "permanent" needs `backend.deletePlugin`. */
+  deleteMethod?: DeleteMethod
   /**
    * Called before each plugin (current set) and once at the end (current null), with the results so far.
    * `active` lists every plugin being handled right now (a whole group while its uninstaller runs).
@@ -186,11 +197,19 @@ export async function uninstallPlugins(plugins: Plugin[], options: BatchOptions)
       continue
     }
     onProgress?.([...results], plugin, [plugin])
+    const permanent = options.deleteMethod === "permanent"
+    const action = permanent ? { action: "delete" as const } : {}
     try {
-      await backend.trashPlugin(buildPluginPath(plugin.installPath, plugin.name))
-      results.push({ plugin, status: "removed" })
+      const path = buildPluginPath(plugin.installPath, plugin.name)
+      if (permanent) {
+        if (!backend.deletePlugin) throw new Error("ERR_INTERNAL:permanent delete is not available")
+        await backend.deletePlugin(path)
+      } else {
+        await backend.trashPlugin(path)
+      }
+      results.push({ plugin, status: "removed", ...action })
     } catch (e) {
-      results.push({ plugin, status: "failed", error: errorMessage(e) })
+      results.push({ plugin, status: "failed", error: errorMessage(e), ...action })
     }
   }
   onProgress?.([...results], null, [])
@@ -219,6 +238,25 @@ async function runVendorGroup(members: Plugin[], backend: NonNullable<BatchOptio
   )
 }
 
+/** Sum of the known sizes of `plugins`, or null when none is known (a partial sum is still a useful lower bound). */
+export function totalKnownSize(plugins: Plugin[], sizeOf: (plugin: Plugin) => number | null | undefined): number | null {
+  let total = 0
+  let known = false
+  for (const plugin of plugins) {
+    const size = sizeOf(plugin)
+    if (typeof size === "number" && Number.isFinite(size) && size >= 0) {
+      total += size
+      known = true
+    }
+  }
+  return known ? total : null
+}
+
+/** Space recovered by a run: the known sizes of the plugins that were actually removed, or null when unknown. */
+export function freedBytes(results: BatchItemResult[], sizeOf: (plugin: Plugin) => number | null | undefined): number | null {
+  return totalKnownSize(results.filter(r => r.status === "removed").map(r => r.plugin), sizeOf)
+}
+
 export async function uninstallPlugin(plugin: Plugin, options: UninstallOptions): Promise<UninstallResult> {
   const batch = await uninstallPlugins([plugin], options)
   if (batch.status === "cancelled") return { status: "cancelled", restorePoint: batch.restorePoint }
@@ -242,6 +280,7 @@ export function parseLeftoverFailure(entry: string): LeftoverFailure {
   if (!m) return { path: entry, error: entry }
   const [, code, detail, path] = m
   if (code === "ERR_TRASH_FAILED") return { path, error: `ERR_LEFTOVER_TRASH_FAILED:${detail ?? ""}` }
+  if (code === "ERR_DELETE_FAILED") return { path, error: `ERR_LEFTOVER_DELETE_FAILED:${detail ?? ""}` }
   return { path, error: code }
 }
 
@@ -267,6 +306,9 @@ export type PluginOutcome =
   /** The plugin was moved to the trash. */
   | { action: "trash"; status: "removed" }
   | { action: "trash"; status: "failed"; error: string }
+  /** The plugin was deleted for good (delete method "permanent", or a forced removal). */
+  | { action: "delete"; status: "removed" }
+  | { action: "delete"; status: "failed"; error: string }
   /** The vendor uninstaller finished successfully and the plugin is gone. */
   | { action: "vendor"; status: "removed" }
   /** The vendor uninstaller finished successfully but the plugin file or folder is still there. */
@@ -281,6 +323,8 @@ export interface SingleUninstallOptions {
   leftovers: string[]
   /** How the plugin itself is removed. */
   method: "trash" | "vendor"
+  /** How the plugin (method "trash") and the leftovers are deleted. Defaults to "trash". */
+  deleteMethod?: DeleteMethod
   /** Called when a long step starts, so the dialog can say what it is waiting for. */
   onStep?: (step: "restorePoint" | "leftovers" | "plugin") => void
 }
@@ -297,6 +341,7 @@ export interface SingleUninstallResult {
 /** Order: restore point -> selected leftovers -> the plugin itself (trash or the publisher's uninstaller). */
 export async function uninstallSingle(plugin: Plugin, options: SingleUninstallOptions): Promise<SingleUninstallResult> {
   const { restorePoint, backend, confirmContinue, leftovers, method, onStep } = options
+  const permanent = options.deleteMethod === "permanent"
   const path = buildPluginPath(plugin.installPath, plugin.name)
   let rp: SingleUninstallResult["restorePoint"] = "skipped"
 
@@ -321,7 +366,9 @@ export async function uninstallSingle(plugin: Plugin, options: SingleUninstallOp
   if (leftovers.length > 0) {
     onStep?.("leftovers")
     try {
-      leftoverFailures = (await backend.trashLeftovers(path, leftovers)).map(parseLeftoverFailure)
+      const remove = permanent ? backend.deleteLeftovers : backend.trashLeftovers
+      if (!remove) throw new Error("ERR_INTERNAL:permanent delete is not available")
+      leftoverFailures = (await remove.call(backend, path, leftovers)).map(parseLeftoverFailure)
     } catch (e) {
       // The whole call was refused: every path counts as failed, the plugin step still runs.
       const error = errorMessage(e)
@@ -332,7 +379,15 @@ export async function uninstallSingle(plugin: Plugin, options: SingleUninstallOp
 
   onStep?.("plugin")
   let outcome: PluginOutcome
-  if (method === "trash") {
+  if (method === "trash" && permanent) {
+    try {
+      if (!backend.deletePlugin) throw new Error("ERR_INTERNAL:permanent delete is not available")
+      await backend.deletePlugin(path)
+      outcome = { action: "delete", status: "removed" }
+    } catch (e) {
+      outcome = { action: "delete", status: "failed", error: errorMessage(e) }
+    }
+  } else if (method === "trash") {
     try {
       await backend.trashPlugin(path)
       outcome = { action: "trash", status: "removed" }
