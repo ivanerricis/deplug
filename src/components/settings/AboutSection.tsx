@@ -115,7 +115,7 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
       <section aria-label={t("settings.about.updates")} className="flex flex-col gap-3">
         <div>
           <Button variant="outline" size="sm" onClick={runUpdateCheck} disabled={update === "checking"}>
-            <RefreshCw aria-hidden className={update === "checking" ? "animate-spin motion-reduce:animate-none" : ""} />
+            <RefreshCw aria-hidden className={update === "checking" ? "animate-spin" : ""} />
             {update === "checking" ? t("settings.about.checking") : t("settings.about.checkUpdates")}
           </Button>
         </div>
