@@ -1,7 +1,8 @@
 import { useState } from "react"
 import { open } from "@tauri-apps/plugin-dialog"
-import { FolderPlus, X } from "lucide-react"
+import { FolderPlus, Plus, X } from "lucide-react"
 import { useSettings } from "@/core/settings/SettingsContext"
+import { MAX_EXCLUSIONS, MAX_EXCLUSION_LENGTH, normalizeExclusions } from "@/core/plugin/Exclude"
 import { MAX_SCAN_DEPTH, MIN_SCAN_DEPTH } from "@/core/settings/AppSettings"
 import { useI18n } from "@/i18n/I18nProvider"
 import { Button } from "../ui/button"
@@ -15,6 +16,7 @@ export default function ScanSection({ systemPaths }: { systemPaths: string[] }) 
   const { t } = useI18n()
   const { settings, update } = useSettings()
   const [draft, setDraft] = useState<string | null>(null)
+  const [pattern, setPattern] = useState("")
 
   const commitDepth = (text: string) => {
     const n = Number(text)
@@ -34,6 +36,12 @@ export default function ScanSection({ systemPaths }: { systemPaths: string[] }) 
     } catch (e) {
       console.error(e)
     }
+  }
+
+  const addExclusion = () => {
+    const next = normalizeExclusions([...settings.scanExclusions, pattern])
+    if (next.length > settings.scanExclusions.length) update({ scanExclusions: next })
+    setPattern("")
   }
 
   const toggleSystem = (path: string, enabled: boolean) => {
@@ -102,6 +110,50 @@ export default function ScanSection({ systemPaths }: { systemPaths: string[] }) 
               <FolderPlus /> {t("settings.scan.addFolder")}
             </Button>
           </div>
+        </div>
+      </Group>
+
+      <Group title={t("settings.scan.exclusions")} hint={t("settings.scan.exclusionsHint")}>
+        <div className="flex flex-col gap-2">
+          {settings.scanExclusions.length === 0 ? (
+            <p className="rounded bg-muted px-3 py-2 text-sm text-muted-foreground">{t("settings.scan.noExclusions")}</p>
+          ) : (
+            <ul className="flex flex-col gap-1">
+              {settings.scanExclusions.map(item => (
+                <li key={item} className="flex items-center justify-between gap-2 rounded bg-muted py-1 pl-3 pr-1">
+                  <span className="min-w-0 truncate text-sm" title={item}>{item}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t("settings.scan.removeExclusion", { pattern: item })}
+                    onClick={() => update({ scanExclusions: settings.scanExclusions.filter(p => p !== item) })}
+                  >
+                    <X />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <form
+            className="flex items-center gap-2"
+            onSubmit={e => {
+              e.preventDefault()
+              addExclusion()
+            }}
+          >
+            <Input
+              value={pattern}
+              onChange={e => setPattern(e.target.value)}
+              maxLength={MAX_EXCLUSION_LENGTH}
+              placeholder={t("settings.scan.exclusionPlaceholder")}
+              aria-label={t("settings.scan.exclusionInput")}
+              className="h-8 max-w-64"
+            />
+            <Button type="submit" variant="outline" size="sm" disabled={pattern.trim() === "" || settings.scanExclusions.length >= MAX_EXCLUSIONS}>
+              <Plus /> {t("settings.scan.addExclusion")}
+            </Button>
+          </form>
+          <p className="text-xs text-muted-foreground">{t("settings.scan.exclusionLimit", { max: MAX_EXCLUSIONS, length: MAX_EXCLUSION_LENGTH })}</p>
         </div>
       </Group>
 

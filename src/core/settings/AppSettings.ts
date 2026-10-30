@@ -1,7 +1,17 @@
 import { invoke } from "@tauri-apps/api/core"
+import { normalizeExclusions } from "../plugin/Exclude"
 
 export type LanguageSetting = "system" | "en" | "it"
 export type ThemeSetting = "system" | "light" | "dark"
+
+export type ColumnKey = "path" | "size" | "modified" | "arch"
+export type DensitySetting = "comfortable" | "compact"
+export type TabSetting = "all" | "VST2" | "VST3" | "AAX" | "AU"
+export type SortSetting = { key: "name" | "path" | "size" | "modified"; dir: "asc" | "desc" }
+
+export const COLUMN_KEYS: readonly ColumnKey[] = ["path", "size", "modified", "arch"]
+export const TAB_SETTINGS: readonly TabSetting[] = ["all", "VST2", "VST3", "AAX", "AU"]
+export const SORT_KEYS: readonly SortSetting["key"][] = ["name", "path", "size", "modified"]
 
 export type AppSettings = {
   version: number
@@ -14,6 +24,17 @@ export type AppSettings = {
   disabledSystemPaths: string[]
   /** Windows only: relaunch elevated at startup. Takes effect on the next start. */
   runAsAdmin: boolean
+  /** Name patterns (`*` wildcard) of plugins and folders the scan skips. */
+  scanExclusions: string[]
+  /** Optional list columns shown, in canonical order. Name is always shown. */
+  visibleColumns: ColumnKey[]
+  density: DensitySetting
+  defaultTab: TabSetting
+  defaultSort: SortSetting
+  /** Restore the last used tab and sort at startup instead of the defaults. */
+  rememberView: boolean
+  lastTab: TabSetting
+  lastSort: SortSetting
 }
 
 export type AppInfo = {
@@ -39,6 +60,14 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customScanDepth: DEFAULT_SCAN_DEPTH,
   disabledSystemPaths: [],
   runAsAdmin: true,
+  scanExclusions: [],
+  visibleColumns: [...COLUMN_KEYS],
+  density: "comfortable",
+  defaultTab: "all",
+  defaultSort: { key: "name", dir: "asc" },
+  rememberView: true,
+  lastTab: "all",
+  lastSort: { key: "name", dir: "asc" },
 }
 
 const onlyStrings = (value: unknown): string[] =>
@@ -46,6 +75,16 @@ const onlyStrings = (value: unknown): string[] =>
 
 const oneOf = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
   allowed.includes(value as T) ? (value as T) : fallback
+
+function normalizeSort(value: unknown): SortSetting {
+  const r = (value && typeof value === "object" ? value : {}) as Record<string, unknown>
+  return { key: oneOf(r.key, SORT_KEYS, "name"), dir: oneOf(r.dir, ["asc", "desc"], "asc") }
+}
+
+function normalizeColumns(value: unknown): ColumnKey[] {
+  if (!Array.isArray(value)) return [...COLUMN_KEYS]
+  return COLUMN_KEYS.filter(c => value.includes(c))
+}
 
 export function clampDepth(value: unknown): number {
   const n = typeof value === "number" ? value : Number.NaN
@@ -67,6 +106,14 @@ export function normalizeSettings(raw: unknown): AppSettings {
     customScanDepth: r.customScanDepth === undefined ? d.customScanDepth : clampDepth(r.customScanDepth),
     disabledSystemPaths: onlyStrings(r.disabledSystemPaths),
     runAsAdmin: typeof r.runAsAdmin === "boolean" ? r.runAsAdmin : d.runAsAdmin,
+    scanExclusions: normalizeExclusions(r.scanExclusions),
+    visibleColumns: normalizeColumns(r.visibleColumns),
+    density: oneOf(r.density, ["comfortable", "compact"], d.density),
+    defaultTab: oneOf(r.defaultTab, TAB_SETTINGS, d.defaultTab),
+    defaultSort: normalizeSort(r.defaultSort),
+    rememberView: typeof r.rememberView === "boolean" ? r.rememberView : d.rememberView,
+    lastTab: oneOf(r.lastTab, TAB_SETTINGS, d.lastTab),
+    lastSort: normalizeSort(r.lastSort),
   }
 }
 

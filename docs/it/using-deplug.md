@@ -51,7 +51,7 @@ Il pulsante di download nella barra degli strumenti salva l'elenco dei plugin in
 
 ## Ordinare
 
-Ogni sezione ha le intestazioni di colonna **Nome** e **Percorso**. Fai clic su una per ordinare, e di nuovo per invertire l'ordine. L'ordinamento è naturale, quindi "Plug 2" viene prima di "Plug 10", e ogni sezione di formato mantiene il proprio.
+Ogni sezione ha le intestazioni di colonna (**Nome**, più **Percorso**, **Dimensione** e **Modificato** quando quelle colonne sono visibili; vedi [Impostazioni](/it/settings#general)). Fai clic su una per ordinare, e di nuovo per invertire l'ordine. La scheda e l'ordinamento usati per ultimi vengono ricordati per il prossimo avvio (oppure imposta un avvio fisso nelle impostazioni). L'ordinamento è naturale, quindi "Plug 2" viene prima di "Plug 10", e ogni sezione di formato mantiene il proprio.
 
 ## Duplicati
 

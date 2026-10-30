@@ -132,6 +132,74 @@ fn default_scan_depth() -> u8 {
     6
 }
 
+const MAX_SCAN_EXCLUSIONS: usize = 50;
+const MAX_EXCLUSION_LEN: usize = 100;
+const COLUMNS: [&str; 4] = ["path", "size", "modified", "arch"];
+const TABS: [&str; 5] = ["all", "VST2", "VST3", "AAX", "AU"];
+const SORT_KEYS: [&str; 4] = ["name", "path", "size", "modified"];
+
+fn default_columns() -> Vec<String> {
+    COLUMNS.iter().map(|c| c.to_string()).collect()
+}
+
+fn default_density() -> String {
+    "comfortable".to_string()
+}
+
+fn default_tab() -> String {
+    "all".to_string()
+}
+
+/// Sort column and direction of the plugin list.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SortSetting {
+    /// "name" | "path" | "size" | "modified"
+    pub key: String,
+    /// "asc" | "desc"
+    pub dir: String,
+}
+
+impl Default for SortSetting {
+    fn default() -> Self {
+        SortSetting {
+            key: "name".to_string(),
+            dir: "asc".to_string(),
+        }
+    }
+}
+
+impl SortSetting {
+    fn sanitized(mut self) -> Self {
+        if !SORT_KEYS.contains(&self.key.as_str()) {
+            self.key = "name".to_string();
+        }
+        if !matches!(self.dir.as_str(), "asc" | "desc") {
+            self.dir = "asc".to_string();
+        }
+        self
+    }
+}
+
+/// Trims, drops empty and duplicate (case-insensitive) entries and caps the count and length.
+fn sanitize_exclusions(list: Vec<String>) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    let mut out = Vec::new();
+    for item in list {
+        let t = item.trim();
+        if t.is_empty() || t.chars().count() > MAX_EXCLUSION_LEN {
+            continue;
+        }
+        if seen.insert(t.to_lowercase()) {
+            out.push(t.to_string());
+            if out.len() == MAX_SCAN_EXCLUSIONS {
+                break;
+            }
+        }
+    }
+    out
+}
+
 /// Allowed range for `custom_scan_depth`.
 const SCAN_DEPTH_RANGE: std::ops::RangeInclusive<u8> = 1..=10;
 
@@ -151,6 +219,19 @@ pub struct Settings {
     pub disabled_system_paths: Vec<String>,
     /// Windows only: relaunch Deplug elevated at startup (default on).
     pub run_as_admin: bool,
+    /// Name patterns (`*` wildcard) of plugins and folders the scan skips.
+    pub scan_exclusions: Vec<String>,
+    /// Optional list columns shown: "path" | "size" | "modified" | "arch".
+    pub visible_columns: Vec<String>,
+    /// "comfortable" | "compact"
+    pub density: String,
+    /// "all" | "VST2" | "VST3" | "AAX" | "AU"
+    pub default_tab: String,
+    pub default_sort: SortSetting,
+    /// Restore the last used tab and sort at startup instead of the defaults.
+    pub remember_view: bool,
+    pub last_tab: String,
+    pub last_sort: SortSetting,
 }
 
 impl Default for Settings {
@@ -165,6 +246,14 @@ impl Default for Settings {
             custom_scan_depth: default_scan_depth(),
             disabled_system_paths: Vec::new(),
             run_as_admin: true,
+            scan_exclusions: Vec::new(),
+            visible_columns: default_columns(),
+            density: default_density(),
+            default_tab: default_tab(),
+            default_sort: SortSetting::default(),
+            remember_view: true,
+            last_tab: default_tab(),
+            last_sort: SortSetting::default(),
         }
     }
 }
@@ -181,6 +270,25 @@ impl Settings {
         self.custom_scan_depth = self
             .custom_scan_depth
             .clamp(*SCAN_DEPTH_RANGE.start(), *SCAN_DEPTH_RANGE.end());
+        self.scan_exclusions = sanitize_exclusions(std::mem::take(&mut self.scan_exclusions));
+        // Canonical order, no unknown or repeated columns.
+        let cols = std::mem::take(&mut self.visible_columns);
+        self.visible_columns = COLUMNS
+            .iter()
+            .filter(|c| cols.iter().any(|v| v == *c))
+            .map(|c| c.to_string())
+            .collect();
+        if !matches!(self.density.as_str(), "comfortable" | "compact") {
+            self.density = default_density();
+        }
+        if !TABS.contains(&self.default_tab.as_str()) {
+            self.default_tab = default_tab();
+        }
+        if !TABS.contains(&self.last_tab.as_str()) {
+            self.last_tab = default_tab();
+        }
+        self.default_sort = std::mem::take(&mut self.default_sort).sanitized();
+        self.last_sort = std::mem::take(&mut self.last_sort).sanitized();
         self
     }
 }
@@ -361,6 +469,63 @@ mod tests {
         assert_eq!(s.custom_scan_depth, 6);
         assert!(s.disabled_system_paths.is_empty());
         assert!(s.run_as_admin);
+        assert!(s.scan_exclusions.is_empty());
+        assert_eq!(s.visible_columns, ["path", "size", "modified", "arch"]);
+        assert_eq!(s.density, "comfortable");
+        assert_eq!(s.default_tab, "all");
+        assert_eq!(s.default_sort, SortSetting::default());
+        assert!(s.remember_view);
+    }
+
+    #[test]
+    fn settings_view_and_exclusions_sanitized() {
+        let long = "x".repeat(101);
+        let many: Vec<String> = (0..60).map(|i| format!("p{i}")).collect();
+        let s = Settings {
+            scan_exclusions: [vec!["  Demo ".into(), "demo".into(), "".into(), long], many]
+                .concat(),
+            visible_columns: vec!["size".into(), "bogus".into(), "path".into(), "size".into()],
+            density: "huge".into(),
+            default_tab: "VST9".into(),
+            last_tab: "AU".into(),
+            default_sort: SortSetting {
+                key: "color".into(),
+                dir: "up".into(),
+            },
+            last_sort: SortSetting {
+                key: "size".into(),
+                dir: "desc".into(),
+            },
+            ..Settings::default()
+        }
+        .sanitized();
+        assert_eq!(s.scan_exclusions.len(), 50);
+        assert_eq!(s.scan_exclusions[0], "Demo");
+        assert_eq!(s.scan_exclusions[1], "p0");
+        assert_eq!(s.visible_columns, ["path", "size"]);
+        assert_eq!(s.density, "comfortable");
+        assert_eq!(s.default_tab, "all");
+        assert_eq!(s.last_tab, "AU");
+        assert_eq!(s.default_sort, SortSetting::default());
+        assert_eq!(s.last_sort.key, "size");
+    }
+
+    #[test]
+    fn settings_old_file_gets_view_defaults() {
+        let d = tempdir().unwrap();
+        let p = d.path().join("s.json");
+        fs::write(
+            &p,
+            r#"{"version":1,"visibleColumns":[],"defaultSort":{"key":"size"}}"#,
+        )
+        .unwrap();
+        let s = load(&p);
+        assert!(s.visible_columns.is_empty());
+        assert_eq!(s.default_sort.key, "size");
+        assert_eq!(s.default_sort.dir, "asc");
+        assert!(s.remember_view);
+        fs::write(&p, r#"{"version":1}"#).unwrap();
+        assert_eq!(load(&p), Settings::default());
     }
 
     #[test]
@@ -454,6 +619,8 @@ mod tests {
             custom_scan_depth: 3,
             disabled_system_paths: vec!["/sys".into()],
             run_as_admin: true,
+            scan_exclusions: vec!["*Demo*".into()],
+            ..Settings::default()
         };
         save(&p, &s).unwrap();
         assert_eq!(load(&p), s);

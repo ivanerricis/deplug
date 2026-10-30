@@ -6,12 +6,17 @@ Open the settings with the gear button at the right of the toolbar. The dialog h
 
 - **Language**: *System default*, *English* or *Italiano*. It changes the whole interface immediately. *System default* follows the language of your operating system and falls back to English if it is neither English nor Italian.
 - **Theme**: *System*, *Light* or *Dark*. *System* follows your operating system's light or dark setting.
+- **List**: tick the optional columns of the plugin list: **Path**, **Size**, **Modified** and **Architecture** (the 32/64-bit pill next to the name). The name is always shown. Hidden columns also lose their sort header, and the layout adjusts so nothing is left empty. **Row density** is *Comfortable* (default) or *Compact*, which fits more plugins on screen.
+- **Remember the last tab and sort**: on by default. Deplug saves the tab and sort you used last and opens on them next time. Turn it off to always open on the two choices below.
+- **Start on tab**: *All*, *VST2*, *VST3*, *AAX* or *AU*; used when remembering is off.
+- **Default sort**: the column (*Name*, *Path*, *Size* or *Modified*) and direction (*Ascending* or *Descending*) every section starts with when remembering is off.
 
 ## Scan {#scan}
 
 - **Scan on startup**: on by default. Turn it off and Deplug opens with a "Ready to scan" screen; press **Scan now** (or the rescan button) when you want a list.
 - **Custom folder depth**: how many levels of subfolders are searched inside the folders you add, from 1 to 10 (default 6). It does not apply to the standard system folders, which are always searched three levels deep.
 - **Custom folders**: extra folders to scan, for plugins you copied by hand. Use **Add folder** to pick one and the cross next to a folder to remove it. Removing a folder never touches its files. See [Custom folders](/custom-folders).
+- **Exclusions**: names to skip while scanning. Type a pattern and press **Add**; the cross removes it. A pattern is compared with the whole name of a plugin or of a single folder, ignoring upper and lower case, and never with the full path. `*` stands for any text: `*Demo*` skips anything with "demo" in its name, `Backup` skips folders or plugins named exactly Backup, `old_*` skips names that start with "old_". Matching folders are not searched at all and matching plugins are not listed. There is no other pattern syntax. You can add up to 50 patterns of up to 100 characters; blanks and duplicates are ignored.
 - **System folders**: the standard locations for your operating system, each with a checkbox. Untick the ones you do not want to scan.
 
 The plugin list refreshes when you close the settings, if anything here changed.
