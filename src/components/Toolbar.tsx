@@ -156,8 +156,9 @@ export default function Toolbar({
           >
             {([["format", Layers, "toolbar.groupFormat", "toolbar.groupFormatTip"], ["vendor", Building2, "toolbar.groupVendor", "toolbar.groupVendorTip"]] as const).map(([value, Icon, label, tip]) => (
               <Tooltip key={value}>
+                {/* TooltipTrigger overwrites data-state, so the selected look keys on aria-checked. */}
                 <TooltipTrigger asChild>
-                  <ToggleGroupItem value={value} aria-label={t(tip)} className="h-9 cursor-pointer gap-1.5 px-2.5 text-xs font-medium data-[state=on]:bg-secondary max-[1099px]:w-8 max-[1099px]:px-0">
+                  <ToggleGroupItem value={value} aria-label={t(tip)} className="h-9 cursor-pointer gap-1.5 px-2.5 text-xs font-medium aria-checked:bg-primary aria-checked:text-primary-foreground aria-checked:hover:bg-primary/90 aria-checked:hover:text-primary-foreground max-[1099px]:w-8 max-[1099px]:px-0">
                     <Icon aria-hidden className="size-3.5" />
                     <span aria-hidden className="max-[1099px]:hidden">{t(label)}</span>
                   </ToggleGroupItem>
