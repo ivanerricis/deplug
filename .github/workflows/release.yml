@@ -63,6 +63,14 @@ jobs:
         with:
           workspaces: src-tauri
       - run: npm ci
+      - name: Release notes from CHANGELOG.md
+        shell: bash
+        run: |
+          {
+            echo "RELEASE_BODY<<RELEASE_NOTES_EOF"
+            ./packaging/release-notes.sh "$RELEASE_TAG"
+            echo "RELEASE_NOTES_EOF"
+          } >> "$GITHUB_ENV"
       - uses: tauri-apps/tauri-action@v0
         id: tauri
         env:
@@ -73,7 +81,7 @@ jobs:
         with:
           tagName: ${{ env.RELEASE_TAG }}
           releaseName: "Deplug ${{ env.RELEASE_TAG }}"
-          releaseBody: "See the assets below. Installers: .msi/.exe (Windows), .dmg (macOS), .deb/.rpm/.AppImage (Linux). Installed copies update themselves from the app (Settings > About). Portable builds (no install, data kept next to the app): *_portable.zip (Windows, macOS) and *_portable.tar.gz (Linux)."
+          releaseBody: ${{ env.RELEASE_BODY }}
           releaseDraft: true
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           args: ${{ matrix.args }}
