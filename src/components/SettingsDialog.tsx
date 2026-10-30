@@ -16,6 +16,7 @@ import GeneralSection from "./settings/GeneralSection"
 import ScanSection from "./settings/ScanSection"
 import UninstallSection from "./settings/UninstallSection"
 import AboutSection from "./settings/AboutSection"
+import type { StartupUpdate } from "@/core/useStartupUpdateCheck"
 
 type TabId = "general" | "scan" | "uninstall" | "about"
 
@@ -32,11 +33,15 @@ type SettingsDialogProps = {
   /** Plugins per detected architecture, for the diagnostics text. */
   archSummary?: Partial<Record<PluginArch, number>>
   appInfo?: AppInfo
+  /** Plugins found per format, for the diagnostics text. */
+  formatCounts?: Record<string, number>
+  /** Result of the opt-in startup update check, when it found a newer version. */
+  startupUpdate?: StartupUpdate | null
   initialTab?: TabId
   onClose: () => void
 }
 
-export default function SettingsDialog({ platform, systemPaths, archSummary, appInfo, initialTab = "general", onClose }: SettingsDialogProps) {
+export default function SettingsDialog({ platform, systemPaths, archSummary, appInfo, formatCounts, startupUpdate, initialTab = "general", onClose }: SettingsDialogProps) {
   const { t, tError } = useI18n()
   const { saveError, clearSaveError } = useSettings()
   const [tab, setTab] = useState<TabId>(initialTab)
@@ -108,7 +113,7 @@ export default function SettingsDialog({ platform, systemPaths, archSummary, app
               <TabsContent value="general" className="px-5 py-4"><GeneralSection /></TabsContent>
               <TabsContent value="scan" className="px-5 py-4"><ScanSection systemPaths={systemPaths} /></TabsContent>
               <TabsContent value="uninstall" className="px-5 py-4"><UninstallSection platform={platform} /></TabsContent>
-              <TabsContent value="about" className="px-5 py-4"><AboutSection platform={platform} appInfo={appInfo} systemPaths={systemPaths} archSummary={archSummary} /></TabsContent>
+              <TabsContent value="about" className="px-5 py-4"><AboutSection platform={platform} appInfo={appInfo} systemPaths={systemPaths} archSummary={archSummary} formatCounts={formatCounts} startupUpdate={startupUpdate} /></TabsContent>
             </ScrollArea>
           </div>
         </Tabs>

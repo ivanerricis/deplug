@@ -22,6 +22,10 @@ import { buildPluginPath } from "./core/plugin/Uninstall"
 import { fetchPluginMeta, knownArch, type PluginMeta } from "./core/plugin/Meta"
 import { getAppInfo, type AppInfo, type SortSetting } from "./core/settings/AppSettings"
 import { useSettings } from "./core/settings/SettingsContext"
+import { useStartupUpdateCheck } from "./core/useStartupUpdateCheck"
+import { pushError } from "./core/errorLog"
+import { isEditableTarget, shortcutAction } from "./core/shortcuts"
+import ShortcutsDialog from "./components/ShortcutsDialog"
 import { useI18n } from "./i18n/I18nProvider"
 import type { Plugin } from "@/core/plugin/Plugin"
 import type { ScanResult } from "./core/plugin/PluginScanner"
@@ -67,6 +71,8 @@ export default function App() {
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [uninstallTargets, setUninstallTargets] = useState<Plugin[] | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const [showShortcuts, setShowShortcuts] = useState(false)
+  const [exportOpenSignal, setExportOpenSignal] = useState(0)
 
   const systemPaths = useMemo(() => getPluginPaths(platform, home, sysPaths), [platform, home, sysPaths])
   // What the last scan used, so closing settings only rescans when it would change the list.
@@ -121,6 +127,7 @@ export default function App() {
       )
     } catch (e) {
       console.error(e)
+      pushError("scan", e)
     } finally {
       setScanning(false)
     }
@@ -232,6 +239,7 @@ export default function App() {
       await writeTextFile(path, exportPlugins(format, exportList, meta))
       setExportStatus({ ok: true, text: t("export.done", { count: exportList.length, path }) })
     } catch (e) {
+      pushError("export", e)
       setExportStatus({ ok: false, text: t("export.failed", { error: e instanceof Error ? e.message : String(e) }) })
     }
   }
@@ -262,13 +270,43 @@ export default function App() {
     setArchFilter("all")
   }
 
-  // Ctrl/Cmd+F focuses the search field; Esc clears the search, then the selection.
+  const startupUpdate = useStartupUpdateCheck(loaded && !scanning && (scanned || !settings.scanOnStartup))
+
+  // Keyboard shortcuts (see core/shortcuts.ts); Esc clears the search, then the selection.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "f") {
+      const action = shortcutAction(e, {
+        inInput: isEditableTarget(document.activeElement),
+        modalOpen: !!document.querySelector('[role="dialog"], [role="menu"]'),
+        hasSelection: selectedPlugins.length > 0,
+        scanning,
+      })
+      if (action) {
         e.preventDefault()
-        searchRef.current?.focus()
-        searchRef.current?.select()
+        switch (action) {
+          case "focus-search":
+            searchRef.current?.focus()
+            searchRef.current?.select()
+            break
+          case "select-all":
+            selectKeys(visibleShown.map(pluginKey), true)
+            break
+          case "uninstall-selected":
+            setUninstallTargets(selectedPlugins)
+            break
+          case "open-export":
+            if (exportList.length > 0) setExportOpenSignal(n => n + 1)
+            break
+          case "open-settings":
+            setShowSettings(true)
+            break
+          case "rescan":
+            void scanPlugins()
+            break
+          case "open-shortcuts":
+            setShowShortcuts(true)
+            break
+        }
         return
       }
       if (e.key !== "Escape" || e.defaultPrevented) return
@@ -282,7 +320,7 @@ export default function App() {
     }
     document.addEventListener("keydown", onKey)
     return () => document.removeEventListener("keydown", onKey)
-  }, [queryInput, selected])
+  }, [queryInput, selected, selectedPlugins, visibleShown, exportList.length, scanning, selectKeys, scanPlugins])
 
   const closeUninstall = (removedAny: boolean) => {
     setUninstallTargets(null)
@@ -326,10 +364,20 @@ export default function App() {
         exportCount={exportList.length}
         exportSelection={selectedPlugins.length > 0}
         onExport={format => void runExport(format)}
+        exportOpenSignal={exportOpenSignal}
+        updateAvailable={startupUpdate !== null}
       />
 
       {showSettings && (
-        <SettingsDialog platform={platform} systemPaths={systemPaths} archSummary={archSummary} appInfo={appInfo} onClose={closeSettings} />
+        <SettingsDialog
+          platform={platform}
+          systemPaths={systemPaths}
+          archSummary={archSummary}
+          appInfo={appInfo}
+          formatCounts={{ VST2: result.vst2.length, VST3: result.vst3.length, AAX: result.aax.length, AU: result.au.length }}
+          startupUpdate={startupUpdate}
+          onClose={closeSettings}
+        />
       )}
 
       {result.all.length === 0 ? (
@@ -399,6 +447,8 @@ export default function App() {
           </AlertDescription>
         </Alert>
       )}
+
+      {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
 
       {uninstallTargets && <UninstallDialog plugins={uninstallTargets} meta={meta} onClose={closeUninstall} elevated={appInfo?.elevated ?? false} />}
     </div>

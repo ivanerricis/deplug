@@ -1,4 +1,4 @@
-import type { RefObject } from "react"
+import { useEffect, useState, type RefObject } from "react"
 import { ChevronDown, Copy, Download, OctagonAlert, RefreshCcw, Search, Settings, X } from "lucide-react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -39,6 +39,10 @@ type ToolbarProps = {
   exportCount: number
   exportSelection: boolean
   onExport: (format: ExportFormat) => void
+  /** Increments to open the export menu from the keyboard (Ctrl/Cmd+E). */
+  exportOpenSignal?: number
+  /** A newer version was found by the startup check: shows a dot on the settings button. */
+  updateAvailable?: boolean
 }
 
 const TYPES: PluginType[] = ["VST2", "VST3", "AAX", "AU"]
@@ -71,8 +75,14 @@ export default function Toolbar({
   exportCount,
   exportSelection,
   onExport,
+  exportOpenSignal = 0,
+  updateAvailable = false,
 }: ToolbarProps) {
   const { t } = useI18n()
+  const [exportOpen, setExportOpen] = useState(false)
+  useEffect(() => {
+    if (exportOpenSignal > 0) setExportOpen(true)
+  }, [exportOpenSignal])
   return (
     <div className="flex flex-none items-center gap-2 border-b border-border px-3 py-2">
       <BrandMark className="mr-1 hidden size-6 shrink-0 text-foreground min-[900px]:block" />
@@ -175,7 +185,7 @@ export default function Toolbar({
       </span>
 
       <div className="flex items-center">
-        <DropdownMenu>
+        <DropdownMenu open={exportOpen} onOpenChange={setExportOpen}>
           <Tooltip>
             <TooltipTrigger asChild>
               <DropdownMenuTrigger asChild>
@@ -204,11 +214,12 @@ export default function Toolbar({
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={onSettings} aria-label={t("toolbar.settings")}>
+            <Button variant="ghost" size="icon" onClick={onSettings} aria-label={t(updateAvailable ? "toolbar.settingsUpdate" : "toolbar.settings")} className="relative">
               <Settings aria-hidden />
+              {updateAvailable && <span aria-hidden className="absolute right-1.5 top-1.5 size-2 rounded-full bg-signal" />}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t("toolbar.settings")}</TooltipContent>
+          <TooltipContent>{t(updateAvailable ? "toolbar.settingsUpdate" : "toolbar.settings")}</TooltipContent>
         </Tooltip>
       </div>
     </div>

@@ -124,6 +124,10 @@ fn default_system() -> String {
     "system".to_string()
 }
 
+fn default_stable() -> String {
+    "stable".to_string()
+}
+
 fn default_true() -> bool {
     true
 }
@@ -219,6 +223,12 @@ pub struct Settings {
     pub disabled_system_paths: Vec<String>,
     /// Windows only: relaunch Deplug elevated at startup (default on).
     pub run_as_admin: bool,
+    /// Opt-in: look for a newer release shortly after startup (default off).
+    pub check_updates_on_startup: bool,
+    /// "stable" | "prerelease"
+    pub update_channel: String,
+    /// Unix time in milliseconds of the last automatic update check (0 = never).
+    pub last_update_check: u64,
     /// Name patterns (`*` wildcard) of plugins and folders the scan skips.
     pub scan_exclusions: Vec<String>,
     /// Optional list columns shown: "path" | "size" | "modified" | "arch".
@@ -246,6 +256,9 @@ impl Default for Settings {
             custom_scan_depth: default_scan_depth(),
             disabled_system_paths: Vec::new(),
             run_as_admin: true,
+            check_updates_on_startup: false,
+            update_channel: default_stable(),
+            last_update_check: 0,
             scan_exclusions: Vec::new(),
             visible_columns: default_columns(),
             density: default_density(),
@@ -266,6 +279,9 @@ impl Settings {
         }
         if !matches!(self.theme.as_str(), "system" | "light" | "dark") {
             self.theme = default_system();
+        }
+        if !matches!(self.update_channel.as_str(), "stable" | "prerelease") {
+            self.update_channel = default_stable();
         }
         self.custom_scan_depth = self
             .custom_scan_depth
@@ -606,6 +622,28 @@ mod tests {
     }
 
     #[test]
+    fn settings_update_fields_default_off_and_sanitize() {
+        let d = tempdir().unwrap();
+        let p = d.path().join("s.json");
+        fs::write(&p, r#"{"version":1,"scanOnStartup":false}"#).unwrap();
+        let s = load(&p);
+        assert!(!s.check_updates_on_startup);
+        assert_eq!(s.update_channel, "stable");
+        assert_eq!(s.last_update_check, 0);
+        fs::write(
+            &p,
+            r#"{"checkUpdatesOnStartup":true,"updateChannel":"nightly","lastUpdateCheck":42}"#,
+        )
+        .unwrap();
+        let s = load(&p);
+        assert!(s.check_updates_on_startup);
+        assert_eq!(s.update_channel, "stable");
+        assert_eq!(s.last_update_check, 42);
+        fs::write(&p, r#"{"updateChannel":"prerelease"}"#).unwrap();
+        assert_eq!(load(&p).update_channel, "prerelease");
+    }
+
+    #[test]
     fn settings_roundtrip_no_tmp() {
         let d = tempdir().unwrap();
         let p = d.path().join("nested/dir/settings.json");
@@ -619,6 +657,9 @@ mod tests {
             custom_scan_depth: 3,
             disabled_system_paths: vec!["/sys".into()],
             run_as_admin: true,
+            check_updates_on_startup: true,
+            update_channel: "prerelease".into(),
+            last_update_check: 1_700_000_000_000,
             scan_exclusions: vec!["*Demo*".into()],
             ..Settings::default()
         };

@@ -3,6 +3,7 @@ import { normalizeExclusions } from "../plugin/Exclude"
 
 export type LanguageSetting = "system" | "en" | "it"
 export type ThemeSetting = "system" | "light" | "dark"
+export type UpdateChannel = "stable" | "prerelease"
 
 export type ColumnKey = "path" | "size" | "modified" | "arch"
 export type DensitySetting = "comfortable" | "compact"
@@ -24,6 +25,12 @@ export type AppSettings = {
   disabledSystemPaths: string[]
   /** Windows only: relaunch elevated at startup. Takes effect on the next start. */
   runAsAdmin: boolean
+  /** Opt-in: check for a newer release shortly after startup. */
+  checkUpdatesOnStartup: boolean
+  /** "stable" ignores GitHub pre-releases; "prerelease" also offers release candidates. */
+  updateChannel: UpdateChannel
+  /** Unix time in ms of the last automatic update check (0 = never). */
+  lastUpdateCheck: number
   /** Name patterns (`*` wildcard) of plugins and folders the scan skips. */
   scanExclusions: string[]
   /** Optional list columns shown, in canonical order. Name is always shown. */
@@ -44,6 +51,8 @@ export type AppInfo = {
   portableWarning: string | null
   /** True when the process already runs with administrator rights (Windows only). */
   elevated: boolean
+  /** CPU architecture and OS family from the backend, e.g. "x86_64 / windows". */
+  osInfo?: string
 }
 
 export const MIN_SCAN_DEPTH = 1
@@ -60,6 +69,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customScanDepth: DEFAULT_SCAN_DEPTH,
   disabledSystemPaths: [],
   runAsAdmin: true,
+  checkUpdatesOnStartup: false,
+  updateChannel: "stable",
+  lastUpdateCheck: 0,
   scanExclusions: [],
   visibleColumns: [...COLUMN_KEYS],
   density: "comfortable",
@@ -106,6 +118,12 @@ export function normalizeSettings(raw: unknown): AppSettings {
     customScanDepth: r.customScanDepth === undefined ? d.customScanDepth : clampDepth(r.customScanDepth),
     disabledSystemPaths: onlyStrings(r.disabledSystemPaths),
     runAsAdmin: typeof r.runAsAdmin === "boolean" ? r.runAsAdmin : d.runAsAdmin,
+    checkUpdatesOnStartup: typeof r.checkUpdatesOnStartup === "boolean" ? r.checkUpdatesOnStartup : d.checkUpdatesOnStartup,
+    updateChannel: oneOf(r.updateChannel, ["stable", "prerelease"], d.updateChannel),
+    lastUpdateCheck:
+      typeof r.lastUpdateCheck === "number" && Number.isFinite(r.lastUpdateCheck) && r.lastUpdateCheck > 0
+        ? Math.floor(r.lastUpdateCheck)
+        : d.lastUpdateCheck,
     scanExclusions: normalizeExclusions(r.scanExclusions),
     visibleColumns: normalizeColumns(r.visibleColumns),
     density: oneOf(r.density, ["comfortable", "compact"], d.density),

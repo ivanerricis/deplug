@@ -124,3 +124,18 @@ Se non riesce, Deplug mostra il motivo e chiede se **continuare senza punto di r
 Con più plugin la domanda è una sola: se il punto di ripristino non riesce, decidi se continuare per tutti i plugin selezionati.
 
 Per gli altri errori viene mostrato il messaggio restituito da Windows PowerShell.
+
+## Scorciatoie da tastiera
+
+Le scorciatoie che agiscono sull'elenco non fanno nulla mentre è aperta una finestra o un menu, e i tasti semplici vengono ignorati mentre scrivi in un campo. Su macOS usa **Cmd** al posto di **Ctrl**. Premi **?** per mostrare questo elenco nell'app.
+
+| Tasti | Azione |
+| --- | --- |
+| **Ctrl+F** | Porta il cursore nel campo di ricerca |
+| **Ctrl+A** | Seleziona tutti i plugin mostrati nella vista corrente |
+| **Esc** | Cancella la ricerca, poi la selezione |
+| **Canc** | Disinstalla i plugin selezionati (apre la finestra di disinstallazione) |
+| **Ctrl+E** | Apre il menu di esportazione |
+| **Ctrl+,** | Apre le impostazioni |
+| **F5** o **Ctrl+R** | Riesegue la scansione |
+| **?** | Mostra le scorciatoie |

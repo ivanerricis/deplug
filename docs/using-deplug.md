@@ -124,3 +124,18 @@ If it fails, Deplug shows the reason and asks whether to **continue without a re
 A batch asks only once: if the restore point fails, you choose whether to continue for all the selected plugins.
 
 Other errors show the message reported by Windows PowerShell.
+
+## Keyboard shortcuts
+
+Shortcuts that act on the list do nothing while a dialog or menu is open, and the plain keys are ignored while you type in a field. On macOS use **Cmd** instead of **Ctrl**. Press **?** to show this list in the app.
+
+| Keys | Action |
+| --- | --- |
+| **Ctrl+F** | Focus the search field |
+| **Ctrl+A** | Select every plugin shown in the current view |
+| **Esc** | Clear the search, then the selection |
+| **Del** | Uninstall the selected plugins (opens the uninstall dialog) |
+| **Ctrl+E** | Open the export menu |
+| **Ctrl+,** | Open settings |
+| **F5** or **Ctrl+R** | Rescan plugins |
+| **?** | Show the shortcuts |

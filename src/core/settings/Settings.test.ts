@@ -3,6 +3,27 @@ import { DEFAULT_SETTINGS, normalizeSettings, type AppSettings } from "./AppSett
 import { loadSettings } from "./LoadSettings"
 
 describe("normalizeSettings", () => {
+  it("defaults the update settings to off / stable / never", () => {
+    const s = normalizeSettings({ version: 1 })
+    expect(s.checkUpdatesOnStartup).toBe(false)
+    expect(s.updateChannel).toBe("stable")
+    expect(s.lastUpdateCheck).toBe(0)
+  })
+
+  it("validates the update settings", () => {
+    expect(normalizeSettings({ checkUpdatesOnStartup: true, updateChannel: "prerelease", lastUpdateCheck: 1700000000000.7 })).toMatchObject({
+      checkUpdatesOnStartup: true,
+      updateChannel: "prerelease",
+      lastUpdateCheck: 1700000000000,
+    })
+    expect(normalizeSettings({ checkUpdatesOnStartup: "yes", updateChannel: "nightly", lastUpdateCheck: -5 })).toMatchObject({
+      checkUpdatesOnStartup: false,
+      updateChannel: "stable",
+      lastUpdateCheck: 0,
+    })
+    expect(normalizeSettings({ lastUpdateCheck: "x" }).lastUpdateCheck).toBe(0)
+  })
+
   it("fills defaults for missing or garbage input", () => {
     expect(normalizeSettings(undefined)).toEqual(DEFAULT_SETTINGS)
     expect(normalizeSettings(null)).toEqual(DEFAULT_SETTINGS)
