@@ -8,6 +8,8 @@ when releasing.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-30
+
 ### Fixed
 - Closing a dialog or menu no longer pops up the tooltip of the button that opened it (all tooltips ignore focus that returns by script; keyboard focus still shows them).
 - The selected option of the **Group by** switch is now clearly highlighted (the tooltip was hiding its selected state).
@@ -44,5 +46,6 @@ First public release.
 - Keyboard shortcuts, a welcome screen and clearer empty states.
 - Installers for Windows (per-machine), macOS and Linux, plus portable builds.
 
-[Unreleased]: https://github.com/ivanerricis/deplug/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/ivanerricis/deplug/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/ivanerricis/deplug/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/ivanerricis/deplug/releases/tag/v0.1.0
