@@ -25,6 +25,8 @@ L'elenco dei plugin si aggiorna quando chiudi le impostazioni, se qualcosa è ca
 
 La sezione Informazioni mostra il nome dell'app, la **Versione** e la **Modalità** (*Standard* o *Portatile*). In modalità portatile indica anche la **Cartella dei dati** e un avviso se la modalità portatile non è partita, ad esempio perché la cartella è in sola lettura. Vedi [Modalità portatile](/it/portable-mode).
 
+In **Aggiornamenti**, **Controlla aggiornamenti** cerca una versione pubblicata più recente. Su una copia normale (installata) Deplug può poi scaricarla e installarla per te: premi **Scarica e installa**, segui la barra di avanzamento, poi premi **Riavvia ora**. Gli aggiornamenti sono verificati con una firma prima dell'installazione. Se l'aggiornamento nell'app non è disponibile per la tua installazione (ad esempio alcuni pacchetti Linux), oppure usi una copia [portatile](/it/portable-mode), che non si aggiorna mai da sola perché le copie portatili si sostituiscono a mano, il pulsante **Apri la pagina della release** ti porta al download.
+
 Contiene inoltre:
 
 - i collegamenti a **Pagina GitHub**, **Documentazione**, **Segnala un problema** e **Note di rilascio**, che si aprono nel browser;

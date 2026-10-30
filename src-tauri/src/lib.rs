@@ -79,6 +79,14 @@ pub fn run() {
                 }
             }
 
+            // Updater and relaunch exist on desktop only.
+            #[cfg(desktop)]
+            {
+                app.handle()
+                    .plugin(tauri_plugin_updater::Builder::new().build())?;
+                app.handle().plugin(tauri_plugin_process::init())?;
+            }
+
             // The window is configured visible:false; always show it here.
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.show();

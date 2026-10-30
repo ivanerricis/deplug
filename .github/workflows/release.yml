@@ -23,6 +23,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: ./packaging/check-version.sh "$RELEASE_TAG"
+      - name: Check updater signing key
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error title=Missing secret TAURI_SIGNING_PRIVATE_KEY::The repository secret TAURI_SIGNING_PRIVATE_KEY is not set. It signs the in-app updater artifacts and the build fails without it. Generate a key pair with 'npx tauri signer generate' (no password), put the private key in this secret and the public key in src-tauri/tauri.conf.json (plugins.updater.pubkey). See the Releases section of docs/building-from-source.md."
+            exit 1
+          fi
 
   release:
     needs: verify-version
@@ -59,13 +67,18 @@ jobs:
         id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signs the updater artifacts (.sig). The key has no password: the secret may stay unset/empty.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ env.RELEASE_TAG }}
           releaseName: "Deplug ${{ env.RELEASE_TAG }}"
-          releaseBody: "See the assets below. Installers: .msi/.exe (Windows), .dmg (macOS), .deb/.rpm/.AppImage (Linux). Portable builds (no install, data kept next to the app): *_portable.zip (Windows, macOS) and *_portable.tar.gz (Linux)."
+          releaseBody: "See the assets below. Installers: .msi/.exe (Windows), .dmg (macOS), .deb/.rpm/.AppImage (Linux). Installed copies update themselves from the app (Settings > About). Portable builds (no install, data kept next to the app): *_portable.zip (Windows, macOS) and *_portable.tar.gz (Linux)."
           releaseDraft: true
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           args: ${{ matrix.args }}
+          # Uploads latest.json (signed updater manifest) next to the installers and their .sig files.
+          includeUpdaterJson: true
       - name: Package portable (Windows)
         if: runner.os == 'Windows'
         shell: bash

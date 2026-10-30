@@ -64,7 +64,7 @@ Un solo file: `settings.json`. Contiene le tue preferenze (lingua, tema, opzioni
 
 ## Viene inviato qualcosa in rete?
 
-Solo quando lo chiedi tu: **Impostazioni → Informazioni → Controlla aggiornamenti** contatta le API delle release di GitHub (`api.github.com`) per leggere l'elenco delle versioni pubblicate. Non viene inviato altro e il controllo non parte mai da solo. L'elenco dei plugin, i percorsi e le impostazioni restano sul tuo computer. Vedi [Sicurezza e privacy](/it/safety-and-privacy).
+Solo quando lo chiedi tu: **Impostazioni → Informazioni → Controlla aggiornamenti** contatta le API delle release di GitHub (`api.github.com`) per leggere l'elenco delle versioni pubblicate. Se esiste un aggiornamento e premi **Scarica e installa**, Deplug scarica da GitHub l'aggiornamento firmato. Non viene inviato altro e nulla parte da solo. L'elenco dei plugin, i percorsi e le impostazioni restano sul tuo computer. Vedi [Sicurezza e privacy](/it/safety-and-privacy).
 
 ## Dove segnalo un bug?
 

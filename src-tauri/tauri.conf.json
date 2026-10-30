@@ -29,6 +29,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",
@@ -46,5 +47,16 @@
     "copyright": "Copyright (c) 2026 Ivan Erricis. All rights reserved.",
     "shortDescription": "Find and remove audio plugins",
     "longDescription": "Deplug finds the VST2, VST3, AAX and AU plugins installed on your computer and uninstalls the ones you choose."
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZGRUY2QjQyNEY5NDg4RTQKUldUa2lKUlBRbXZ2LzVFOE5idThNOFIrSTFadDFZVWF6VERIVnN0b3pFbUpnYlYvcjFKQ3MvMEMK",
+      "endpoints": [
+        "https://github.com/ivanerricis/deplug/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }
