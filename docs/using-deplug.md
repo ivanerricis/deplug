@@ -88,12 +88,14 @@ To undo, open the trash and restore the item to its original location, then pres
 
 ### The publisher's uninstaller and leftover folders
 
-When you uninstall a **single** plugin, Deplug also looks in the background for two optional extras. If it finds nothing (or the check fails, or you are on Linux) the dialog looks exactly as before. Batch uninstalls never show them.
+When you uninstall a **single** plugin, Deplug also looks in the background for two optional extras. If it finds nothing (or the check fails, or you are on Linux) the dialog looks exactly as before. Leftover folders are only offered for a single plugin; the publisher's uninstaller is also offered in batches (see below).
 
 - **The publisher's own uninstaller.** If the plugin was installed by a regular installer, the dialog says so and lets you choose between **Move only the files to the trash** (the default) and **Run the publisher's uninstaller**. The second choice shows the exact command first, and the confirm button becomes **Run uninstaller**. It starts a program from the publisher, which may ask for administrator permission and may remove more than this plugin; Deplug waits for it to finish. On macOS, if the plugin came from an installer package, the dialog only shows the package id: Deplug cannot run those, so the files are moved to the trash.
 - **Leftover folders.** A collapsed **Leftover folders** section lists data folders the publisher may have left behind (presets, licenses, settings), with their size. **None is selected by default.** Tick the ones you want gone; they are moved to the trash before the plugin is removed. Be careful: they can hold presets or licenses you still need.
 
 If something fails, the dialog ends with a summary of what was done and what was not. If the publisher's uninstaller finishes but the plugin is still there, Deplug tells you and leaves it alone.
+
+**In a batch.** Deplug looks up the publisher's uninstaller for each selected plugin. Plugins that resolve to the same uninstaller are grouped, and each group is offered once, for example **Run the publisher's uninstaller for Voxengo SPAN (3 selected plugins)**, with the exact command shown once you tick it. By default nothing is ticked and everything is moved to the trash as before. For each ticked group Deplug runs that uninstaller once, one group after another, and waits for it to finish. The plugins in the group are then checked: a plugin is reported as removed only if it is gone, otherwise it is listed as **Still present** and left alone. If the uninstaller fails, every plugin of its group is reported as failed. Plugins you did not tick are moved to the trash.
 
 ## Restore point on Windows
 
