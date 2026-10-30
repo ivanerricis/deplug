@@ -8,6 +8,9 @@ when releasing.
 
 ## [Unreleased]
 
+### Added
+- `CLAUDE.md` and project skills for contributors and agents (checks, release, new setting, new format, UI screenshots, sub-agent brief).
+
 ## [0.1.0] - 2026-10-30
 
 First public release.

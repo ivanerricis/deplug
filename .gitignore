@@ -24,4 +24,6 @@ dist-ssr
 *.sw?
 
 # Third-party agent skills, installed by scripts/install-skills.sh
-.claude/skills/
+# Third-party skills (scripts/install-skills.sh) stay out of git; the project skills deplug-* are committed.
+.claude/skills/*
+!.claude/skills/deplug-*/
