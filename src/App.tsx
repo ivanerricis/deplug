@@ -208,7 +208,6 @@ export default function App() {
     setQuery("")
     setDuplicatesOnly(false)
     setArchFilter("all")
-    setTab("all")
   }
 
   // Ctrl/Cmd+F focuses the search field; Esc clears the search, then the selection.
