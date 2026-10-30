@@ -3,6 +3,9 @@ import { getVersion } from "@tauri-apps/api/app"
 import { openUrl } from "@tauri-apps/plugin-opener"
 import { Copy, ExternalLink, RefreshCw } from "lucide-react"
 import { checkForUpdate, type UpdateResult } from "@/core/update"
+import { buildDiagnostics } from "@/core/diagnostics"
+import { pushError, getErrors } from "@/core/errorLog"
+import type { StartupUpdate } from "@/core/useStartupUpdateCheck"
 import {
   downloadPercent,
   initialSelfUpdateState,
@@ -18,11 +21,14 @@ import { DOCS_AVAILABLE, DOCS_URL, ISSUES_URL, RELEASES_URL, REPO_URL } from "@/
 import type { PluginArch } from "@/core/plugin/Meta"
 import { osLabel, type Platform } from "@/core/plugin/Path"
 import { useSettings } from "@/core/settings/SettingsContext"
-import type { AppInfo } from "@/core/settings/AppSettings"
+import type { AppInfo, UpdateChannel } from "@/core/settings/AppSettings"
 import { useI18n } from "@/i18n/I18nProvider"
 import { Alert, AlertDescription } from "../ui/alert"
 import { Button } from "../ui/button"
 import { Progress } from "../ui/progress"
+import { Switch } from "../ui/switch"
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group"
+import { SettingRow } from "./SettingRow"
 import markLight from "../../../assets/brand/deplug-mark-color.svg"
 import markDark from "../../../assets/brand/deplug-mark-color-on-dark.svg"
 
@@ -31,11 +37,14 @@ type AboutProps = {
   appInfo?: AppInfo
   systemPaths: string[]
   archSummary?: Partial<Record<PluginArch, number>>
+  formatCounts?: Record<string, number>
+  /** Set when the opt-in startup check already found a newer version. */
+  startupUpdate?: StartupUpdate | null
 }
 
-export default function AboutSection({ platform, appInfo, systemPaths, archSummary }: AboutProps) {
+export default function AboutSection({ platform, appInfo, systemPaths, archSummary, formatCounts, startupUpdate }: AboutProps) {
   const { t, tError } = useI18n()
-  const { settings } = useSettings()
+  const { settings, update: updateSettings } = useSettings()
   const [version, setVersion] = useState<string | null>(null)
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle")
   const [update, setUpdate] = useState<UpdateResult | "checking" | null>(null)
@@ -69,39 +78,44 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
     pending.current = null
     setSelf(initialSelfUpdateState)
     // Without a known running version (plain browser dev mode) there is nothing to compare.
-    const result = version ? await checkForUpdate(version) : ({ status: "error", reason: "invalid-version" } as const)
+    const result = version ? await checkForUpdate(version, { channel: settings.updateChannel }) : ({ status: "error", reason: "invalid-version" } as const)
     // The GitHub check is the base (it knows pre-releases); the plugin then confirms it can install the update.
-    if (result.status === "available" && canSelfUpdate) pending.current = await runCheck(tauriUpdaterBackend, dispatchSelf)
+    // The in-app installer only sees stable releases: a pre-release always goes through the release page.
+    if (result.status === "available" && result.prerelease) dispatchSelf({ type: "manual" })
+    else if (result.status === "available" && canSelfUpdate) pending.current = await runCheck(tauriUpdaterBackend, dispatchSelf)
+    if (result.status === "error") pushError("update", result.reason)
     setUpdate(result)
   }
 
   const installUpdate = async () => {
-    if (pending.current) await runInstall(pending.current, dispatchSelf)
+    if (pending.current) await runInstall(pending.current, a => {
+      if (a.type === "failed") pushError("update", a.message)
+      dispatchSelf(a)
+    })
   }
 
   const restart = () => {
-    tauriUpdaterBackend.relaunch().catch(e => dispatchSelf({ type: "failed", message: String(e) }))
+    tauriUpdaterBackend.relaunch().catch(e => { pushError("update", e); dispatchSelf({ type: "failed", message: String(e) }) })
   }
 
   const percent = downloadPercent(self)
 
   const copyDiagnostics = async () => {
-    const folders = [...systemPaths.filter(p => !settings.disabledSystemPaths.includes(p)), ...settings.customScanPaths]
-    const archLine = (["x64", "x86", "arm64", "universal", "mixed"] as const)
-      .filter(a => (archSummary?.[a] ?? 0) > 0)
-      .map(a => `${t(`arch.${a}`)} ${archSummary?.[a]}`)
-      .join(", ")
-    const text = [
-      `Deplug`,
-      `${t("diagnostics.version")}: ${version ?? unknown}`,
-      `${t("diagnostics.os")}: ${osLabel(platform)}`,
-      `${t("diagnostics.mode")}: ${mode}`,
-      ...(platform === "windows" ? [`${t("diagnostics.admin")}: ${adminText}`] : []),
-      ...(appInfo?.portable && appInfo.dataDir ? [`${t("diagnostics.dataDir")}: ${appInfo.dataDir}`] : []),
-      `${t("diagnostics.scanFolders")}: ${folders.length === 0 ? t("diagnostics.none") : ""}`,
-      ...folders.map(f => `  - ${f}`),
-      ...(archLine ? [`${t("diagnostics.architectures")}: ${archLine}`] : []),
-    ].join("\n")
+    const text = buildDiagnostics({
+      t,
+      version,
+      osName: osLabel(platform),
+      osInfo: appInfo?.osInfo,
+      userAgent: typeof navigator === "undefined" ? undefined : navigator.userAgent,
+      portable: appInfo?.portable === true,
+      elevated: platform === "windows" ? appInfo?.elevated === true : undefined,
+      settings,
+      systemFolderCount: systemPaths.filter(p => !settings.disabledSystemPaths.includes(p)).length,
+      customFolderCount: settings.customScanPaths.length,
+      formatCounts: formatCounts ?? {},
+      archCounts: archSummary,
+      errors: getErrors(),
+    })
     try {
       await navigator.clipboard.writeText(text)
       setCopyState("copied")
@@ -147,7 +161,47 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
         </p>
       )}
 
+      {startupUpdate && (
+        <Alert role="status">
+          <AlertDescription className="flex flex-col gap-2 text-foreground">
+            <span className="font-medium">{t("settings.about.startupUpdate", { version: startupUpdate.latest })}</span>
+            {startupUpdate.prerelease && <span className="text-muted-foreground">{t("settings.about.prereleaseHint")}</span>}
+            <div>
+              <Button size="sm" onClick={() => { openUrl(startupUpdate.url).catch(console.error) }}>
+                {t("settings.about.openRelease")} <ExternalLink aria-hidden />
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <section aria-label={t("settings.about.updates")} className="flex flex-col gap-3">
+        <div className="flex flex-col">
+          <SettingRow label={t("settings.about.updatesAtStartup")} hint={t("settings.about.updatesAtStartupHint")} labelId="set-upd" hintId="set-upd-h">
+            <Switch
+              checked={settings.checkUpdatesOnStartup}
+              onCheckedChange={v => updateSettings({ checkUpdatesOnStartup: v })}
+              aria-labelledby="set-upd"
+              aria-describedby="set-upd-h"
+            />
+          </SettingRow>
+          <SettingRow label={t("settings.about.channel")} hint={t("settings.about.channelHint")} labelId="set-chan" hintId="set-chan-h">
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              value={settings.updateChannel}
+              onValueChange={v => { if (v) updateSettings({ updateChannel: v as UpdateChannel }) }}
+              aria-labelledby="set-chan"
+              aria-describedby="set-chan-h"
+            >
+              {(["stable", "prerelease"] as const).map(value => (
+                <ToggleGroupItem key={value} value={value} className="px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                  {t(value === "stable" ? "settings.about.channelStable" : "settings.about.channelPrerelease")}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </SettingRow>
+        </div>
         <div>
           <Button variant="outline" size="sm" onClick={runUpdateCheck} disabled={update === "checking"}>
             <RefreshCw aria-hidden className={update === "checking" ? "animate-spin" : ""} />
@@ -191,7 +245,7 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
                 <>
                   <span className="font-medium">{t("settings.about.updateAvailable", { version: update.latest })}</span>
                   <span className="text-muted-foreground">
-                    {portable ? t("settings.about.portableHint") : t("settings.about.updateHint")}
+                    {update.prerelease ? t("settings.about.prereleaseHint") : portable ? t("settings.about.portableHint") : t("settings.about.updateHint")}
                   </span>
                   <div>
                     <Button size="sm" onClick={() => { openUrl(update.url).catch(console.error) }}>

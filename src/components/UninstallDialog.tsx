@@ -31,6 +31,7 @@ import {
   type VendorUninstaller,
 } from "@/core/plugin/Uninstall"
 import { pluginKey } from "@/core/plugin/ListOps"
+import { pushError } from "@/core/errorLog"
 import { elevationCandidates, restoreOutcomeKey, retryElevated, tauriElevatedBackend } from "@/core/plugin/Elevate"
 
 type UninstallDialogProps = {
@@ -177,6 +178,7 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
           onClose(true)
           return
         }
+        if (result.plugin?.status === "failed") pushError("uninstall", result.plugin.error)
         setSingle(result)
         setPhase("done")
         return
@@ -193,10 +195,12 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
         return
       }
       setProgress({ completed: batch.results, current: null, active: [] })
+      for (const r of batch.results) if (r.status === "failed") pushError("uninstall", r.error ?? "")
       setBatchRestore(batch.restorePoint)
       setPhase("done")
     } catch (e) {
       setStep(null)
+      pushError("uninstall", e)
       setError(String(e))
       setPhase("confirm")
     }

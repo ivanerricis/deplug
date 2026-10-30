@@ -25,12 +25,17 @@ The plugin list refreshes when you close the settings, if anything here changed.
 
 The About section shows the app name, the **Version**, and the **Mode** (*Standard* or *Portable*). In portable mode it also shows the **Data folder**, and a warning if portable mode could not start, for example because the folder is read-only. See [Portable mode](/portable-mode).
 
-Under **Updates**, **Check for updates** looks for a newer published version. On a normal (installed) copy, Deplug can then download and install it for you: press **Download and install**, watch the progress bar, then press **Restart now**. Updates are verified with a signature before they are installed. If the in-app update is not available for your install (for example some Linux packages), or you run a [portable](/portable-mode) copy, which never updates itself because portable copies are replaced by hand, the button **Open release page** takes you to the download instead.
+Under **Updates**:
+
+- **Check for updates at startup** (off by default): once a day at most, shortly after the first scan, Deplug asks GitHub whether a newer version exists. If so, a small dot appears on the settings button and a notice at the top of this section links to the release; nothing is downloaded or installed on its own. Failures are silent. The time of the last check is kept in `settings.json`, so it also works in portable mode.
+- **Update channel**: *Stable* (default) only offers finished releases; *Pre-release* also offers release candidates. The in-app installer only handles stable releases, so for a pre-release Deplug shows a hint and the **Open release page** button instead.
+
+**Check for updates** looks for a newer published version. On a normal (installed) copy, Deplug can then download and install it for you: press **Download and install**, watch the progress bar, then press **Restart now**. Updates are verified with a signature before they are installed. If the in-app update is not available for your install (for example some Linux packages), or you run a [portable](/portable-mode) copy, which never updates itself because portable copies are replaced by hand, the button **Open release page** takes you to the download instead.
 
 It also has:
 
 - links to the **GitHub page**, the **Documentation**, **Report an issue** and **Release notes**, which open in your browser;
-- **Copy diagnostics**, which puts the version, operating system, mode, administrator rights (Windows only), data folder (portable only) and the folders being scanned on the clipboard, ready to paste into a bug report. It contains no plugin names;
+- **Copy diagnostics**, which puts the app version, operating system (name, architecture and the web view's user agent), mode, administrator rights (Windows only), a summary of your settings (language, theme, uninstall and update options), the number of built-in and custom scan folders, the plugin counts per format and architecture, and the app's last 20 errors (time, area and message) on the clipboard, ready to paste into a bug report. It contains no plugin names and no paths, only counts;
 - the license notice.
 
 ## Where settings are stored

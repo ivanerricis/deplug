@@ -25,12 +25,17 @@ L'elenco dei plugin si aggiorna quando chiudi le impostazioni, se qualcosa è ca
 
 La sezione Informazioni mostra il nome dell'app, la **Versione** e la **Modalità** (*Standard* o *Portatile*). In modalità portatile indica anche la **Cartella dei dati** e un avviso se la modalità portatile non è partita, ad esempio perché la cartella è in sola lettura. Vedi [Modalità portatile](/it/portable-mode).
 
-In **Aggiornamenti**, **Controlla aggiornamenti** cerca una versione pubblicata più recente. Su una copia normale (installata) Deplug può poi scaricarla e installarla per te: premi **Scarica e installa**, segui la barra di avanzamento, poi premi **Riavvia ora**. Gli aggiornamenti sono verificati con una firma prima dell'installazione. Se l'aggiornamento nell'app non è disponibile per la tua installazione (ad esempio alcuni pacchetti Linux), oppure usi una copia [portatile](/it/portable-mode), che non si aggiorna mai da sola perché le copie portatili si sostituiscono a mano, il pulsante **Apri la pagina della release** ti porta al download.
+In **Aggiornamenti**:
+
+- **Cerca aggiornamenti all'avvio** (disattivato per impostazione predefinita): al massimo una volta al giorno, dopo la prima scansione, Deplug chiede a GitHub se esiste una versione più recente. In caso positivo compare un piccolo punto sul pulsante delle impostazioni e un avviso in cima a questa sezione rimanda alla release; nulla viene scaricato o installato da solo. Gli errori sono silenziosi. L'ora dell'ultima verifica è salvata in `settings.json`, quindi funziona anche in modalità portatile.
+- **Canale di aggiornamento**: *Stabile* (predefinito) propone solo le versioni definitive; *Pre-release* propone anche le release candidate. L'installazione automatica gestisce solo le versioni stabili, quindi per una pre-release Deplug mostra un suggerimento e il pulsante **Apri la pagina della release**.
+
+**Controlla aggiornamenti** cerca una versione pubblicata più recente. Su una copia normale (installata) Deplug può poi scaricarla e installarla per te: premi **Scarica e installa**, segui la barra di avanzamento, poi premi **Riavvia ora**. Gli aggiornamenti sono verificati con una firma prima dell'installazione. Se l'aggiornamento nell'app non è disponibile per la tua installazione (ad esempio alcuni pacchetti Linux), oppure usi una copia [portatile](/it/portable-mode), che non si aggiorna mai da sola perché le copie portatili si sostituiscono a mano, il pulsante **Apri la pagina della release** ti porta al download.
 
 Contiene inoltre:
 
 - i collegamenti a **Pagina GitHub**, **Documentazione**, **Segnala un problema** e **Note di rilascio**, che si aprono nel browser;
-- **Copia diagnostica**, che mette negli appunti versione, sistema operativo, modalità, diritti di amministratore (solo Windows), cartella dei dati (solo portatile) e cartelle analizzate, pronti da incollare in una segnalazione. Non contiene nomi di plugin;
+- **Copia diagnostica**, che mette negli appunti versione dell'app, sistema operativo (nome, architettura e user agent della web view), modalità, diritti di amministratore (solo Windows), un riepilogo delle impostazioni (lingua, tema, opzioni di disinstallazione e aggiornamento), il numero di cartelle di scansione predefinite e personalizzate, il numero di plugin per formato e architettura e gli ultimi 20 errori dell'app (ora, area e messaggio), pronti da incollare in una segnalazione. Non contiene nomi di plugin né percorsi, solo conteggi;
 - l'avviso di licenza.
 
 ## Dove vengono salvate le impostazioni
