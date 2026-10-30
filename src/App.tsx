@@ -38,7 +38,11 @@ export default function App() {
   const [appInfo, setAppInfo] = useState<AppInfo | undefined>(undefined)
   const [showSettings, setShowSettings] = useState(false)
   const [collapsed, setCollapsed] = useState<Record<SectionType, boolean>>({ VST2: false, VST3: false, AAX: false, AU: false })
-  const [visible, setVisible] = useState<Record<SectionType, boolean>>({ VST2: true, VST3: true, AAX: true, AU: true })
+  const [tab, setTab] = useState<"all" | SectionType>("all")
+  const visible = useMemo(
+    () => ({ VST2: tab === "all" || tab === "VST2", VST3: tab === "all" || tab === "VST3", AAX: tab === "all" || tab === "AAX", AU: tab === "all" || tab === "AU" }),
+    [tab],
+  )
 
   const [queryInput, setQueryInput] = useState("")
   const [query, setQuery] = useState("")
@@ -204,7 +208,7 @@ export default function App() {
     setQuery("")
     setDuplicatesOnly(false)
     setArchFilter("all")
-    setVisible({ VST2: true, VST3: true, AAX: true, AU: true })
+    setTab("all")
   }
 
   // Ctrl/Cmd+F focuses the search field; Esc clears the search, then the selection.
@@ -251,8 +255,8 @@ export default function App() {
       <Toolbar
         pluginsCount={result.all.length}
         counts={{ VST2: result.vst2.length, VST3: result.vst3.length, AAX: result.aax.length, AU: result.au.length }}
-        visible={visible}
-        onToggleType={(type, value) => setVisible(c => ({ ...c, [type]: value }))}
+        tab={tab}
+        onTabChange={setTab}
         onRefresh={() => void scanPlugins()}
         onSettings={() => setShowSettings(true)}
         query={queryInput}

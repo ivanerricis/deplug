@@ -3,6 +3,7 @@ import { ChevronDown, Copy, RefreshCcw, Search, Settings, X } from "lucide-react
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Toggle } from "./ui/toggle"
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs"
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import BrandMark from "./BrandMark"
@@ -15,8 +16,8 @@ type ToolbarProps = {
   pluginsCount: number
   /** Plugins found per format, before filtering. */
   counts: Record<PluginType, number>
-  visible: Record<PluginType, boolean>
-  onToggleType: (type: PluginType, value: boolean) => void
+  tab: "all" | PluginType
+  onTabChange: (tab: "all" | PluginType) => void
   onRefresh: () => void
   onSettings?: () => void
   query: string
@@ -36,15 +37,14 @@ const TYPES: PluginType[] = ["VST2", "VST3", "AAX", "AU"]
 
 const chipBase =
   "inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
-const chipOn = "border-border bg-secondary text-foreground hover:bg-accent"
 const chipOff = "border-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground"
 
 /** One calm row: search, format chips, duplicates toggle, rescan, settings. */
 export default function Toolbar({
   pluginsCount,
   counts,
-  visible,
-  onToggleType,
+  tab,
+  onTabChange,
   onRefresh,
   onSettings,
   query,
@@ -94,21 +94,21 @@ export default function Toolbar({
         )}
       </div>
 
-      <div role="group" aria-label={t("toolbar.formats")} className="flex items-center gap-1">
-        {TYPES.map(type => (
-          <Toggle
-            key={type}
-            pressed={visible[type]}
-            aria-label={t("toolbar.formatChip", { type, count: counts[type] })}
-            onPressedChange={pressed => onToggleType(type, pressed)}
-            className={`${chipBase} ${visible[type] ? chipOn : chipOff}`}
-          >
-            <FormatDot type={type} className={visible[type] ? "" : "opacity-40"} />
-            <span aria-hidden>{type}</span>
-            <span aria-hidden className="hidden tabular-nums text-muted-foreground min-[900px]:inline">{counts[type]}</span>
-          </Toggle>
-        ))}
-      </div>
+      <Tabs value={tab} onValueChange={v => onTabChange(v as "all" | PluginType)} className="shrink-0">
+        <TabsList aria-label={t("toolbar.formats")} className="h-8">
+          <TabsTrigger value="all" className="h-6 gap-1.5 px-2.5 text-xs">
+            {t("toolbar.tabAll")}
+            <span className="tabular-nums text-muted-foreground">{TYPES.reduce((n, type) => n + counts[type], 0)}</span>
+          </TabsTrigger>
+          {TYPES.map(type => (
+            <TabsTrigger key={type} value={type} aria-label={t("toolbar.formatChip", { type, count: counts[type] })} className="h-6 gap-1.5 px-2.5 text-xs">
+              <FormatDot type={type} />
+              <span aria-hidden>{type}</span>
+              <span aria-hidden className="tabular-nums text-muted-foreground">{counts[type]}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       <Toggle
         pressed={duplicatesOnly}

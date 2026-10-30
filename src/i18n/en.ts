@@ -15,6 +15,7 @@ export const en = {
   "empty.openSettings": "Scan settings",
 
   "toolbar.count": "Plugins found: {count}",
+  "toolbar.tabAll": "All",
   "toolbar.formats": "Plugin formats to show",
   "toolbar.rescan": "Rescan plugins",
   "toolbar.settings": "Settings",
@@ -103,6 +104,8 @@ export const en = {
   "uninstall.vendor.command": "Command that will run",
   "uninstall.vendor.warning": "This runs a program from the vendor. It may ask for administrator permission, and Deplug waits for it to finish. Nothing runs until you press the button.",
   "uninstall.vendor.pkgInfo": "This plugin was installed by the package {id}. Deplug cannot run package uninstallers, so the files will only be moved to the trash.",
+  "uninstall.leftovers.searching": "Searching for leftover folders…",
+  "uninstall.leftovers.none": "No leftover folders found.",
   "uninstall.leftovers.title": "Leftover folders ({count})",
   "uninstall.leftovers.hint": "Folders this plugin's publisher may have left on your computer. They can contain presets, licenses or settings. Selected folders are moved to the trash too. None is selected by default.",
   "uninstall.leftovers.select": "Move {path} to the trash",

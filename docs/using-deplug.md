@@ -39,7 +39,7 @@ The **Architecture** menu in the toolbar (All, 64-bit, 32-bit, ARM64) narrows th
 
 ## Filter by format
 
-The four checkboxes in the toolbar (VST2, VST3, AAX, AU) show or hide the section of that format. Filtering only changes what you see; it does not rescan. Each section can also be collapsed on its own, and a format with no plugins has no section.
+The tabs in the toolbar (All, VST2, VST3, AAX, AU) show every format together or just one, each with its plugin count. Filtering only changes what you see; it does not rescan. Each section can also be collapsed on its own, and a format with no plugins has no section.
 
 ## Search
 
