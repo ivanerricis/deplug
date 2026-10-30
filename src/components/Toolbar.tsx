@@ -129,7 +129,7 @@ export default function Toolbar({
             <TabsTrigger key={type} value={type} aria-label={t("toolbar.formatChip", { type, count: counts[type] })} className="gap-1.5 px-2.5 text-xs">
               <FormatDot type={type} />
               <span aria-hidden>{type}</span>
-              <span aria-hidden className="tabular-nums text-muted-foreground">{counts[type]}</span>
+              <span aria-hidden className="tabular-nums text-muted-foreground max-[1099px]:hidden">{counts[type]}</span>
             </TabsTrigger>
           ))}
         </TabsList>
