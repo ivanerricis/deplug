@@ -1,5 +1,5 @@
 import type { Plugin } from "./Plugin"
-import { knownArch, type MetaMap } from "./Meta"
+import { isDamaged, knownArch, type MetaMap } from "./Meta"
 import { buildPluginPath } from "./Uninstall"
 
 export type SortKey = "name" | "path" | "size" | "modified"
@@ -53,6 +53,11 @@ export function countByArch(plugins: Plugin[], meta?: MetaMap): Record<ArchFilte
     x86: filterByArch(plugins, "x86", meta).length,
     arm64: filterByArch(plugins, "arm64", meta).length,
   }
+}
+
+/** Keeps only plugins the backend reported as damaged (empty, or a bundle without its binary). */
+export function filterDamaged(plugins: Plugin[], meta?: MetaMap): Plugin[] {
+  return plugins.filter(p => isDamaged(meta?.get(buildPluginPath(p.installPath, p.name))))
 }
 
 const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" })

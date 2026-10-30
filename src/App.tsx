@@ -25,7 +25,7 @@ import { useSettings } from "./core/settings/SettingsContext"
 import { useI18n } from "./i18n/I18nProvider"
 import type { Plugin } from "@/core/plugin/Plugin"
 import type { ScanResult } from "./core/plugin/PluginScanner"
-import { countByArch, filterByArch, filterPlugins, findDuplicates, type ArchFilter, pluginKey, sortPlugins, type SortKey, type SortState } from "./core/plugin/ListOps"
+import { countByArch, filterByArch, filterDamaged, filterPlugins, findDuplicates, type ArchFilter, pluginKey, sortPlugins, type SortKey, type SortState } from "./core/plugin/ListOps"
 
 type SectionType = "VST2" | "VST3" | "AAX" | "AU"
 const SECTION_ORDER: SectionType[] = ["VST2", "VST3", "AAX", "AU"]
@@ -55,6 +55,7 @@ export default function App() {
   const [sorts, setSorts] = useState<Record<SectionType, SortState>>({
     VST2: DEFAULT_SORT, VST3: DEFAULT_SORT, AAX: DEFAULT_SORT, AU: DEFAULT_SORT,
   })
+  const [damagedOnly, setDamagedOnly] = useState(false)
   const [archFilter, setArchFilter] = useState<ArchFilter>("all")
   const [sysPaths, setSysPaths] = useState<SystemPaths | null>(null)
   const sysPathsRef = useRef<SystemPaths | null>(null)
@@ -143,6 +144,7 @@ export default function App() {
   }, [queryInput])
 
   const duplicates = useMemo(() => findDuplicates(result.all), [result.all])
+  const damagedCount = useMemo(() => filterDamaged(result.all, meta).length, [result.all, meta])
   const archCounts = useMemo(() => countByArch(result.all, meta), [result.all, meta])
   const archAvailable = useMemo(
     () => result.all.some(p => knownArch(meta.get(buildPluginPath(p.installPath, p.name))) !== null),
@@ -164,11 +166,12 @@ export default function App() {
     for (const type of SECTION_ORDER) {
       let list = filterPlugins(byType[type], query)
       if (duplicatesOnly) list = list.filter(p => duplicates.has(pluginKey(p)))
+      if (damagedOnly) list = filterDamaged(list, meta)
       list = filterByArch(list, archFilter, meta)
       out[type] = { shown: sortPlugins(list, sorts[type], meta), total: byType[type].length }
     }
     return out
-  }, [result, query, duplicatesOnly, archFilter, duplicates, sorts, meta])
+  }, [result, query, duplicatesOnly, damagedOnly, archFilter, duplicates, sorts, meta])
 
   const visibleShown = useMemo(
     () => SECTION_ORDER.filter(type => visible[type]).flatMap(type => view[type].shown),
@@ -234,6 +237,7 @@ export default function App() {
     setQueryInput("")
     setQuery("")
     setDuplicatesOnly(false)
+    setDamagedOnly(false)
     setArchFilter("all")
   }
 
@@ -291,6 +295,9 @@ export default function App() {
         duplicatesOnly={duplicatesOnly}
         onToggleDuplicatesOnly={setDuplicatesOnly}
         duplicateCount={duplicates.size}
+        damagedOnly={damagedOnly}
+        onToggleDamagedOnly={setDamagedOnly}
+        damagedCount={damagedCount}
         archFilter={archFilter}
         onArchFilterChange={setArchFilter}
         archCounts={archCounts}

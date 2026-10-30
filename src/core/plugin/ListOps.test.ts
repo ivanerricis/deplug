@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { countByArch, filterByArch, filterPlugins, findDuplicates, folderRuns, naturalCompare, shouldGroupByFolder, normalizeBaseName, pluginKey, sortPlugins } from "./ListOps"
+import { countByArch, filterByArch, filterDamaged, filterPlugins, findDuplicates, folderRuns, naturalCompare, shouldGroupByFolder, normalizeBaseName, pluginKey, sortPlugins } from "./ListOps"
 import type { Plugin } from "./Plugin"
 import type { MetaMap, PluginArch } from "./Meta"
 import { buildPluginPath } from "./Uninstall"
@@ -185,5 +185,19 @@ describe("filterByArch", () => {
   })
   it("counts per filter", () => {
     expect(countByArch(list, meta)).toEqual({ all: 6, x64: 3, x86: 2, arm64: 3 })
+  })
+})
+
+describe("filterDamaged", () => {
+  const list = [p("A.vst3", "/a"), p("B.vst3", "/b"), p("C.vst3", "/c"), p("D.vst3", "/d")]
+  const health = ["ok", "empty", "missing-binary", undefined] as const
+  const meta: MetaMap = new Map(
+    list.map((x, i) => [buildPluginPath(x.installPath, x.name), { path: buildPluginPath(x.installPath, x.name), size: 1, modified: 1, health: health[i] }]),
+  )
+  it("keeps empty and missing-binary plugins", () => {
+    expect(filterDamaged(list, meta).map(x => x.name)).toEqual(["B.vst3", "C.vst3"])
+  })
+  it("returns nothing without metadata", () => {
+    expect(filterDamaged(list)).toEqual([])
   })
 })

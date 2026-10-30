@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { fetchPluginMeta, knownArch, type PluginMeta } from "./Meta"
+import { fetchPluginMeta, isDamaged, knownArch, type PluginMeta } from "./Meta"
 
 const m = (path: string): PluginMeta => ({ path, size: 1, modified: 2 })
 
@@ -46,5 +46,15 @@ describe("arch passthrough", () => {
     expect(knownArch({ path: "a", size: 1, modified: 1 })).toBeNull()
     expect(knownArch(undefined)).toBeNull()
     expect(knownArch({ path: "a", size: 1, modified: 1, arch: "arm64" })).toBe("arm64")
+  })
+})
+
+describe("isDamaged", () => {
+  it("is true only for empty and missing-binary", () => {
+    expect(isDamaged({ path: "a", size: 0, modified: 1, health: "empty" })).toBe(true)
+    expect(isDamaged({ path: "a", size: 5, modified: 1, health: "missing-binary" })).toBe(true)
+    expect(isDamaged({ path: "a", size: 5, modified: 1, health: "ok" })).toBe(false)
+    expect(isDamaged({ path: "a", size: 5, modified: 1 })).toBe(false)
+    expect(isDamaged(undefined)).toBe(false)
   })
 })

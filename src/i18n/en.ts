@@ -35,6 +35,8 @@ export const en = {
   "toolbar.searchClear": "Clear search",
   "toolbar.duplicatesOnly": "Show only duplicates",
   "toolbar.duplicatesShort": "Duplicates",
+  "toolbar.damagedOnly": "Show only damaged plugins",
+  "toolbar.damagedShort": "Damaged",
   "toolbar.formatChip": "{type} plugins: {count}",
   "toolbar.arch": "Architecture",
   "toolbar.archLabel": "Filter plugins by architecture",
@@ -52,7 +54,7 @@ export const en = {
   "arch.arm64Hint": "Native ARM64 plugin.",
 
   "list.noResults.title": "No plugins match",
-  "list.noResults.body": "Try a different search, or turn off the duplicates, architecture and format filters.",
+  "list.noResults.body": "Try a different search, or turn off the duplicates, damaged, architecture and format filters.",
   "list.noResults.clear": "Clear filters",
 
   "section.name": "Name",
@@ -73,6 +75,9 @@ export const en = {
   "row.select": "Select {name}",
   "row.unknown": "Unknown",
   "row.folder": "Folder: {path}",
+  "health.damaged": "Damaged",
+  "health.emptyHint": "This plugin is empty (a zero-byte file or an empty folder), so it cannot load.",
+  "health.missingBinaryHint": "The plugin bundle has no binary inside it (it is missing or zero size), so it cannot load.",
   "row.duplicate": "Duplicate",
   "row.duplicateAlso": "Also found in:",
 

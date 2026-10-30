@@ -1,5 +1,6 @@
 import { Folder, Trash } from "lucide-react"
 import ArchPill from "./ArchPill"
+import HealthPill from "./HealthPill"
 import { Button } from "./ui/button"
 import { Checkbox } from "./ui/checkbox"
 import { Badge } from "./ui/badge"
@@ -57,6 +58,7 @@ export default function Row({ plugin, selected, duplicates, meta, showPath, home
                 <div className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-sm font-medium" title={plugin.name}>{plugin.name}</span>
                     <ArchPill arch={meta?.arch} />
+                    <HealthPill health={meta?.health} />
                     {tip && (
                         <Tooltip>
                             <TooltipTrigger asChild>

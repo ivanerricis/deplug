@@ -43,7 +43,7 @@ The tabs in the toolbar (All, VST2, VST3, AAX, AU) show every format together or
 
 ## Search
 
-The search field in the toolbar filters the list as you type. It matches the plugin name or its path, ignoring case and accents. Press **Ctrl+F** (**Cmd+F** on macOS) to jump to it from anywhere in the window. **Esc** clears the search; use the cross inside the field for the same. If nothing matches, a **Clear filters** button resets the search, the duplicates, architecture and format filters in one go.
+The search field in the toolbar filters the list as you type. It matches the plugin name or its path, ignoring case and accents. Press **Ctrl+F** (**Cmd+F** on macOS) to jump to it from anywhere in the window. **Esc** clears the search; use the cross inside the field for the same. If nothing matches, a **Clear filters** button resets the search, the duplicates, damaged, architecture and format filters in one go.
 
 ## Export the list
 
@@ -58,6 +58,12 @@ Each section has **Name** and **Path** column headers. Click one to sort by it, 
 A plugin that appears more than once gets a **Duplicate** badge. Two entries count as the same plugin when their names match after removing the extension and a trailing `x64`, ignoring case. That catches the same plugin in several formats (VST2 and VST3), in several folders, or both. Hover the badge to see where the other copies are.
 
 The **Show only duplicates** checkbox in the toolbar keeps only those plugins and shows how many there are. It is a good starting point for a clean-up. Deplug only points them out; deciding which copy to keep is up to you.
+
+## Damaged plugins
+
+A plugin that cannot load gets a **Damaged** badge. Deplug flags a zero-byte plugin file, an empty plugin folder, and a bundle (`.vst3`, `.aaxplugin`, `.component`, `.vst`) whose binary inside `Contents` is missing or zero size. Hover the badge for the reason. Only file sizes are checked, never file contents.
+
+The **Show only damaged plugins** checkbox in the toolbar keeps only those plugins and shows how many there are. They can be selected and uninstalled like any other plugin.
 
 ## Select several plugins
 
