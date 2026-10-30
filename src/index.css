@@ -168,4 +168,10 @@
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+
+  /* A spinner is the only sign that work is in progress; with animations disabled in the OS it must still turn. */
+  .animate-spin {
+    animation-duration: 1.5s !important;
+    animation-iteration-count: infinite !important;
+  }
 }
