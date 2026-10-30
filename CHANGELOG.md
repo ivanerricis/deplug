@@ -9,6 +9,7 @@ when releasing.
 ## [Unreleased]
 
 ### Fixed
+- Closing a dialog or menu no longer pops up the tooltip of the button that opened it (all tooltips ignore focus that returns by script; keyboard focus still shows them).
 - The selected option of the **Group by** switch is now clearly highlighted (the tooltip was hiding its selected state).
 
 ### Added
