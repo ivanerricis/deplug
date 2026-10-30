@@ -149,7 +149,7 @@ pub struct Settings {
     /// Max folder depth for custom scans, clamped to 1..=10.
     pub custom_scan_depth: u8,
     pub disabled_system_paths: Vec<String>,
-    /// Windows only: relaunch Deplug elevated at startup (opt-in, default off).
+    /// Windows only: relaunch Deplug elevated at startup (default on).
     pub run_as_admin: bool,
 }
 
@@ -164,7 +164,7 @@ impl Default for Settings {
             scan_on_startup: default_true(),
             custom_scan_depth: default_scan_depth(),
             disabled_system_paths: Vec::new(),
-            run_as_admin: false,
+            run_as_admin: true,
         }
     }
 }
@@ -360,7 +360,7 @@ mod tests {
         assert!(s.scan_on_startup);
         assert_eq!(s.custom_scan_depth, 6);
         assert!(s.disabled_system_paths.is_empty());
-        assert!(!s.run_as_admin);
+        assert!(s.run_as_admin);
     }
 
     #[test]
@@ -424,20 +424,20 @@ mod tests {
     }
 
     #[test]
-    fn settings_run_as_admin_serializes_camel_case_and_old_files_default_off() {
+    fn settings_run_as_admin_serializes_camel_case_and_old_files_default_on() {
         let d = tempdir().unwrap();
         let p = d.path().join("s.json");
-        fs::write(&p, r#"{"runAsAdmin":true}"#).unwrap();
-        assert!(load(&p).run_as_admin);
-        fs::write(&p, r#"{"version":1,"scanOnStartup":false}"#).unwrap();
+        fs::write(&p, r#"{"runAsAdmin":false}"#).unwrap();
         assert!(!load(&p).run_as_admin);
+        fs::write(&p, r#"{"version":1,"scanOnStartup":false}"#).unwrap();
+        assert!(load(&p).run_as_admin);
         let s = Settings {
-            run_as_admin: true,
+            run_as_admin: false,
             ..Settings::default()
         };
         save(&p, &s).unwrap();
         let raw: serde_json::Value = serde_json::from_slice(&fs::read(&p).unwrap()).unwrap();
-        assert_eq!(raw["runAsAdmin"], true);
+        assert_eq!(raw["runAsAdmin"], false);
     }
 
     #[test]
