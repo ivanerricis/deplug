@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, ChevronDown } from "lucide-react"
 import { Checkbox } from "./ui/checkbox"
 import { FormatDot } from "./FormatTag"
-import { MODIFIED_CELL, ROW_GRID } from "./listLayout"
+import { MODIFIED_CELL, rowGrid, type ListColumns } from "./listLayout"
 import { useI18n } from "@/i18n/I18nProvider"
 import type { SortKey, SortState } from "@/core/plugin/ListOps"
 import type { PluginType } from "@/core/plugin/Plugin"
@@ -16,6 +16,7 @@ type HeaderRowProps = {
   total: number
   selectState: boolean | "indeterminate"
   onSelectAll: () => void
+  columns: ListColumns
 }
 
 function SortButton({ column, label, sort, onSort, className = "" }: { column: SortKey; label: string; sort: SortState; onSort: (key: SortKey) => void; className?: string }) {
@@ -44,10 +45,10 @@ function SortButton({ column, label, sort, onSort, className = "" }: { column: S
 }
 
 /** Sticky section header: collapse toggle, count and the sortable column labels. */
-export default function HeaderRow({ type, expanded, onToggle, sort, onSort, shown, total, selectState, onSelectAll }: HeaderRowProps) {
+export default function HeaderRow({ type, expanded, onToggle, sort, onSort, shown, total, selectState, onSelectAll, columns }: HeaderRowProps) {
   const { t } = useI18n()
   return (
-    <div role="row" className={`${ROW_GRID} sticky top-0 z-10 items-center border-b border-border bg-background`}>
+    <div role="row" className={`${rowGrid(columns)} sticky top-0 z-10 items-center border-b border-border bg-background`}>
       <div role="columnheader" className="flex h-10 items-center justify-center">
         <Checkbox
           checked={selectState}
@@ -78,15 +79,19 @@ export default function HeaderRow({ type, expanded, onToggle, sort, onSort, show
           {shown === total ? total : t("section.count", { shown, total })}
         </span>
         <SortButton column="name" label={t("section.name")} sort={sort} onSort={onSort} />
-        <SortButton column="path" label={t("section.path")} sort={sort} onSort={onSort} />
+        {columns.path && <SortButton column="path" label={t("section.path")} sort={sort} onSort={onSort} />}
       </div>
 
-      <div className="flex h-10 items-center justify-end">
-        <SortButton column="size" label={t("section.size")} sort={sort} onSort={onSort} className="flex-row-reverse" />
-      </div>
-      <div className={`h-10 items-center ${MODIFIED_CELL}`}>
-        <SortButton column="modified" label={t("section.modified")} sort={sort} onSort={onSort} />
-      </div>
+      {columns.size && (
+        <div className="flex h-10 items-center justify-end">
+          <SortButton column="size" label={t("section.size")} sort={sort} onSort={onSort} className="flex-row-reverse" />
+        </div>
+      )}
+      {columns.modified && (
+        <div className={`h-10 items-center ${MODIFIED_CELL}`}>
+          <SortButton column="modified" label={t("section.modified")} sort={sort} onSort={onSort} />
+        </div>
+      )}
       <div aria-hidden />
     </div>
   )
