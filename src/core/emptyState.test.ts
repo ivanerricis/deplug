@@ -4,11 +4,11 @@ import { emptyStateKind, type EmptyStateInput } from "./emptyState"
 const base: EmptyStateInput = {
   welcome: false,
   scanned: true,
-  counts: { VST2: 2, VST3: 3, AAX: 0, AU: 0 },
+  counts: { VST2: 2, VST3: 3, AAX: 0, AU: 0, CLAP: 0 },
   tab: "all",
   shown: 5,
 }
-const none = { VST2: 0, VST3: 0, AAX: 0, AU: 0 }
+const none = { VST2: 0, VST3: 0, AAX: 0, AU: 0, CLAP: 0 }
 
 describe("emptyStateKind", () => {
   it("is null when there is a list", () => {
@@ -27,6 +27,7 @@ describe("emptyStateKind", () => {
 
   it("reports an empty format tab instead of a filter problem", () => {
     expect(emptyStateKind({ ...base, tab: "AAX", shown: 0 })).toBe("tab-empty")
+    expect(emptyStateKind({ ...base, tab: "CLAP", shown: 0 })).toBe("tab-empty")
   })
 
   it("reports filters hiding everything when the tab has plugins", () => {

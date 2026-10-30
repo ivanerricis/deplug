@@ -8,7 +8,7 @@ use tauri::State;
 
 use crate::portable::AppMode;
 
-const PLUGIN_EXTENSIONS: [&str; 6] = ["dll", "vst", "vst3", "aaxplugin", "component", "so"];
+const PLUGIN_EXTENSIONS: [&str; 7] = ["dll", "vst", "vst3", "aaxplugin", "component", "so", "clap"];
 
 /// Strictly validates a path before it is trashed.
 pub fn validate_plugin_path(path: &Path) -> Result<(), String> {
@@ -622,6 +622,7 @@ mod tests {
             "b.VST3",
             "c.vst",
             "d.aaxplugin",
+            "e.clap",
             "e.component",
             "f.so",
         ] {

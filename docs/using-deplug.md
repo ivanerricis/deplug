@@ -10,9 +10,9 @@ On startup (unless you turned that off in [Settings](/settings#scan)), and whene
 
 | System | Folders |
 | --- | --- |
-| Windows | VST2: `Program Files\VstPlugins`, `Program Files (x86)\VstPlugins`, `Common Files\VST2` (both), `Program Files\Steinberg\VSTPlugins`, `Program Files (x86)\Steinberg\VstPlugins`. VST3: `Common Files\VST3` (both), `%LOCALAPPDATA%\Programs\Common\VST3`. AAX: `Common Files\Avid\Audio\Plug-Ins` (both). See below. |
-| macOS | `/Library/Audio/Plug-Ins/VST`, `.../VST3`, `.../Components`, `/Library/Application Support/Avid/Audio/Plug-Ins`, and the same `VST`, `VST3` and `Components` folders under `~/Library/Audio/Plug-Ins` plus `~/Library/Application Support/Avid/Audio/Plug-Ins` |
-| Linux | `/usr/lib/vst`, `/usr/local/lib/vst`, `~/.vst`, `/usr/lib/vst3`, `/usr/local/lib/vst3`, `~/.vst3` |
+| Windows | VST2: `Program Files\VstPlugins`, `Program Files (x86)\VstPlugins`, `Common Files\VST2` (both), `Program Files\Steinberg\VSTPlugins`, `Program Files (x86)\Steinberg\VstPlugins`. VST3: `Common Files\VST3` (both), `%LOCALAPPDATA%\Programs\Common\VST3`. AAX: `Common Files\Avid\Audio\Plug-Ins` (both). CLAP: `Common Files\CLAP` (both), `%LOCALAPPDATA%\Programs\Common\CLAP`. See below. |
+| macOS | `/Library/Audio/Plug-Ins/VST`, `.../VST3`, `.../CLAP`, `.../Components`, `/Library/Application Support/Avid/Audio/Plug-Ins`, and the same `VST`, `VST3`, `CLAP` and `Components` folders under `~/Library/Audio/Plug-Ins` plus `~/Library/Application Support/Avid/Audio/Plug-Ins` |
+| Linux | `/usr/lib/vst`, `/usr/local/lib/vst`, `~/.vst`, `/usr/lib/vst3`, `/usr/local/lib/vst3`, `~/.vst3`, `/usr/lib/clap`, `~/.clap` |
 
 On Windows the roots are read from the system (the `ProgramFiles`, `ProgramFiles(x86)`, `CommonProgramFiles` and `CommonProgramFiles(x86)` locations), so a relocated or localised Program Files works. "Both" means the 64-bit and the 32-bit (`Program Files (x86)`) variant of the folder.
 
@@ -26,8 +26,9 @@ Anything you add as a [custom folder](/custom-folders) is scanned too, by defaul
 | VST3 | `.vst3` | all |
 | AAX | `.aaxplugin` | all |
 | AU (Audio Units) | `.component` | macOS only |
+| CLAP | `.clap` | all |
 
-A plugin bundle (a folder such as `Something.vst3`) is listed as one plugin; Deplug does not look inside it.
+A plugin bundle (a folder such as `Something.vst3`, or a `.clap` on macOS) is listed as one plugin; Deplug does not look inside it.
 
 ## AAX, 32-bit and 64-bit
 
@@ -43,7 +44,7 @@ The **Architecture** menu in the toolbar (All, 64-bit, 32-bit, ARM64) narrows th
 
 ## Filter by format
 
-The tabs in the toolbar (All, VST2, VST3, AAX, AU) show every format together or just one, each with its plugin count. Filtering only changes what you see; it does not rescan. Each section can also be collapsed on its own, and a format with no plugins has no section. If the selected format has no plugins at all, Deplug says so (for example "No AU plugins") and offers **Switch to All**. If your search or filters hide everything, it shows "Nothing matches" with **Clear filters** instead.
+The tabs in the toolbar (All, VST2, VST3, AAX, AU, CLAP) show every format together or just one, each with its plugin count. Filtering only changes what you see; it does not rescan. Each section can also be collapsed on its own, and a format with no plugins has no section. If the selected format has no plugins at all, Deplug says so (for example "No AU plugins") and offers **Switch to All**. If your search or filters hide everything, it shows "Nothing matches" with **Clear filters** instead.
 
 ## Search
 

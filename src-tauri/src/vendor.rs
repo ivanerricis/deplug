@@ -20,11 +20,12 @@ const RUN_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 const POLL_INTERVAL: Duration = Duration::from_millis(500);
 
 /// Directory names that are far too broad to identify a single product.
-const GENERIC_DIR_NAMES: [&str; 23] = [
+const GENERIC_DIR_NAMES: [&str; 24] = [
     "program files",
     "program files (x86)",
     "common files",
     "vst3",
+    "clap",
     "vst2",
     "vstplugins",
     "vstplugin",

@@ -143,7 +143,7 @@ fn default_scan_depth() -> u8 {
 const MAX_SCAN_EXCLUSIONS: usize = 50;
 const MAX_EXCLUSION_LEN: usize = 100;
 const COLUMNS: [&str; 4] = ["path", "size", "modified", "arch"];
-const TABS: [&str; 5] = ["all", "VST2", "VST3", "AAX", "AU"];
+const TABS: [&str; 6] = ["all", "VST2", "VST3", "AAX", "AU", "CLAP"];
 const SORT_KEYS: [&str; 4] = ["name", "path", "size", "modified"];
 
 fn default_columns() -> Vec<String> {
@@ -245,7 +245,7 @@ pub struct Settings {
     pub visible_columns: Vec<String>,
     /// "comfortable" | "compact"
     pub density: String,
-    /// "all" | "VST2" | "VST3" | "AAX" | "AU"
+    /// "all" | "VST2" | "VST3" | "AAX" | "AU" | "CLAP"
     pub default_tab: String,
     pub default_sort: SortSetting,
     /// Restore the last used tab and sort at startup instead of the defaults.
@@ -528,7 +528,7 @@ mod tests {
             visible_columns: vec!["size".into(), "bogus".into(), "path".into(), "size".into()],
             density: "huge".into(),
             default_tab: "VST9".into(),
-            last_tab: "AU".into(),
+            last_tab: "CLAP".into(),
             default_sort: SortSetting {
                 key: "color".into(),
                 dir: "up".into(),
@@ -546,7 +546,7 @@ mod tests {
         assert_eq!(s.visible_columns, ["path", "size"]);
         assert_eq!(s.density, "comfortable");
         assert_eq!(s.default_tab, "all");
-        assert_eq!(s.last_tab, "AU");
+        assert_eq!(s.last_tab, "CLAP");
         assert_eq!(s.default_sort, SortSetting::default());
         assert_eq!(s.last_sort.key, "size");
     }

@@ -20,12 +20,14 @@ export interface ScanResult {
   vst3: Plugin[]
   aax: Plugin[]
   au: Plugin[]
+  clap: Plugin[]
 }
 
 export function pluginTypeOf(name: string, platform: string): PluginType | null {
   const lower = name.toLowerCase()
   if (lower.endsWith(".vst3")) return "VST3"
   if (lower.endsWith(".aaxplugin")) return "AAX"
+  if (lower.endsWith(".clap")) return "CLAP"
   if (lower.endsWith(".component") && platform === "macos") return "AU"
   if (lower.endsWith(".dll") && platform === "windows") return "VST2"
   if (lower.endsWith(".vst") && platform === "macos") return "VST2"
@@ -47,7 +49,7 @@ export class PluginScanner {
   private isExcluded: (name: string) => boolean
 
   async search(): Promise<ScanResult> {
-    const result: ScanResult = { all: [], vst2: [], vst3: [], aax: [], au: [] }
+    const result: ScanResult = { all: [], vst2: [], vst3: [], aax: [], au: [], clap: [] }
     const seen = new Set<string>()
 
     const disabled = new Set(this.options.disabledPaths ?? [])
@@ -67,6 +69,7 @@ export class PluginScanner {
         if (plugin.type === "VST2") result.vst2.push(plugin)
         else if (plugin.type === "VST3") result.vst3.push(plugin)
         else if (plugin.type === "AAX") result.aax.push(plugin)
+        else if (plugin.type === "CLAP") result.clap.push(plugin)
         else result.au.push(plugin)
       }
     }

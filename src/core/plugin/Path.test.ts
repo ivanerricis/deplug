@@ -34,7 +34,10 @@ describe("getPluginPaths (windows)", () => {
       "D:/Programmi (x86)/File comuni/VST3",
       "D:/Programmi/File comuni/Avid/Audio/Plug-Ins",
       "D:/Programmi (x86)/File comuni/Avid/Audio/Plug-Ins",
+      "D:/Programmi/File comuni/CLAP",
+      "D:/Programmi (x86)/File comuni/CLAP",
       "C:/Users/me/AppData/Local/Programs/Common/VST3",
+      "C:/Users/me/AppData/Local/Programs/Common/CLAP",
     ])
   })
 
@@ -60,5 +63,12 @@ describe("getPluginPaths (other platforms)", () => {
   })
   it("keeps the Linux list", () => {
     expect(getPluginPaths("linux", "/home/me")).toContain("/home/me/.vst3")
+  })
+
+  it("includes the CLAP folders on every platform", () => {
+    expect(getPluginPaths("macos", "/Users/me", sys)).toEqual(
+      expect.arrayContaining(["/Library/Audio/Plug-Ins/CLAP", "/Users/me/Library/Audio/Plug-Ins/CLAP"]),
+    )
+    expect(getPluginPaths("linux", "/home/me")).toEqual(expect.arrayContaining(["/usr/lib/clap", "/home/me/.clap"]))
   })
 })

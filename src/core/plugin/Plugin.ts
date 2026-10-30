@@ -1,4 +1,4 @@
-export type PluginType = "VST2" | "VST3" | "AAX" | "AU"
+export type PluginType = "VST2" | "VST3" | "AAX" | "AU" | "CLAP"
 
 export interface Plugin {
   name: string

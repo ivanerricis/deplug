@@ -58,9 +58,15 @@ function windowsPaths(sys?: Partial<SystemPaths> | null): string[] {
     // AAX
     `${cpf}/Avid/Audio/Plug-Ins`,
     `${cpf86}/Avid/Audio/Plug-Ins`,
+    // CLAP
+    `${cpf}/CLAP`,
+    `${cpf86}/CLAP`,
   ]
-  // User-level VST3 install location.
-  if (sys?.localAppData) list.push(`${normalizeRoot(sys.localAppData)}/Programs/Common/VST3`)
+  // User-level VST3 and CLAP install locations.
+  if (sys?.localAppData) {
+    const local = normalizeRoot(sys.localAppData)
+    list.push(`${local}/Programs/Common/VST3`, `${local}/Programs/Common/CLAP`)
+  }
   return dedupe(list)
 }
 
@@ -77,10 +83,12 @@ export function getPluginPaths(platform: Platform, home: string, sys?: Partial<S
         "/Library/Audio/Plug-Ins/VST",
         "/Library/Audio/Plug-Ins/VST3",
         "/Library/Audio/Plug-Ins/Components",
+        "/Library/Audio/Plug-Ins/CLAP",
         "/Library/Application Support/Avid/Audio/Plug-Ins",
         `${home}/Library/Audio/Plug-Ins/VST`,
         `${home}/Library/Audio/Plug-Ins/VST3`,
         `${home}/Library/Audio/Plug-Ins/Components`,
+        `${home}/Library/Audio/Plug-Ins/CLAP`,
         `${home}/Library/Application Support/Avid/Audio/Plug-Ins`,
       ]
     case "linux":
@@ -91,6 +99,8 @@ export function getPluginPaths(platform: Platform, home: string, sys?: Partial<S
         "/usr/lib/vst3",
         "/usr/local/lib/vst3",
         `${home}/.vst3`,
+        "/usr/lib/clap",
+        `${home}/.clap`,
       ]
   }
 }

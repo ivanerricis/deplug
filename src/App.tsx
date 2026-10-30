@@ -34,10 +34,10 @@ import type { Plugin } from "@/core/plugin/Plugin"
 import type { ScanResult } from "./core/plugin/PluginScanner"
 import { countByArch, filterByArch, filterDamaged, filterPlugins, findDuplicates, type ArchFilter, pluginKey, sortPlugins, type SortKey, type SortState } from "./core/plugin/ListOps"
 
-type SectionType = "VST2" | "VST3" | "AAX" | "AU"
-const SECTION_ORDER: SectionType[] = ["VST2", "VST3", "AAX", "AU"]
+type SectionType = "VST2" | "VST3" | "AAX" | "AU" | "CLAP"
+const SECTION_ORDER: SectionType[] = ["VST2", "VST3", "AAX", "AU", "CLAP"]
 const DEFAULT_SORT: SortState = { key: "name", dir: "asc" }
-const EMPTY_RESULT: ScanResult = { all: [], vst2: [], vst3: [], aax: [], au: [] }
+const EMPTY_RESULT: ScanResult = { all: [], vst2: [], vst3: [], aax: [], au: [], clap: [] }
 
 export default function App() {
   const { t } = useI18n()
@@ -50,10 +50,10 @@ export default function App() {
   const [appInfo, setAppInfo] = useState<AppInfo | undefined>(undefined)
   const [showSettings, setShowSettings] = useState(false)
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("general")
-  const [collapsed, setCollapsed] = useState<Record<SectionType, boolean>>({ VST2: false, VST3: false, AAX: false, AU: false })
+  const [collapsed, setCollapsed] = useState<Record<SectionType, boolean>>({ VST2: false, VST3: false, AAX: false, AU: false, CLAP: false })
   const [tab, setTab] = useState<"all" | SectionType>("all")
   const visible = useMemo(
-    () => ({ VST2: tab === "all" || tab === "VST2", VST3: tab === "all" || tab === "VST3", AAX: tab === "all" || tab === "AAX", AU: tab === "all" || tab === "AU" }),
+    () => ({ VST2: tab === "all" || tab === "VST2", VST3: tab === "all" || tab === "VST3", AAX: tab === "all" || tab === "AAX", AU: tab === "all" || tab === "AU", CLAP: tab === "all" || tab === "CLAP" }),
     [tab],
   )
 
@@ -61,7 +61,7 @@ export default function App() {
   const [query, setQuery] = useState("")
   const [duplicatesOnly, setDuplicatesOnly] = useState(false)
   const [sorts, setSorts] = useState<Record<SectionType, SortState>>({
-    VST2: DEFAULT_SORT, VST3: DEFAULT_SORT, AAX: DEFAULT_SORT, AU: DEFAULT_SORT,
+    VST2: DEFAULT_SORT, VST3: DEFAULT_SORT, AAX: DEFAULT_SORT, AU: DEFAULT_SORT, CLAP: DEFAULT_SORT,
   })
   // Last sort the user picked in any section; saved with the tab when "remember" is on.
   const [viewSort, setViewSort] = useState<SortSetting>(DEFAULT_SORT)
@@ -155,7 +155,7 @@ export default function App() {
     const startSort = settings.rememberView ? settings.lastSort : settings.defaultSort
     setTab(startTab)
     setViewSort(startSort)
-    setSorts({ VST2: startSort, VST3: startSort, AAX: startSort, AU: startSort })
+    setSorts({ VST2: startSort, VST3: startSort, AAX: startSort, AU: startSort, CLAP: startSort })
     setViewReady(true)
     // On the very first run the welcome screen asks first, even when scanning on startup is on.
     if (settings.scanOnStartup && settings.welcomeSeen) void scanPlugins()
@@ -196,7 +196,7 @@ export default function App() {
   }, [result.all, meta])
 
   const view = useMemo(() => {
-    const byType: Record<SectionType, Plugin[]> = { VST2: result.vst2, VST3: result.vst3, AAX: result.aax, AU: result.au }
+    const byType: Record<SectionType, Plugin[]> = { VST2: result.vst2, VST3: result.vst3, AAX: result.aax, AU: result.au, CLAP: result.clap }
     const out = {} as Record<SectionType, { shown: Plugin[]; total: number }>
     for (const type of SECTION_ORDER) {
       let list = filterPlugins(byType[type], query)
@@ -349,7 +349,7 @@ export default function App() {
     setSettingsTab("scan")
     setShowSettings(true)
   }
-  const counts = { VST2: result.vst2.length, VST3: result.vst3.length, AAX: result.aax.length, AU: result.au.length }
+  const counts = { VST2: result.vst2.length, VST3: result.vst3.length, AAX: result.aax.length, AU: result.au.length, CLAP: result.clap.length }
   const emptyKind = emptyStateKind({ welcome: !settings.welcomeSeen && !scanned, scanned, counts, tab, shown: visibleShown.length })
 
   return (
@@ -387,7 +387,7 @@ export default function App() {
           systemPaths={systemPaths}
           archSummary={archSummary}
           appInfo={appInfo}
-          formatCounts={{ VST2: result.vst2.length, VST3: result.vst3.length, AAX: result.aax.length, AU: result.au.length }}
+          formatCounts={{ VST2: result.vst2.length, VST3: result.vst3.length, AAX: result.aax.length, AU: result.au.length, CLAP: result.clap.length }}
           startupUpdate={startupUpdate}
           initialTab={settingsTab}
           onClose={closeSettings}

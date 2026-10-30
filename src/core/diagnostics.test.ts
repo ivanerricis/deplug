@@ -13,7 +13,7 @@ const base = (over: Partial<DiagnosticsInput> = {}): DiagnosticsInput => ({
   elevated: true,
   settings: DEFAULT_SETTINGS,
   scanFolders: ["C:\\Program Files\\Common Files\\VST3", "D:\\Plugins"],
-  formatCounts: { VST2: 0, VST3: 120, AAX: 3, AU: 0 },
+  formatCounts: { VST2: 0, VST3: 120, AAX: 3, AU: 0, CLAP: 2 },
   archCounts: { x64: 100, arm64: 5 },
   errors: [],
   ...over,
@@ -27,7 +27,7 @@ describe("buildDiagnostics", () => {
     expect(text).toContain("Mozilla/5.0")
     expect(text).toContain("Language: system")
     expect(text).toContain("Scan folders: \n  - C:\\Program Files\\Common Files\\VST3\n  - D:\\Plugins")
-    expect(text).toContain("Plugins found: 123 (VST3 120, AAX 3)")
+    expect(text).toContain("Plugins found: 125 (VST3 120, AAX 3, CLAP 2)")
     expect(text).toContain("Recent errors: none")
   })
 

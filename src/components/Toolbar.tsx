@@ -46,7 +46,7 @@ type ToolbarProps = {
   updateAvailable?: boolean
 }
 
-const TYPES: PluginType[] = ["VST2", "VST3", "AAX", "AU"]
+const TYPES: PluginType[] = ["VST2", "VST3", "AAX", "AU", "CLAP"]
 
 // Filter toggles share the control height (h-9) and the rounded-md corners of the search field and the format tabs.
 const chip = "shrink-0 cursor-pointer gap-1.5 px-2.5 text-xs font-medium"

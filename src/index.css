@@ -36,6 +36,7 @@
   --color-fmt-vst3: var(--fmt-vst3);
   --color-fmt-aax: var(--fmt-aax);
   --color-fmt-au: var(--fmt-au);
+  --color-fmt-clap: var(--fmt-clap);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -86,6 +87,7 @@
   --fmt-vst3: #2b5a8c;
   --fmt-aax: #266a5c;
   --fmt-au: #7a5524;
+  --fmt-clap: #6a4a96;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -128,6 +130,7 @@
   --fmt-vst3: #8db7e6;
   --fmt-aax: #7fcdb9;
   --fmt-au: #dcb680;
+  --fmt-clap: #c3a9ea;
   --sidebar: #1c1f25;
   --sidebar-foreground: #f2f3f5;
   --sidebar-primary: #f2f3f5;

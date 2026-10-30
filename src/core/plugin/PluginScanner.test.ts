@@ -20,6 +20,9 @@ describe("pluginTypeOf", () => {
     expect(pluginTypeOf("Serum.dll", "windows")).toBe("VST2")
     expect(pluginTypeOf("Serum.vst3", "windows")).toBe("VST3")
     expect(pluginTypeOf("Pro.aaxplugin", "windows")).toBe("AAX")
+    expect(pluginTypeOf("Surge.clap", "windows")).toBe("CLAP")
+    expect(pluginTypeOf("Surge.CLAP", "macos")).toBe("CLAP")
+    expect(pluginTypeOf("Surge.clap", "linux")).toBe("CLAP")
     expect(pluginTypeOf("readme.txt", "windows")).toBeNull()
     expect(pluginTypeOf("vstlib-notes.txt", "windows")).toBeNull()
     expect(pluginTypeOf("Foo.dll", "linux")).toBeNull()
@@ -123,6 +126,28 @@ describe("getPluginPaths", () => {
     expect(getPluginPaths("macos", "/Users/me")).toContain("/Users/me/Library/Audio/Plug-Ins/VST3")
     expect(getPluginPaths("macos", "/Users/me")).toContain("/Library/Audio/Plug-Ins/Components")
     expect(getPluginPaths("linux", "/home/me")).toContain("/home/me/.vst3")
+  })
+})
+
+describe("CLAP", () => {
+  it("finds a .clap file (Windows/Linux) and a .clap bundle (macOS) without descending into the bundle", async () => {
+    const dir = "/home/me/.clap"
+    const os = fakeOS({
+      [dir]: [file(dir, "Single.clap"), folder(dir, "Bundle.clap"), file(dir, "notes.txt")],
+      [`${dir}/Bundle.clap`]: [folder(`${dir}/Bundle.clap`, "Contents")],
+    })
+    const res = await new PluginScanner(os, [dir], "linux").search()
+    expect(res.clap.map(p => p.name)).toEqual(["Single.clap", "Bundle.clap"])
+    expect(res.all).toHaveLength(2)
+    expect(res.vst2).toEqual([])
+  })
+
+  it("finds .clap in a custom folder, nested", async () => {
+    const root = "D:/Plugins"
+    const sub = `${root}/Acme`
+    const os = fakeOS({ [root]: [folder(root, "Acme")], [sub]: [file(sub, "Synth.clap")] })
+    const res = await new PluginScanner(os, [], "windows", [root]).search()
+    expect(res.clap).toEqual([{ name: "Synth.clap", installPath: sub, type: "CLAP" }])
   })
 })
 

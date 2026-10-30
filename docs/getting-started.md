@@ -39,7 +39,7 @@ Prefer not to install anything? Use the [portable build](/portable-mode).
 ## Your first scan
 
 1. Start Deplug. It scans the standard plugin folders automatically and shows a spinner until it is done.
-2. The toolbar shows **how many plugins were found** and four format checkboxes: VST2, VST3, AAX and AU.
+2. The toolbar shows **how many plugins were found** and format tabs: All, VST2, VST3, AAX, AU and CLAP.
 3. Plugins are listed in one collapsible section per format. Expand a section to see its plugins.
 4. Search by name with the field in the toolbar (Ctrl+F or Cmd+F), and use the rescan button after you install or remove something outside Deplug.
 
