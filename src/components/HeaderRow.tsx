@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ChevronDown } from "lucide-react"
+import { ArrowDown, ArrowUp, ChevronDown, Loader } from "lucide-react"
 import { Button } from "./ui/button"
 import { Checkbox } from "./ui/checkbox"
 import { FormatDot } from "./FormatTag"
@@ -10,7 +10,9 @@ import type { SortKey, SortState } from "@/core/plugin/ListOps"
 import type { PluginType } from "@/core/plugin/Plugin"
 
 type HeaderRowProps = {
-  type: PluginType
+  type?: PluginType
+  /** Producer mode: replaces the format name and dot with the producer. `reading` shows a spinner while names are still being read. */
+  vendor?: { name: string; unknown: boolean; reading: boolean }
   expanded: boolean
   onToggle: () => void
   sort: SortState
@@ -52,15 +54,16 @@ function SortButton({ column, label, sort, onSort, className = "" }: { column: S
 }
 
 /** Sticky section header: collapse toggle, count and the sortable column labels. */
-export default function HeaderRow({ type, expanded, onToggle, sort, onSort, shown, total, selectState, onSelectAll, columns, sizeTotal = null }: HeaderRowProps) {
+export default function HeaderRow({ type, vendor, expanded, onToggle, sort, onSort, shown, total, selectState, onSelectAll, columns, sizeTotal = null }: HeaderRowProps) {
   const { t, language } = useI18n()
+  const title = vendor?.name ?? type ?? ""
   return (
     <div role="row" className={`${rowGrid(columns)} sticky top-0 z-10 items-center border-b border-border bg-background`}>
       <div role="columnheader" className="flex h-10 items-center justify-center">
         <Checkbox
           checked={selectState}
           onCheckedChange={onSelectAll}
-          aria-label={t("section.selectAll", { type })}
+          aria-label={t("section.selectAll", { type: title })}
           disabled={shown === 0}
           className="relative after:absolute after:-inset-3 after:content-['']"
         />
@@ -73,26 +76,31 @@ export default function HeaderRow({ type, expanded, onToggle, sort, onSort, show
           size="sm"
           onClick={onToggle}
           aria-expanded={expanded}
-          aria-label={t(expanded ? "section.collapse" : "section.expand", { type })}
+          aria-label={t(expanded ? "section.collapse" : "section.expand", { type: title })}
           className="pl-1 pr-2 font-semibold has-[>svg]:pl-1 has-[>svg]:pr-2"
         >
           <ChevronDown aria-hidden className={`size-4 text-muted-foreground transition-transform motion-reduce:transition-none ${expanded ? "" : "-rotate-90"}`} />
-          <FormatDot type={type} />
-          {type}
+          {vendor ? <span className={cn("truncate", vendor.unknown && "font-medium text-muted-foreground")}>{title}</span> : (<>{type && <FormatDot type={type} />}{type}</>)}
         </Button>
         <span
           role="status"
-          aria-label={t("section.countLabel", { shown, total, type })}
+          aria-label={t("section.countLabel", { shown, total, type: title })}
           className="mr-2 shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground"
         >
           {shown === total ? total : t("section.count", { shown, total })}
         </span>
         {sizeTotal !== null && (
           <span
-            aria-label={t("section.sizeTotalLabel", { type, size: formatBytes(sizeTotal, language) })}
+            aria-label={t("section.sizeTotalLabel", { type: title, size: formatBytes(sizeTotal, language) })}
             className="mr-2 hidden shrink-0 text-[11px] tabular-nums text-muted-foreground sm:inline"
           >
             {t("section.sizeTotal", { size: formatBytes(sizeTotal, language) })}
+          </span>
+        )}
+        {vendor?.reading && (
+          <span role="status" aria-label={t("vendor.readingLabel")} className="mr-2 flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
+            <Loader aria-hidden className="size-3 animate-spin motion-reduce:animate-none" />
+            <span className="max-[899px]:sr-only">{t("vendor.reading")}</span>
           </span>
         )}
         <SortButton column="name" label={t("section.name")} sort={sort} onSort={onSort} />

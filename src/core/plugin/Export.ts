@@ -6,7 +6,7 @@ export type ExportFormat = "csv" | "txt"
 
 /** Excel only reads UTF-8 reliably when the file starts with a byte order mark. */
 const BOM = "\uFEFF"
-const CSV_HEADER = ["format", "name", "path", "size", "modified", "architecture"]
+const CSV_HEADER = ["format", "name", "path", "size", "modified", "architecture", "vendor"]
 
 /** Quotes a CSV field when it holds a comma, a quote or a line break; quotes are doubled. */
 export function csvField(value: string): string {
@@ -20,12 +20,12 @@ function isoDate(seconds: number | null | undefined): string {
   return Number.isNaN(d.getTime()) ? "" : d.toISOString()
 }
 
-/** CSV with a UTF-8 BOM and CRLF rows: format, name, path, size (bytes), modified (ISO 8601), architecture. */
+/** CSV with a UTF-8 BOM and CRLF rows: format, name, path, size (bytes), modified (ISO 8601), architecture, vendor. */
 export function pluginsToCsv(plugins: Plugin[], meta?: MetaMap): string {
   const rows = plugins.map(p => {
     const path = buildPluginPath(p.installPath, p.name)
     const m = meta?.get(path)
-    return [p.type, p.name, path, m?.size == null ? "" : String(m.size), isoDate(m?.modified), knownArch(m) ?? ""]
+    return [p.type, p.name, path, m?.size == null ? "" : String(m.size), isoDate(m?.modified), knownArch(m) ?? "", m?.vendor?.trim() ?? ""]
   })
   return BOM + [CSV_HEADER, ...rows].map(r => r.map(csvField).join(",")).join("\r\n") + "\r\n"
 }

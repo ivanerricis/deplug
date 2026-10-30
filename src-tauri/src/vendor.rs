@@ -578,17 +578,21 @@ pub fn resolve_command(
         })
 }
 
+/// Publisher of the best matching entry, trimmed; `None` when nothing matches or it is blank.
+pub fn publisher_from_entries(entries: &[UninstallEntry], plugin: &Path) -> Option<String> {
+    select_entries(entries, &plugin.to_string_lossy())
+        .first()
+        .and_then(|e| e.publisher.clone())
+        .map(|p| p.trim().to_string())
+        .filter(|p| !p.is_empty())
+}
+
 /// Registry Publisher of the entry that owns the plugin (used by leftover search).
 #[cfg_attr(not(windows), allow(unused_variables))]
 pub fn registry_publisher(plugin: &Path) -> Option<String> {
     #[cfg(windows)]
     {
-        let entries = registry::read_entries();
-        select_entries(&entries, &plugin.to_string_lossy())
-            .first()
-            .and_then(|e| e.publisher.clone())
-            .map(|p| p.trim().to_string())
-            .filter(|p| !p.is_empty())
+        publisher_from_entries(&registry::read_entries(), plugin)
     }
     #[cfg(not(windows))]
     {
