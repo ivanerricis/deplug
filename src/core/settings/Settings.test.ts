@@ -3,6 +3,12 @@ import { DEFAULT_SETTINGS, normalizeSettings, type AppSettings } from "./AppSett
 import { loadSettings } from "./LoadSettings"
 
 describe("normalizeSettings", () => {
+  it("defaults welcomeSeen to false and validates its type", () => {
+    expect(normalizeSettings({ version: 1 }).welcomeSeen).toBe(false)
+    expect(normalizeSettings({ welcomeSeen: true }).welcomeSeen).toBe(true)
+    expect(normalizeSettings({ welcomeSeen: "yes" }).welcomeSeen).toBe(false)
+  })
+
   it("defaults the update settings to off / stable / never", () => {
     const s = normalizeSettings({ version: 1 })
     expect(s.checkUpdatesOnStartup).toBe(false)

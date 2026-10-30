@@ -49,6 +49,8 @@ export type AppSettings = {
   rememberView: boolean
   lastTab: TabSetting
   lastSort: SortSetting
+  /** The first-run welcome screen was dismissed (an existing settings file counts as seen, see portable-core). */
+  welcomeSeen: boolean
 }
 
 export type AppInfo = {
@@ -90,6 +92,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   rememberView: true,
   lastTab: "all",
   lastSort: { key: "name", dir: "asc" },
+  welcomeSeen: false,
 }
 
 const onlyStrings = (value: unknown): string[] =>
@@ -145,6 +148,7 @@ export function normalizeSettings(raw: unknown): AppSettings {
     rememberView: typeof r.rememberView === "boolean" ? r.rememberView : d.rememberView,
     lastTab: oneOf(r.lastTab, TAB_SETTINGS, d.lastTab),
     lastSort: normalizeSort(r.lastSort),
+    welcomeSeen: typeof r.welcomeSeen === "boolean" ? r.welcomeSeen : d.welcomeSeen,
   }
 }
 

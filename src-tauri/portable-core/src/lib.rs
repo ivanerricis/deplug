@@ -252,6 +252,11 @@ pub struct Settings {
     pub remember_view: bool,
     pub last_tab: String,
     pub last_sort: SortSetting,
+    /// The first-run welcome screen was dismissed. A fresh install has no file and gets
+    /// `false` from `Default`; a settings file written before this field existed counts as
+    /// "seen" so upgrading users are not welcomed again.
+    #[serde(default = "default_true")]
+    pub welcome_seen: bool,
 }
 
 impl Default for Settings {
@@ -280,6 +285,7 @@ impl Default for Settings {
             remember_view: true,
             last_tab: default_tab(),
             last_sort: SortSetting::default(),
+            welcome_seen: false,
         }
     }
 }
@@ -560,7 +566,14 @@ mod tests {
         assert_eq!(s.default_sort.dir, "asc");
         assert!(s.remember_view);
         fs::write(&p, r#"{"version":1}"#).unwrap();
-        assert_eq!(load(&p), Settings::default());
+        // An existing file without the field counts as welcomed.
+        assert_eq!(
+            load(&p),
+            Settings {
+                welcome_seen: true,
+                ..Settings::default()
+            }
+        );
     }
 
     #[test]
@@ -628,6 +641,7 @@ mod tests {
             s,
             Settings {
                 custom_scan_paths: vec!["/x".into()],
+                welcome_seen: true,
                 ..Settings::default()
             }
         );
@@ -708,6 +722,25 @@ mod tests {
     }
 
     #[test]
+    fn settings_welcome_seen_is_false_for_new_installs_and_true_for_old_files() {
+        let d = tempdir().unwrap();
+        let p = d.path().join("s.json");
+        assert!(!Settings::default().welcome_seen);
+        assert!(!load(&p).welcome_seen); // no file yet
+        fs::write(&p, r#"{"version":1,"scanOnStartup":false}"#).unwrap();
+        assert!(load(&p).welcome_seen);
+        fs::write(&p, r#"{"welcomeSeen":false}"#).unwrap();
+        assert!(!load(&p).welcome_seen);
+        let s = Settings {
+            welcome_seen: true,
+            ..Settings::default()
+        };
+        save(&p, &s).unwrap();
+        let raw: serde_json::Value = serde_json::from_slice(&fs::read(&p).unwrap()).unwrap();
+        assert_eq!(raw["welcomeSeen"], true);
+    }
+
+    #[test]
     fn settings_roundtrip_no_tmp() {
         let d = tempdir().unwrap();
         let p = d.path().join("nested/dir/settings.json");
@@ -760,7 +793,14 @@ mod tests {
         assert_eq!(s.version, 1);
         assert_eq!(s.custom_scan_paths, vec!["/x".to_string()]);
         fs::write(&p, "{}").unwrap();
-        assert_eq!(load(&p), Settings::default());
+        // An existing file without the field counts as welcomed.
+        assert_eq!(
+            load(&p),
+            Settings {
+                welcome_seen: true,
+                ..Settings::default()
+            }
+        );
     }
 
     #[test]

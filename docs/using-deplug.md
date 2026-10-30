@@ -1,5 +1,9 @@
 # Using Deplug
 
+## First start
+
+The first time you open Deplug it shows a welcome screen instead of scanning right away, even if **Scan on startup** is on. Press **Scan for plugins** to run the first scan, or **Scan settings** to add folders first. From then on Deplug follows your [Settings](/settings#scan). If you update from an older version, the welcome screen is skipped.
+
 ## What gets scanned
 
 On startup (unless you turned that off in [Settings](/settings#scan)), and whenever you press the rescan button, Deplug looks through the standard plugin folders of your system. It searches up to three folder levels deep, so vendor sub-folders are covered.
@@ -39,7 +43,7 @@ The **Architecture** menu in the toolbar (All, 64-bit, 32-bit, ARM64) narrows th
 
 ## Filter by format
 
-The tabs in the toolbar (All, VST2, VST3, AAX, AU) show every format together or just one, each with its plugin count. Filtering only changes what you see; it does not rescan. Each section can also be collapsed on its own, and a format with no plugins has no section.
+The tabs in the toolbar (All, VST2, VST3, AAX, AU) show every format together or just one, each with its plugin count. Filtering only changes what you see; it does not rescan. Each section can also be collapsed on its own, and a format with no plugins has no section. If the selected format has no plugins at all, Deplug says so (for example "No AU plugins") and offers **Switch to All**. If your search or filters hide everything, it shows "Nothing matches" with **Clear filters** instead.
 
 ## Search
 

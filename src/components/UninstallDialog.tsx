@@ -498,7 +498,7 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
                   {phase !== "confirm" && (
                     <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
                       {result?.status === "removed" && <Check aria-hidden className="size-4" />}
-                      {result?.status === "still-present" && <AlertTriangle aria-hidden className="size-4 text-amber-600 dark:text-amber-400" />}
+                      {result?.status === "still-present" && <AlertTriangle aria-hidden className="size-4 text-caution" />}
                       {result?.status === "failed" && <X aria-hidden className="size-4 text-destructive" />}
                       {st === "running" && <Loader2 aria-hidden className="size-4 animate-spin" />}
                     </span>
@@ -867,7 +867,7 @@ function ResultLine({ tone, detail, children }: { tone: "ok" | "warn" | "fail"; 
     <li className="flex items-start gap-2">
       <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
         {tone === "ok" && <Check aria-hidden className="size-4" />}
-        {tone === "warn" && <AlertTriangle aria-hidden className="size-4 text-amber-600 dark:text-amber-400" />}
+        {tone === "warn" && <AlertTriangle aria-hidden className="size-4 text-caution" />}
         {tone === "fail" && <X aria-hidden className="size-4 text-destructive" />}
       </span>
       <div className="min-w-0 flex-1">

@@ -1,8 +1,10 @@
 import { ArrowDown, ArrowUp, ChevronDown } from "lucide-react"
+import { Button } from "./ui/button"
 import { Checkbox } from "./ui/checkbox"
 import { FormatDot } from "./FormatTag"
 import { MODIFIED_CELL, rowGrid, type ListColumns } from "./listLayout"
 import { formatBytes } from "@/core/format"
+import { cn } from "@/lib/utils"
 import { useI18n } from "@/i18n/I18nProvider"
 import type { SortKey, SortState } from "@/core/plugin/ListOps"
 import type { PluginType } from "@/core/plugin/Plugin"
@@ -31,19 +33,21 @@ function SortButton({ column, label, sort, onSort, className = "" }: { column: S
     : t(sort.dir === "asc" ? "section.sortAsc" : "section.sortDesc", { column: label })
   const Icon = sort.dir === "asc" ? ArrowUp : ArrowDown
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="sm"
       role="columnheader"
       aria-sort={aria}
       onClick={() => onSort(column)}
       aria-label={name}
       title={name}
-      className={`flex h-8 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 ${active ? "text-foreground" : "text-muted-foreground"} ${className}`}
+      className={cn("gap-1 px-2 text-xs has-[>svg]:px-2", active ? "text-foreground" : "text-muted-foreground", className)}
     >
       <span className="truncate">{label}</span>
       {/* Reserve the arrow's space so labels do not shift when the sort changes. */}
       <Icon aria-hidden className={`size-3 shrink-0 ${active ? "" : "opacity-0"}`} />
-    </button>
+    </Button>
   )
 }
 
@@ -63,17 +67,19 @@ export default function HeaderRow({ type, expanded, onToggle, sort, onSort, show
       </div>
 
       <div role="columnheader" className="flex h-10 min-w-0 items-center gap-1">
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={onToggle}
           aria-expanded={expanded}
           aria-label={t(expanded ? "section.collapse" : "section.expand", { type })}
-          className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md pl-1 pr-2 text-sm font-semibold outline-none transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="pl-1 pr-2 font-semibold has-[>svg]:pl-1 has-[>svg]:pr-2"
         >
           <ChevronDown aria-hidden className={`size-4 text-muted-foreground transition-transform motion-reduce:transition-none ${expanded ? "" : "-rotate-90"}`} />
           <FormatDot type={type} />
           {type}
-        </button>
+        </Button>
         <span
           role="status"
           aria-label={t("section.countLabel", { shown, total, type })}
