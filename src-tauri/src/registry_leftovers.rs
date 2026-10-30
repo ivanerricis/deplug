@@ -3,10 +3,13 @@
 //! Security model: nothing but the plugin file path and the key names the backend itself reported
 //! ever comes from the frontend. The candidate set is re-derived on every call, a key must be in
 //! it and pass a strict structural check (hive, depth, denylist), and every key is exported to a
-//! `.reg` backup before anything is deleted: if the export fails, nothing is deleted. Only keys
+//! `.reg` backup before anything is deleted: if the export fails, nothing is deleted. The search
+//! runs AFTER the plugin is gone, from a context (publisher, product, vendor entry) the backend
+//! captured while the plugin still existed and keeps in managed state; a plugin path without a
+//! cached context is refused. Only keys
 //! under `HKCU\Software` and `HKLM\SOFTWARE` (+ `WOW6432Node`) at depth 1-2 whose name EXACTLY
-//! equals the publisher or "Publisher Product" are ever candidates, plus the product's own
-//! `Uninstall` entry when its uninstaller is gone. Values are never touched on their own.
+//! equals the publisher or "Publisher Product" are ever candidates, plus the vendor's own
+//! `Uninstall` entry when it still exists. Values are never touched on their own.
 #![cfg_attr(not(windows), allow(dead_code))]
 
 use std::path::Path;
@@ -20,7 +23,7 @@ use crate::settings::SettingsPath;
 use crate::uninstall::check_script_safe;
 use crate::uninstall::ps_quote;
 use crate::vendor::{
-    command_program, is_generic_name, normalize_name, select_entries, strip_arch_suffix,
+    is_generic_name, normalize_name, normalize_path, select_entries, strip_arch_suffix,
     UninstallEntry,
 };
 
@@ -319,59 +322,59 @@ fn software_candidates(names: &RegistryNames, io: &dyn RegistryIo) -> Vec<KeyPat
     out
 }
 
-/// An `Uninstall` entry whose uninstaller program is gone (so it only clutters "Apps"). Entries
-/// that use msiexec or whose program cannot be told are never orphaned.
-pub fn is_orphaned(e: &UninstallEntry, exists: &dyn Fn(&str) -> bool) -> bool {
-    let gone = |cmd: &Option<String>| match cmd.as_deref() {
-        None => true,
-        Some(c) => command_program(c).is_some_and(|p| !exists(&p)),
-    };
-    let main = e.uninstall_string.as_deref().and_then(command_program);
-    main.is_some_and(|p| !exists(&p)) && gone(&e.quiet_uninstall_string)
+/// What the backend knows about the plugin's owner, captured while the plugin and its installer
+/// entry still exist. The frontend never sends these names, so it cannot forge a match.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct RegistryContext {
+    pub publisher: Option<String>,
+    pub display_name: Option<String>,
+    /// Full key of the vendor's `Uninstall` entry, when one matched the plugin.
+    pub uninstall_key: Option<String>,
 }
 
-/// Uninstall keys of the entries that belong to the plugin and are orphaned.
-pub fn orphaned_uninstall_keys(
+/// Builds the context from the bundle's vendor (if any) and the `Uninstall` entries. The registry's
+/// own publisher is the fallback.
+pub fn build_context(
+    plugin: &Path,
+    bundle_vendor: Option<String>,
     keyed: &[(String, UninstallEntry)],
-    plugin_path: &str,
-    exists: &dyn Fn(&str) -> bool,
-) -> Vec<KeyPath> {
+) -> RegistryContext {
     let entries: Vec<UninstallEntry> = keyed.iter().map(|(_, e)| e.clone()).collect();
-    select_entries(&entries, plugin_path)
+    let owner = select_entries(&entries, &plugin.to_string_lossy())
         .into_iter()
-        .filter(|e| is_orphaned(e, exists))
-        .filter_map(|e| {
-            let i = entries.iter().position(|o| std::ptr::eq(o, e))?;
-            KeyPath::parse(&keyed[i].0)
-        })
-        .filter(|k| classify(k) == Some(KeyKind::Uninstall))
-        .collect()
+        .next();
+    let index = owner.and_then(|e| entries.iter().position(|o| std::ptr::eq(o, e)));
+    RegistryContext {
+        publisher: bundle_vendor.or_else(|| owner.and_then(|e| e.publisher.clone())),
+        display_name: owner.map(|e| e.display_name.clone()),
+        uninstall_key: index.map(|i| keyed[i].0.clone()),
+    }
 }
 
-/// Everything the backend would report for the plugin. `publisher` is the vendor from the bundle
-/// metadata, if any; the registry's own publisher is the fallback.
+/// Everything the backend reports for the plugin once it is gone: software keys named after the
+/// publisher or product, plus the vendor's own `Uninstall` entry if it still exists.
 pub fn derive_candidates(
     plugin: &Path,
-    publisher: Option<String>,
-    keyed: &[(String, UninstallEntry)],
-    exists: &dyn Fn(&str) -> bool,
+    ctx: &RegistryContext,
     io: &dyn RegistryIo,
 ) -> Vec<RegistryLeftover> {
-    let plugin_str = plugin.to_string_lossy();
-    let entries: Vec<UninstallEntry> = keyed.iter().map(|(_, e)| e.clone()).collect();
-    let owner = select_entries(&entries, &plugin_str).into_iter().next();
-    let publisher = publisher.or_else(|| owner.and_then(|e| e.publisher.clone()));
     let mut keys: Vec<KeyPath> = Vec::new();
     if let Some(names) = registry_names(
         plugin,
-        publisher.as_deref(),
-        owner.map(|e| e.display_name.as_str()),
+        ctx.publisher.as_deref(),
+        ctx.display_name.as_deref(),
     ) {
         keys = software_candidates(&names, io);
     }
-    keys.extend(orphaned_uninstall_keys(keyed, &plugin_str, exists));
+    keys.extend(
+        ctx.uninstall_key
+            .as_deref()
+            .and_then(KeyPath::parse)
+            .filter(|k| classify(k) == Some(KeyKind::Uninstall)),
+    );
     keys.into_iter()
         .filter_map(|k| {
+            // A key that no longer exists has no stats and is dropped here.
             let (subkeys, values) = io.stats(&k)?;
             within_limits(subkeys, values).then(|| RegistryLeftover {
                 key: k.display(),
@@ -381,6 +384,55 @@ pub fn derive_candidates(
         })
         .take(MAX_RESULTS)
         .collect()
+}
+
+/// Contexts captured at dialog open, keyed by plugin path. Small and short-lived: the entries
+/// only have to survive one uninstall.
+pub const MAX_CONTEXTS: usize = 8;
+pub const CONTEXT_TTL: std::time::Duration = std::time::Duration::from_secs(2 * 60 * 60);
+
+#[derive(Default)]
+pub struct ContextCache {
+    items: std::collections::VecDeque<(String, std::time::Instant, RegistryContext)>,
+}
+
+impl ContextCache {
+    fn prune(&mut self, now: std::time::Instant) {
+        self.items
+            .retain(|(_, at, _)| now.saturating_duration_since(*at) < CONTEXT_TTL);
+    }
+
+    pub fn insert(&mut self, plugin_path: &str, ctx: RegistryContext, now: std::time::Instant) {
+        let id = normalize_path(plugin_path);
+        self.prune(now);
+        self.items.retain(|(k, _, _)| *k != id);
+        self.items.push_back((id, now, ctx));
+        while self.items.len() > MAX_CONTEXTS {
+            self.items.pop_front();
+        }
+    }
+
+    pub fn get(&mut self, plugin_path: &str, now: std::time::Instant) -> Option<RegistryContext> {
+        self.prune(now);
+        let id = normalize_path(plugin_path);
+        self.items
+            .iter()
+            .find(|(k, _, _)| *k == id)
+            .map(|(_, _, c)| c.clone())
+    }
+}
+
+/// Managed state holding the captured contexts.
+#[derive(Default)]
+pub struct RegistryContexts(pub std::sync::Mutex<ContextCache>);
+
+impl RegistryContexts {
+    fn get(&self, plugin_path: &str) -> Option<RegistryContext> {
+        self.0
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(plugin_path, std::time::Instant::now())
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -603,24 +655,20 @@ mod win {
         Ok(())
     }
 
-    pub fn derive(plugin: &Path) -> Vec<RegistryLeftover> {
+    /// Reads what the registry says about the plugin's owner; the plugin must still exist.
+    pub fn capture(plugin: &Path) -> RegistryContext {
         let keyed = crate::vendor::registry::read_keyed_entries();
-        let publisher = crate::leftovers::vendor_from_moduleinfo(plugin);
-        derive_candidates(
-            plugin,
-            publisher,
-            &keyed,
-            &|p| Path::new(p).exists(),
-            &WinIo,
-        )
+        let bundle_vendor = crate::leftovers::vendor_from_moduleinfo(plugin);
+        build_context(plugin, bundle_vendor, &keyed)
     }
 
     pub fn delete(
         plugin: &Path,
+        ctx: &RegistryContext,
         keys: &[String],
         backup_root: &Path,
     ) -> Result<RegistryDeleteResult, String> {
-        let plan = plan_delete(keys, &derive(plugin));
+        let plan = plan_delete(keys, &derive_candidates(plugin, ctx, &WinIo));
         let mut result = RegistryDeleteResult {
             failures: plan.invalid,
             ..Default::default()
@@ -681,47 +729,93 @@ fn search_enabled(settings: &SettingsPath) -> bool {
     portable_core::load(&settings.0).search_registry_leftovers
 }
 
-/// Registry keys that look like leftovers of the plugin. The plugin must still exist. Empty off
-/// Windows and when the setting is off.
+/// Captures what the registry says about the plugin's owner and keeps it for the search that runs
+/// after the uninstall. Must be called while the plugin still exists. Returns whether a context
+/// was kept (false off Windows and when the setting is off).
 #[tauri::command]
-pub async fn find_registry_leftovers(
+pub async fn capture_registry_context(
     plugin_path: String,
     settings: State<'_, SettingsPath>,
-) -> Result<Vec<RegistryLeftover>, String> {
+    contexts: State<'_, RegistryContexts>,
+) -> Result<bool, String> {
     #[cfg(windows)]
     {
         if !search_enabled(&settings) {
-            return Ok(Vec::new());
+            return Ok(false);
         }
-        tauri::async_runtime::spawn_blocking(move || {
-            let p = std::path::PathBuf::from(plugin_path);
+        let path = plugin_path.clone();
+        let ctx = tauri::async_runtime::spawn_blocking(move || {
+            let p = std::path::PathBuf::from(path);
             crate::uninstall::validate_plugin_path(&p)?;
-            Ok(win::derive(&p))
+            Ok::<_, String>(win::capture(&p))
         })
         .await
-        .map_err(|e| format!("ERR_INTERNAL:{e}"))?
+        .map_err(|e| format!("ERR_INTERNAL:{e}"))??;
+        contexts.0.lock().unwrap_or_else(|e| e.into_inner()).insert(
+            &plugin_path,
+            ctx,
+            std::time::Instant::now(),
+        );
+        Ok(true)
     }
     #[cfg(not(windows))]
     {
-        let _ = (plugin_path, settings);
+        let _ = (plugin_path, settings, contexts);
+        Ok(false)
+    }
+}
+
+/// Looks up the context captured for the plugin; refuses paths without one.
+#[cfg(windows)]
+fn cached_context(
+    plugin_path: &str,
+    settings: &SettingsPath,
+    contexts: &RegistryContexts,
+) -> Result<RegistryContext, String> {
+    if !search_enabled(settings) {
+        return Err("ERR_REGISTRY_DISABLED".into());
+    }
+    contexts
+        .get(plugin_path)
+        .ok_or("ERR_REGISTRY_NO_CONTEXT".into())
+}
+
+/// Registry keys left behind by the plugin. Meant to run after the plugin was removed; the plugin
+/// path only selects the captured context and no longer has to exist.
+#[tauri::command]
+pub async fn find_registry_leftovers_after(
+    plugin_path: String,
+    settings: State<'_, SettingsPath>,
+    contexts: State<'_, RegistryContexts>,
+) -> Result<Vec<RegistryLeftover>, String> {
+    #[cfg(windows)]
+    {
+        let ctx = cached_context(&plugin_path, &settings, &contexts)?;
+        tauri::async_runtime::spawn_blocking(move || {
+            derive_candidates(std::path::Path::new(&plugin_path), &ctx, &win::WinIo)
+        })
+        .await
+        .map_err(|e| format!("ERR_INTERNAL:{e}"))
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (plugin_path, settings, contexts);
         Ok(Vec::new())
     }
 }
 
 /// Exports the given keys to `.reg` backups and deletes them. Only keys that
-/// `find_registry_leftovers(plugin_path)` would report are accepted. Must be called while the
-/// plugin still exists.
+/// `find_registry_leftovers_after(plugin_path)` would report are accepted.
 #[tauri::command]
 pub async fn delete_registry_leftovers(
     plugin_path: String,
     keys: Vec<String>,
     settings: State<'_, SettingsPath>,
+    contexts: State<'_, RegistryContexts>,
 ) -> Result<RegistryDeleteResult, String> {
     #[cfg(windows)]
     {
-        if !search_enabled(&settings) {
-            return Err("ERR_REGISTRY_DISABLED".into());
-        }
+        let ctx = cached_context(&plugin_path, &settings, &contexts)?;
         if keys.len() > MAX_KEYS_PER_CALL {
             return Err("ERR_INVALID_PATH".into());
         }
@@ -733,15 +827,14 @@ pub async fn delete_registry_leftovers(
             .join(BACKUP_DIR);
         tauri::async_runtime::spawn_blocking(move || {
             let p = std::path::PathBuf::from(plugin_path);
-            crate::uninstall::validate_plugin_path(&p)?;
-            win::delete(&p, &keys, &backup_root)
+            win::delete(&p, &ctx, &keys, &backup_root)
         })
         .await
         .map_err(|e| format!("ERR_INTERNAL:{e}"))?
     }
     #[cfg(not(windows))]
     {
-        let _ = (plugin_path, keys, settings);
+        let _ = (plugin_path, keys, settings, contexts);
         Err("ERR_REGISTRY_UNSUPPORTED".into())
     }
 }
@@ -813,12 +906,17 @@ mod tests {
         .unwrap()
     }
 
+    fn ctx(publisher: &str) -> RegistryContext {
+        RegistryContext {
+            publisher: Some(publisher.into()),
+            ..Default::default()
+        }
+    }
+
     fn derive(fake: &Fake, publisher: &str) -> Vec<String> {
         derive_candidates(
             Path::new("C:/VST3/Cool Synth_x64.vst3"),
-            Some(publisher.into()),
-            &[],
-            &|_| true,
+            &ctx(publisher),
             fake,
         )
         .into_iter()
@@ -1008,13 +1106,7 @@ mod tests {
         assert!(derive(&fake, "Acme").is_empty());
         let fake =
             Fake::new(&[r"HKCU\Software\Acme\Cool Synth"]).with_values(r"HKCU\Software\Acme", 500);
-        let got = derive_candidates(
-            Path::new("C:/VST3/Cool Synth.vst3"),
-            Some("Acme".into()),
-            &[],
-            &|_| true,
-            &fake,
-        );
+        let got = derive_candidates(Path::new("C:/VST3/Cool Synth.vst3"), &ctx("Acme"), &fake);
         assert_eq!(got.len(), 2);
         assert_eq!(
             got[0],
@@ -1039,55 +1131,117 @@ mod tests {
         }
     }
 
+    const UKEY: &str = r"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Acme Cool Synth";
+    const PLUGIN: &str = "C:/Program Files/Acme/Cool Synth/Cool Synth.vst3";
+
     #[test]
-    fn orphaned_uninstall_entry_is_reported_only_when_its_uninstaller_is_gone() {
-        let key = r"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Acme Cool Synth";
-        let keyed = vec![(
-            key.to_string(),
-            uninstall_entry(
-                "Acme Cool Synth",
-                r#""C:\Program Files\Acme\Cool Synth\unins000.exe""#,
+    fn context_captures_publisher_name_and_uninstall_key() {
+        let keyed = vec![
+            (
+                r"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Other".to_string(),
+                UninstallEntry {
+                    display_name: "Other".into(),
+                    uninstall_string: Some(r"C:\Other\unins.exe".into()),
+                    ..Default::default()
+                },
             ),
-        )];
-        let plugin = "C:/Program Files/Acme/Cool Synth/Cool Synth.vst3";
-        let gone = orphaned_uninstall_keys(&keyed, plugin, &|_| false);
-        assert_eq!(gone.len(), 1);
-        assert_eq!(gone[0].display(), key);
-        assert!(orphaned_uninstall_keys(&keyed, plugin, &|_| true).is_empty());
-        // msiexec entries are never orphaned.
-        let msi = vec![(
-            key.to_string(),
-            uninstall_entry("Acme Cool Synth", "MsiExec.exe /I{GUID}"),
-        )];
-        assert!(orphaned_uninstall_keys(&msi, plugin, &|_| false).is_empty());
-        // An entry of some other product is not selected.
-        let other = "C:/Program Files/Other/Thing/Thing.vst3";
-        assert!(orphaned_uninstall_keys(&keyed, other, &|_| false).is_empty());
+            (
+                UKEY.to_string(),
+                uninstall_entry(
+                    "Acme Cool Synth",
+                    r"C:\Program Files\Acme\Cool Synth\unins000.exe",
+                ),
+            ),
+        ];
+        let c = build_context(Path::new(PLUGIN), None, &keyed);
+        assert_eq!(c.publisher.as_deref(), Some("Acme"));
+        assert_eq!(c.display_name.as_deref(), Some("Acme Cool Synth"));
+        assert_eq!(c.uninstall_key.as_deref(), Some(UKEY));
+        // The bundle's vendor wins over the registry's publisher.
+        let c = build_context(Path::new(PLUGIN), Some("Bundle Vendor".into()), &keyed);
+        assert_eq!(c.publisher.as_deref(), Some("Bundle Vendor"));
+        // Nothing matches: empty context.
+        let c = build_context(Path::new("C:/Elsewhere/Thing.vst3"), None, &keyed);
+        assert_eq!(c, RegistryContext::default());
     }
 
     #[test]
-    fn derive_includes_the_orphaned_uninstall_key_with_its_stats() {
-        let key = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\CoolSynth";
-        let keyed = vec![(
-            key.to_string(),
-            uninstall_entry("Acme Cool Synth", r#"C:\Program Files\Acme\unins000.exe"#),
-        )];
-        let fake = Fake::new(&[key]).with_values(key, 7);
-        let got = derive_candidates(
-            Path::new("C:/Program Files/Acme/Cool Synth/Cool Synth.vst3"),
-            None,
-            &keyed,
-            &|_| false,
-            &fake,
-        );
+    fn derive_includes_the_vendor_uninstall_key_only_while_it_exists() {
+        let c = RegistryContext {
+            publisher: None,
+            display_name: Some("Acme Cool Synth".into()),
+            uninstall_key: Some(UKEY.into()),
+        };
+        let fake = Fake::new(&[UKEY]).with_values(UKEY, 7);
+        let got = derive_candidates(Path::new(PLUGIN), &c, &fake);
         assert_eq!(
             got,
             vec![RegistryLeftover {
-                key: key.into(),
+                key: UKEY.into(),
                 subkeys: 0,
                 values: 7
             }]
         );
+        // The uninstaller removed its entry: nothing left to offer.
+        assert!(derive_candidates(Path::new(PLUGIN), &c, &Fake::new(&[])).is_empty());
+        // A cached key outside the Uninstall roots is never trusted.
+        let bad = RegistryContext {
+            uninstall_key: Some(r"HKLM\SOFTWARE\Microsoft\Office".into()),
+            ..Default::default()
+        };
+        let fake = Fake::new(&[r"HKLM\SOFTWARE\Microsoft\Office"]);
+        assert!(derive_candidates(Path::new(PLUGIN), &bad, &fake).is_empty());
+    }
+
+    #[test]
+    fn derive_works_after_the_plugin_is_gone_and_still_respects_limits() {
+        // Only the path string is used: the file does not have to exist.
+        let c = RegistryContext {
+            publisher: Some("Acme".into()),
+            display_name: None,
+            uninstall_key: Some(UKEY.into()),
+        };
+        let fake = Fake::new(&[r"HKCU\Software\Acme\Cool Synth", UKEY]).with_values(UKEY, 501);
+        let got: Vec<String> = derive_candidates(Path::new(PLUGIN), &c, &fake)
+            .into_iter()
+            .map(|l| l.key)
+            .collect();
+        assert_eq!(
+            got,
+            vec![r"HKCU\Software\Acme", r"HKCU\Software\Acme\Cool Synth"]
+        );
+    }
+
+    #[test]
+    fn context_cache_is_bounded_short_lived_and_keyed_by_normalized_path() {
+        use std::time::{Duration, Instant};
+        let t0 = Instant::now();
+        let mut cache = ContextCache::default();
+        for i in 0..(MAX_CONTEXTS + 3) {
+            cache.insert(&format!("C:/p/P{i}.vst3"), ctx(&format!("pub{i}")), t0);
+        }
+        assert_eq!(cache.items.len(), MAX_CONTEXTS);
+        assert!(cache.get("C:/p/P0.vst3", t0).is_none());
+        assert_eq!(
+            cache
+                .get(r"c:\P\p10.VST3", t0)
+                .unwrap()
+                .publisher
+                .as_deref(),
+            Some("pub10")
+        );
+        // Re-inserting replaces instead of duplicating.
+        cache.insert("C:/p/P10.vst3", ctx("new"), t0);
+        assert_eq!(cache.items.len(), MAX_CONTEXTS);
+        assert_eq!(
+            cache.get("C:/p/P10.vst3", t0).unwrap().publisher.as_deref(),
+            Some("new")
+        );
+        // Unknown paths and expired entries are refused.
+        assert!(cache.get("C:/p/other.vst3", t0).is_none());
+        let late = t0 + CONTEXT_TTL + Duration::from_secs(1);
+        assert!(cache.get("C:/p/P10.vst3", late).is_none());
+        assert!(cache.items.is_empty());
     }
 
     #[test]

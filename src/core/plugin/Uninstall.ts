@@ -46,8 +46,6 @@ export interface RegistryDeleteResult {
 export interface SingleUninstallBackend extends UninstallBackend {
   /** Returns one `<code>:<path>` entry per failure; an empty array means everything was trashed. */
   trashLeftovers(pluginPath: string, paths: string[]): Promise<string[]>
-  /** Windows only: exports the keys to a .reg backup, then deletes them. */
-  deleteRegistryLeftovers(pluginPath: string, keys: string[]): Promise<RegistryDeleteResult>
   runVendorUninstaller(path: string): Promise<void>
   pathExists(path: string): Promise<boolean>
 }
@@ -55,14 +53,17 @@ export interface SingleUninstallBackend extends UninstallBackend {
 export const tauriSingleBackend: SingleUninstallBackend = {
   ...tauriUninstallBackend,
   trashLeftovers: (pluginPath, paths) => invoke<string[]>("trash_leftovers", { pluginPath, paths }),
-  deleteRegistryLeftovers: (pluginPath, keys) => invoke<RegistryDeleteResult>("delete_registry_leftovers", { pluginPath, keys }),
   runVendorUninstaller: path => invoke<void>("run_vendor_uninstaller", { path }),
   pathExists: path => exists(path),
 }
 
 export const findVendorUninstaller = (path: string) => invoke<VendorUninstaller | null>("find_vendor_uninstaller", { path })
 export const findLeftovers = (path: string) => invoke<Leftover[]>("find_leftovers", { path })
-export const findRegistryLeftovers = (pluginPath: string) => invoke<RegistryLeftover[]>("find_registry_leftovers", { pluginPath })
+/** Windows: lets the backend remember the plugin's publisher and product while it still exists. False when nothing was kept. */
+export const captureRegistryContext = (pluginPath: string) => invoke<boolean>("capture_registry_context", { pluginPath })
+/** Registry keys left behind once the plugin is gone, derived from the context captured earlier. */
+export const findRegistryLeftoversAfter = (pluginPath: string) => invoke<RegistryLeftover[]>("find_registry_leftovers_after", { pluginPath })
+export const deleteRegistryLeftovers = (pluginPath: string, keys: string[]) => invoke<RegistryDeleteResult>("delete_registry_leftovers", { pluginPath, keys })
 
 export interface UninstallOptions {
   restorePoint: boolean
@@ -281,9 +282,7 @@ export interface SingleUninstallOptions {
   /** How the plugin itself is removed. */
   method: "trash" | "vendor"
   /** Called when a long step starts, so the dialog can say what it is waiting for. */
-  onStep?: (step: "restorePoint" | "leftovers" | "registry" | "plugin") => void
-  /** Windows only: registry keys the user ticked; they are backed up and deleted after the leftover folders. */
-  registryKeys?: string[]
+  onStep?: (step: "restorePoint" | "leftovers" | "plugin") => void
 }
 
 export interface SingleUninstallResult {
@@ -292,14 +291,10 @@ export interface SingleUninstallResult {
   restorePoint: "created" | "skipped" | "failed"
   leftoversTrashed: number
   leftoverFailures: LeftoverFailure[]
-  registryDeleted: number
-  registryFailures: RegistryFailure[]
-  /** Folder with the .reg backups of the deleted keys, when any were exported. */
-  registryBackupDir: string | null
   plugin: PluginOutcome | null
 }
 
-/** Order: restore point -> selected leftovers -> selected registry keys -> the plugin itself (trash or the publisher's uninstaller). */
+/** Order: restore point -> selected leftovers -> the plugin itself (trash or the publisher's uninstaller). */
 export async function uninstallSingle(plugin: Plugin, options: SingleUninstallOptions): Promise<SingleUninstallResult> {
   const { restorePoint, backend, confirmContinue, leftovers, method, onStep } = options
   const path = buildPluginPath(plugin.installPath, plugin.name)
@@ -318,7 +313,7 @@ export async function uninstallSingle(plugin: Plugin, options: SingleUninstallOp
       } catch {
         proceed = false
       }
-      if (!proceed) return { status: "cancelled", restorePoint: rp, leftoversTrashed: 0, leftoverFailures: [], registryDeleted: 0, registryFailures: [], registryBackupDir: null, plugin: null }
+      if (!proceed) return { status: "cancelled", restorePoint: rp, leftoversTrashed: 0, leftoverFailures: [], plugin: null }
     }
   }
 
@@ -334,24 +329,6 @@ export async function uninstallSingle(plugin: Plugin, options: SingleUninstallOp
     }
   }
   const leftoversTrashed = Math.max(0, leftovers.length - leftoverFailures.length)
-
-  const registryKeys = options.registryKeys ?? []
-  let registryDeleted = 0
-  let registryFailures: RegistryFailure[] = []
-  let registryBackupDir: string | null = null
-  if (registryKeys.length > 0) {
-    onStep?.("registry")
-    try {
-      const r = await backend.deleteRegistryLeftovers(path, registryKeys)
-      registryFailures = r.failures.map(parseRegistryFailure)
-      registryDeleted = r.deleted
-      registryBackupDir = r.backupDir
-    } catch (e) {
-      // The whole call was refused (for instance the backup failed): nothing was deleted.
-      const error = errorMessage(e)
-      registryFailures = registryKeys.map(key => ({ key, error }))
-    }
-  }
 
   onStep?.("plugin")
   let outcome: PluginOutcome
@@ -372,5 +349,34 @@ export async function uninstallSingle(plugin: Plugin, options: SingleUninstallOp
       outcome = { action: "vendor", status: "failed", error: errorMessage(e) }
     }
   }
-  return { status: "completed", restorePoint: rp, leftoversTrashed, leftoverFailures, registryDeleted, registryFailures, registryBackupDir, plugin: outcome }
+  return { status: "completed", restorePoint: rp, leftoversTrashed, leftoverFailures, plugin: outcome }
+}
+
+export interface RegistryOutcome {
+  deleted: number
+  failures: RegistryFailure[]
+  backupDir: string | null
+}
+
+/**
+ * Backs up and deletes the ticked registry keys through `remove`. A refused call (a failed backup, no
+ * captured context...) counts every key as failed: nothing was deleted.
+ */
+export async function removeRegistryKeys(
+  pluginPath: string,
+  keys: string[],
+  remove: (pluginPath: string, keys: string[]) => Promise<RegistryDeleteResult> = deleteRegistryLeftovers,
+): Promise<RegistryOutcome> {
+  try {
+    const r = await remove(pluginPath, keys)
+    return { deleted: r.deleted, failures: r.failures.map(parseRegistryFailure), backupDir: r.backupDir }
+  } catch (e) {
+    const error = errorMessage(e)
+    return { deleted: 0, failures: keys.map(key => ({ key, error })), backupDir: null }
+  }
+}
+
+/** True when the plugin itself is gone, so the registry can be searched for what it left behind. */
+export function pluginWasRemoved(outcome: PluginOutcome | null | undefined): boolean {
+  return !!outcome && outcome.status === "removed"
 }

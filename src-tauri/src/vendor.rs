@@ -304,18 +304,6 @@ pub fn parse_command_line_with(
     Ok(ParsedCommand { program, args })
 }
 
-/// Absolute `.exe` path of the program in a command line (None for msiexec, relative or
-/// unparsable programs). Nothing is expanded or checked on disk.
-pub fn command_program(cmd: &str) -> Option<String> {
-    let (prog, _) = split_program(cmd)?;
-    let norm = normalize_path(&prog);
-    (is_windows_absolute(&prog)
-        && !prog.contains('%')
-        && norm.ends_with(".exe")
-        && last_segment(&norm) != "msiexec.exe")
-        .then_some(prog)
-}
-
 fn command_preview(cmd: &ParsedCommand) -> String {
     let prog = match &cmd.program {
         Program::Msiexec => "msiexec.exe".to_string(),

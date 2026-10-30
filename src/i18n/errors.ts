@@ -14,6 +14,7 @@ const SIMPLE: Record<string, MessageKey> = {
   ERR_REGISTRY_INVALID: "error.registryInvalid",
   ERR_REGISTRY_UNSUPPORTED: "error.registryUnsupported",
   ERR_REGISTRY_DISABLED: "error.registryDisabled",
+  ERR_REGISTRY_NO_CONTEXT: "error.registryNoContext",
   ERR_VENDOR_UNSUPPORTED: "error.vendorUnsupported",
   ERR_VENDOR_NOT_FOUND: "error.vendorNotFound",
   ERR_VENDOR_TIMEOUT: "error.vendorTimeout",
