@@ -55,6 +55,12 @@ Un plugin presente più volte riceve il badge **Duplicato**. Due voci sono consi
 
 La casella **Mostra solo i duplicati** nella barra degli strumenti tiene soltanto questi plugin e ne indica il numero. È un buon punto di partenza per fare pulizia. Deplug si limita a segnalarli: quale copia tenere lo decidi tu.
 
+## Plugin danneggiati
+
+Un plugin che non può essere caricato riceve il badge **Danneggiato**. Deplug segnala un file plugin da zero byte, una cartella plugin vuota e un bundle (`.vst3`, `.aaxplugin`, `.component`, `.vst`) il cui binario dentro `Contents` manca o ha dimensione zero. Passa il mouse sul badge per vedere il motivo. Vengono controllate solo le dimensioni dei file, mai il loro contenuto.
+
+La casella **Mostra solo i plugin danneggiati** nella barra degli strumenti tiene soltanto questi plugin e ne indica il numero. Si possono selezionare e disinstallare come qualsiasi altro plugin.
+
 ## Selezionare più plugin
 
 Ogni riga ha una casella nella prima colonna.

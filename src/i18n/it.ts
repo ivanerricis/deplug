@@ -23,6 +23,8 @@ export const it: Record<MessageKey, string> = {
   "toolbar.searchClear": "Cancella la ricerca",
   "toolbar.duplicatesOnly": "Mostra solo i duplicati",
   "toolbar.duplicatesShort": "Duplicati",
+  "toolbar.damagedOnly": "Mostra solo i plugin danneggiati",
+  "toolbar.damagedShort": "Danneggiati",
   "toolbar.formatChip": "Plugin {type}: {count}",
   "toolbar.arch": "Architettura",
   "toolbar.archLabel": "Filtra i plugin per architettura",
@@ -40,7 +42,7 @@ export const it: Record<MessageKey, string> = {
   "arch.arm64Hint": "Plugin ARM64 nativo.",
 
   "list.noResults.title": "Nessun plugin corrisponde",
-  "list.noResults.body": "Prova un'altra ricerca, oppure disattiva i filtri di duplicati, architettura e formato.",
+  "list.noResults.body": "Prova un'altra ricerca, oppure disattiva i filtri di duplicati, danneggiati, architettura e formato.",
   "list.noResults.clear": "Azzera i filtri",
 
   "section.name": "Nome",
@@ -61,6 +63,9 @@ export const it: Record<MessageKey, string> = {
   "row.select": "Seleziona {name}",
   "row.unknown": "Sconosciuto",
   "row.folder": "Cartella: {path}",
+  "health.damaged": "Danneggiato",
+  "health.emptyHint": "Questo plugin è vuoto (un file da zero byte o una cartella vuota), quindi non può essere caricato.",
+  "health.missingBinaryHint": "Il bundle del plugin non contiene il binario (manca o ha dimensione zero), quindi non può essere caricato.",
   "row.duplicate": "Duplicato",
   "row.duplicateAlso": "Presente anche in:",
 

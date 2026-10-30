@@ -1,5 +1,5 @@
 import type { RefObject } from "react"
-import { ChevronDown, Copy, RefreshCcw, Search, Settings, X } from "lucide-react"
+import { ChevronDown, Copy, OctagonAlert, RefreshCcw, Search, Settings, X } from "lucide-react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Toggle } from "./ui/toggle"
@@ -26,6 +26,9 @@ type ToolbarProps = {
   duplicatesOnly: boolean
   onToggleDuplicatesOnly: (value: boolean) => void
   duplicateCount: number
+  damagedOnly: boolean
+  onToggleDamagedOnly: (value: boolean) => void
+  damagedCount: number
   /** Architecture filter; the control is hidden until the backend has reported at least one architecture. */
   archFilter: ArchFilter
   onArchFilterChange: (value: ArchFilter) => void
@@ -39,7 +42,7 @@ const chipBase =
   "inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
 const chipOff = "border-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground"
 
-/** One calm row: search, format chips, duplicates toggle, rescan, settings. */
+/** One calm row: search, format chips, duplicates and damaged toggles, rescan, settings. */
 export default function Toolbar({
   pluginsCount,
   counts,
@@ -53,6 +56,9 @@ export default function Toolbar({
   duplicatesOnly,
   onToggleDuplicatesOnly,
   duplicateCount,
+  damagedOnly,
+  onToggleDamagedOnly,
+  damagedCount,
   archFilter,
   onArchFilterChange,
   archCounts,
@@ -119,6 +125,17 @@ export default function Toolbar({
         <Copy aria-hidden className="size-3.5" />
         <span aria-hidden className="hidden min-[900px]:inline">{t("toolbar.duplicatesShort")}</span>
         <span aria-hidden className="tabular-nums text-muted-foreground">{duplicateCount}</span>
+      </Toggle>
+
+      <Toggle
+        pressed={damagedOnly}
+        aria-label={t("toolbar.damagedOnly")}
+        onPressedChange={onToggleDamagedOnly}
+        className={`${chipBase} ${damagedOnly ? "border-signal/60 bg-signal/10 text-foreground hover:bg-signal/15" : chipOff}`}
+      >
+        <OctagonAlert aria-hidden className="size-3.5" />
+        <span aria-hidden className="hidden min-[900px]:inline">{t("toolbar.damagedShort")}</span>
+        <span aria-hidden className="tabular-nums text-muted-foreground">{damagedCount}</span>
       </Toggle>
 
       {archAvailable && (

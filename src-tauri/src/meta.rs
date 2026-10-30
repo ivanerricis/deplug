@@ -22,6 +22,8 @@ pub struct PluginMeta {
     pub modified: Option<u64>,
     /// CPU architecture: "x86", "x64", "arm64", "universal", "mixed" or "unknown"; `None` when the path is missing.
     pub arch: Option<String>,
+    /// "ok", "empty" or "missing-binary"; `None` when the path is missing.
+    pub health: Option<String>,
 }
 
 fn unix_secs(md: &fs::Metadata) -> Option<u64> {
@@ -259,6 +261,57 @@ fn detect_arch(p: &Path, is_dir: bool) -> &'static str {
     reduce(&sniffs)
 }
 
+/// Bundle subfolders of `Contents/` that never hold the plugin binary.
+const NON_BINARY_DIRS: [&str; 3] = ["Resources", "_CodeSignature", "Frameworks"];
+
+/// True when some non-empty regular file sits directly in a binary folder of the bundle
+/// (`Contents/MacOS`, `Contents/x86_64-win`, ...). Only metadata is read, never file contents.
+fn has_bundle_binary(contents: &Path) -> bool {
+    let Ok(read) = fs::read_dir(contents) else {
+        return false;
+    };
+    for dir in read.flatten() {
+        let name = dir.file_name();
+        let Ok(md) = dir.metadata() else { continue };
+        if !md.is_dir() || NON_BINARY_DIRS.iter().any(|n| name == *n) {
+            continue;
+        }
+        let Ok(files) = fs::read_dir(dir.path()) else {
+            continue;
+        };
+        let found = files
+            .flatten()
+            .filter_map(|f| f.metadata().ok())
+            .any(|m| m.is_file() && m.len() > 0);
+        if found {
+            return true;
+        }
+    }
+    false
+}
+
+/// Integrity of a plugin: a zero-byte file or an empty folder is "empty"; a bundle (a folder with
+/// `Contents/`) whose binary is absent or zero size is "missing-binary"; anything else is "ok".
+fn detect_health(p: &Path, is_dir: bool, file_len: u64) -> &'static str {
+    if !is_dir {
+        return if file_len == 0 { "empty" } else { "ok" };
+    }
+    match fs::read_dir(p) {
+        Ok(mut r) => {
+            if r.next().is_none() {
+                return "empty";
+            }
+        }
+        Err(_) => return "ok",
+    }
+    let contents = p.join("Contents");
+    if contents.is_dir() && !has_bundle_binary(&contents) {
+        "missing-binary"
+    } else {
+        "ok"
+    }
+}
+
 fn meta_for(path: &str) -> PluginMeta {
     let p = Path::new(path);
     let mut out = PluginMeta {
@@ -266,6 +319,7 @@ fn meta_for(path: &str) -> PluginMeta {
         size: None,
         modified: None,
         arch: None,
+        health: None,
     };
     let Ok(md) = fs::symlink_metadata(p) else {
         return out;
@@ -280,6 +334,7 @@ fn meta_for(path: &str) -> PluginMeta {
     }
     if ft.is_file() || ft.is_dir() {
         out.arch = Some(detect_arch(p, ft.is_dir()).to_string());
+        out.health = Some(detect_health(p, ft.is_dir(), md.len()).to_string());
     }
     out
 }
@@ -391,10 +446,11 @@ mod tests {
             size: Some(1),
             modified: None,
             arch: Some("x64".into()),
+            health: Some("ok".into()),
         };
         assert_eq!(
             serde_json::to_string(&m).unwrap(),
-            r#"{"path":"p","size":1,"modified":null,"arch":"x64"}"#
+            r#"{"path":"p","size":1,"modified":null,"arch":"x64","health":"ok"}"#
         );
     }
 
@@ -558,6 +614,56 @@ mod tests {
         fs::write(b.join("Contents/a/b/c/ok"), pe(0x8664)).unwrap();
         assert_eq!(meta_for(b.to_str().unwrap()).arch.as_deref(), Some("x64"));
         let _ = fs::remove_dir_all(&d);
+    }
+
+    fn health(p: &Path) -> Option<String> {
+        meta_for(p.to_str().unwrap()).health
+    }
+
+    #[test]
+    fn health_of_single_files() {
+        let d = tmp("healthfile");
+        write(&d.join("ok.dll"), 10);
+        write(&d.join("zero.dll"), 0);
+        assert_eq!(health(&d.join("ok.dll")).as_deref(), Some("ok"));
+        assert_eq!(health(&d.join("zero.dll")).as_deref(), Some("empty"));
+        let _ = fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn health_of_bundles() {
+        let d = tmp("healthbundle");
+        let empty = d.join("Empty.vst3");
+        fs::create_dir_all(&empty).unwrap();
+        assert_eq!(health(&empty).as_deref(), Some("empty"));
+
+        let good = d.join("Good.vst3");
+        write(&good.join("Contents/x86_64-win/Good.vst3"), 10);
+        write(&good.join("Contents/Resources/a.png"), 5);
+        assert_eq!(health(&good).as_deref(), Some("ok"));
+
+        let mac = d.join("Mac.component");
+        write(&mac.join("Contents/MacOS/Mac"), 10);
+        assert_eq!(health(&mac).as_deref(), Some("ok"));
+
+        let nobin = d.join("NoBin.vst3");
+        write(&nobin.join("Contents/Resources/a.png"), 5);
+        write(&nobin.join("Contents/Info.plist"), 5);
+        assert_eq!(health(&nobin).as_deref(), Some("missing-binary"));
+
+        let zero = d.join("Zero.aaxplugin");
+        write(&zero.join("Contents/x64/Zero.aaxplugin"), 0);
+        assert_eq!(health(&zero).as_deref(), Some("missing-binary"));
+
+        let nomacos = d.join("NoMac.vst");
+        fs::create_dir_all(nomacos.join("Contents/MacOS")).unwrap();
+        assert_eq!(health(&nomacos).as_deref(), Some("missing-binary"));
+        let _ = fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn missing_path_has_no_health() {
+        assert_eq!(meta_for("/definitely/not/here/N.vst3").health, None);
     }
 
     #[test]
