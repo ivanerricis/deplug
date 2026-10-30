@@ -405,6 +405,7 @@ export const it: Record<MessageKey, string> = {
   "welcome.scanHint": "Servono pochi secondi. La ricerca legge solo le cartelle: non cambia né elimina nulla.",
   "welcome.folders": "Deplug cercherà in {count} cartelle.",
   "welcome.foldersOne": "Deplug cercherà in 1 cartella.",
+  "welcome.foldersNone": "Nessuna delle cartelle standard dei plugin esiste ancora su questo computer.",
   "welcome.note": "Puoi cambiare lingua, tema e cartelle di scansione nelle Impostazioni.",
   "toolbar.groupBy": "Raggruppa per",
   "toolbar.groupFormat": "Formato",

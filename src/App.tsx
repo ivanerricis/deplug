@@ -392,6 +392,23 @@ export default function App() {
     setShowSettings(true)
   }
   const counts = { VST2: result.vst2.length, VST3: result.vst3.length, AAX: result.aax.length, AU: result.au.length, CLAP: result.clap.length }
+  // Folders the first scan will really read: the configured ones that exist on this computer.
+  const [existingFolders, setExistingFolders] = useState<number | null>(null)
+  const welcomeVisible = !settings.welcomeSeen && !scanned
+  const configuredFolders = useMemo(
+    () => [...systemPaths.filter(p => !settings.disabledSystemPaths.includes(p)), ...settings.customScanPaths],
+    [systemPaths, settings.disabledSystemPaths, settings.customScanPaths],
+  )
+  useEffect(() => {
+    if (!welcomeVisible || configuredFolders.length === 0) return
+    let alive = true
+    const os = new TauriOS()
+    void Promise.all(configuredFolders.map(p => os.pathExists(p).catch(() => false))).then(found => {
+      if (alive) setExistingFolders(found.filter(Boolean).length)
+    })
+    return () => { alive = false }
+  }, [welcomeVisible, configuredFolders])
+
   const emptyKind = emptyStateKind({ welcome: !settings.welcomeSeen && !scanned, scanned, counts, tab, shown: visibleShown.length })
 
   return (
@@ -442,7 +459,7 @@ export default function App() {
         <Welcome
           onScan={() => void scanPlugins()}
           onSettings={openScanSettings}
-          folderCount={systemPaths.filter(p => !settings.disabledSystemPaths.includes(p)).length + settings.customScanPaths.length}
+          folderCount={existingFolders}
         />
       ) : emptyKind === "idle" || emptyKind === "none" ? (
         <EmptyState

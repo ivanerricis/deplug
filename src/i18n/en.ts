@@ -407,6 +407,7 @@ export const en = {
   "welcome.scanHint": "It takes a few seconds. Scanning only reads folders: nothing is changed or deleted.",
   "welcome.folders": "Deplug will look in {count} folders.",
   "welcome.foldersOne": "Deplug will look in 1 folder.",
+  "welcome.foldersNone": "None of the standard plugin folders exist on this computer yet.",
   "welcome.note": "You can change language, theme and scan folders in Settings.",
   "toolbar.groupBy": "Group by",
   "toolbar.groupFormat": "Format",

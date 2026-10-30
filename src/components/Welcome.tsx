@@ -14,7 +14,7 @@ const ITEMS: { icon: LucideIcon; text: MessageKey }[] = [
  * First-run screen. The scan is the one thing to do: the button comes first, large and focused so
  * Enter starts it, with a line that scanning only reads folders; what the app does follows below.
  */
-export default function Welcome({ onScan, onSettings, folderCount }: { onScan: () => void; onSettings: () => void; folderCount: number }) {
+export default function Welcome({ onScan, onSettings, folderCount }: { onScan: () => void; onSettings: () => void; folderCount: number | null }) {
   const { t } = useI18n()
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 py-8 text-center">
@@ -30,7 +30,11 @@ export default function Welcome({ onScan, onSettings, folderCount }: { onScan: (
         </Button>
         <p className="max-w-sm text-xs text-muted-foreground">{t("welcome.scanHint")}</p>
         <p className="text-xs text-muted-foreground">
-          {t(folderCount === 1 ? "welcome.foldersOne" : "welcome.folders", { count: folderCount })}{" "}
+          {folderCount !== null && (
+            <>
+              {t(folderCount === 1 ? "welcome.foldersOne" : folderCount === 0 ? "welcome.foldersNone" : "welcome.folders", { count: folderCount })}{" "}
+            </>
+          )}
           <Button variant="link" size="sm" onClick={onSettings} className="h-auto p-0 text-xs">{t("welcome.settings")}</Button>
         </p>
       </div>
