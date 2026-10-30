@@ -18,7 +18,7 @@ import UninstallSection from "./settings/UninstallSection"
 import AboutSection from "./settings/AboutSection"
 import type { StartupUpdate } from "@/core/useStartupUpdateCheck"
 
-type TabId = "general" | "scan" | "uninstall" | "about"
+export type TabId = "general" | "scan" | "uninstall" | "about"
 
 const TABS: { id: TabId; label: MessageKey; icon: LucideIcon }[] = [
   { id: "general", label: "settings.nav.general", icon: SlidersHorizontal },
@@ -103,9 +103,9 @@ export default function SettingsDialog({ platform, systemPaths, archSummary, app
               <Alert variant="destructive" className="shrink-0 rounded-none border-0 bg-destructive/10 px-5 py-2">
                 <AlertDescription className="flex items-start justify-between gap-2 text-destructive">
                   <span className="break-words">{t("settings.saveError", { error: tError(saveError) })}</span>
-                  <button type="button" onClick={clearSaveError} className="shrink-0 cursor-pointer rounded px-1 underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+                  <Button type="button" variant="ghost" size="sm" onClick={clearSaveError} className="-my-1 h-6 shrink-0 px-2 text-destructive underline hover:text-destructive">
                     {t("settings.dismiss")}
-                  </button>
+                  </Button>
                 </AlertDescription>
               </Alert>
             )}

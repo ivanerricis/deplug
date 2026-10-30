@@ -1,5 +1,9 @@
 # Usare Deplug
 
+## Primo avvio
+
+La prima volta che apri Deplug compare una schermata di benvenuto invece della scansione automatica, anche se **Scansione all'avvio** è attiva. Premi **Cerca i plugin** per eseguire la prima scansione, oppure **Impostazioni di scansione** per aggiungere prima delle cartelle. Da quel momento Deplug segue le tue [Impostazioni](/it/settings#scan). Se aggiorni da una versione precedente, la schermata di benvenuto non compare.
+
 ## Cosa viene analizzato {#what-gets-scanned}
 
 All'avvio (a meno che tu non l'abbia disattivato nelle [Impostazioni](/it/settings#scan)) e ogni volta che premi il pulsante di nuova scansione, Deplug passa in rassegna le cartelle standard dei plugin del tuo sistema. Scende fino a tre livelli di sottocartelle, quindi le cartelle dei produttori sono incluse.
@@ -39,7 +43,7 @@ Il menu **Architettura** nella barra degli strumenti (Tutte, 64 bit, 32 bit, ARM
 
 ## Filtrare per formato
 
-Le schede nella barra degli strumenti (Tutti, VST2, VST3, AAX, AU) mostrano tutti i formati insieme oppure uno solo, ognuna con il numero di plugin. Il filtro cambia solo ciò che vedi e non ripete la scansione. Ogni sezione si può anche comprimere da sola, e un formato senza plugin non ha sezione.
+Le schede nella barra degli strumenti (Tutti, VST2, VST3, AAX, AU) mostrano tutti i formati insieme oppure uno solo, ognuna con il numero di plugin. Il filtro cambia solo ciò che vedi e non ripete la scansione. Ogni sezione si può anche comprimere da sola, e un formato senza plugin non ha sezione. Se il formato selezionato non ha alcun plugin, Deplug lo dice (per esempio "Nessun plugin AU") e propone **Passa a Tutti**. Se ricerca o filtri nascondono tutto, mostra invece "Nessun risultato" con **Azzera i filtri**.
 
 ## Cercare
 

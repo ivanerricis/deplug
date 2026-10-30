@@ -51,7 +51,7 @@ export const it: Record<MessageKey, string> = {
   "arch.mixedHint": "Il bundle contiene binari di architetture diverse.",
   "arch.arm64Hint": "Plugin ARM64 nativo.",
 
-  "list.noResults.title": "Nessun plugin corrisponde",
+  "list.noResults.title": "Nessun risultato",
   "list.noResults.body": "Prova un'altra ricerca, oppure disattiva i filtri di duplicati, danneggiati, architettura e formato.",
   "list.noResults.clear": "Azzera i filtri",
 
@@ -369,4 +369,16 @@ export const it: Record<MessageKey, string> = {
   "shortcuts.settings": "Apri le impostazioni",
   "shortcuts.rescan": "Riesegui la scansione",
   "shortcuts.help": "Mostra questo elenco",
+  "empty.again": "Scansiona di nuovo",
+  "empty.tab.title": "Nessun plugin {type}",
+  "empty.tab.body": "Deplug non ha trovato plugin {type}. Gli altri {count} trovati sono elencati in Tutti.",
+  "empty.tab.all": "Passa a Tutti",
+  "welcome.title": "Benvenuto in Deplug",
+  "welcome.purpose": "Trova i plugin audio installati su questo computer e rimuovi quelli che non ti servono più.",
+  "welcome.item.find": "Trova i plugin VST2, VST3, AAX e AU nelle cartelle standard e in quelle personalizzate.",
+  "welcome.item.safe": "Sicuro per impostazione predefinita: i plugin vanno nel cestino, con un punto di ripristino di Windows opzionale.",
+  "welcome.item.choose": "Scegli tu cosa rimuovere. Nulla viene eliminato senza la tua conferma.",
+  "welcome.scan": "Cerca i plugin",
+  "welcome.settings": "Impostazioni di scansione",
+  "welcome.note": "Puoi cambiare lingua, tema e cartelle di scansione nelle Impostazioni.",
 }

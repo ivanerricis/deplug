@@ -1,13 +1,14 @@
 import { useEffect, useState, type RefObject } from "react"
-import { ChevronDown, Copy, Download, OctagonAlert, RefreshCcw, Search, Settings, X } from "lucide-react"
+import { ChevronDown, Copy, Cpu, Download, OctagonAlert, RefreshCcw, Search, Settings, X } from "lucide-react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
-import { Toggle } from "./ui/toggle"
+import { Toggle, toggleVariants } from "./ui/toggle"
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs"
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import BrandMark from "./BrandMark"
 import { FormatDot } from "./FormatTag"
+import { cn } from "@/lib/utils"
 import { useI18n } from "@/i18n/I18nProvider"
 import type { PluginType } from "@/core/plugin/Plugin"
 import type { ArchFilter } from "@/core/plugin/ListOps"
@@ -47,9 +48,9 @@ type ToolbarProps = {
 
 const TYPES: PluginType[] = ["VST2", "VST3", "AAX", "AU"]
 
-const chipBase =
-  "inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
-const chipOff = "border-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+// Filter toggles share the control height (h-9) and the rounded-md corners of the search field and the format tabs.
+const chip = "shrink-0 cursor-pointer gap-1.5 px-2.5 text-xs font-medium"
+const chipOn = "border-signal/60 bg-signal/10 text-foreground hover:bg-signal/15 data-[state=on]:bg-signal/10 data-[state=on]:text-foreground"
 
 /** One calm row: search, format chips, duplicates and damaged toggles, rescan, settings. */
 export default function Toolbar({
@@ -84,7 +85,7 @@ export default function Toolbar({
     if (exportOpenSignal > 0) setExportOpen(true)
   }, [exportOpenSignal])
   return (
-    <div className="flex flex-none items-center gap-2 border-b border-border px-3 py-2">
+    <div className="flex flex-none flex-wrap items-center gap-2 border-b border-border px-3 py-2">
       <BrandMark className="mr-1 hidden size-6 shrink-0 text-foreground min-[900px]:block" />
 
       <div className="relative min-w-[9rem] flex-1">
@@ -98,7 +99,7 @@ export default function Toolbar({
           aria-label={t("toolbar.searchLabel")}
           autoComplete="off"
           spellCheck={false}
-          className="rounded-lg border-transparent bg-secondary pl-8 pr-9 text-sm shadow-none hover:bg-accent/70 focus-visible:bg-background dark:bg-secondary dark:hover:bg-accent/70 dark:focus-visible:bg-background"
+          className="rounded-md border-transparent bg-secondary pl-8 pr-9 text-sm shadow-none hover:bg-accent/70 focus-visible:bg-background dark:bg-secondary dark:hover:bg-accent/70 dark:focus-visible:bg-background"
         />
         {query !== "" && (
           <Tooltip>
@@ -119,13 +120,13 @@ export default function Toolbar({
       </div>
 
       <Tabs value={tab} onValueChange={v => onTabChange(v as "all" | PluginType)} className="shrink-0">
-        <TabsList aria-label={t("toolbar.formats")} className="h-8">
-          <TabsTrigger value="all" className="h-6 gap-1.5 px-2.5 text-xs">
+        <TabsList aria-label={t("toolbar.formats")} className="h-9 rounded-md">
+          <TabsTrigger value="all" className="gap-1.5 px-2.5 text-xs">
             {t("toolbar.tabAll")}
             <span className="tabular-nums text-muted-foreground">{TYPES.reduce((n, type) => n + counts[type], 0)}</span>
           </TabsTrigger>
           {TYPES.map(type => (
-            <TabsTrigger key={type} value={type} aria-label={t("toolbar.formatChip", { type, count: counts[type] })} className="h-6 gap-1.5 px-2.5 text-xs">
+            <TabsTrigger key={type} value={type} aria-label={t("toolbar.formatChip", { type, count: counts[type] })} className="gap-1.5 px-2.5 text-xs">
               <FormatDot type={type} />
               <span aria-hidden>{type}</span>
               <span aria-hidden className="tabular-nums text-muted-foreground">{counts[type]}</span>
@@ -138,10 +139,11 @@ export default function Toolbar({
         pressed={duplicatesOnly}
         aria-label={t("toolbar.duplicatesOnly")}
         onPressedChange={onToggleDuplicatesOnly}
-        className={`${chipBase} ${duplicatesOnly ? "border-signal/60 bg-signal/10 text-foreground hover:bg-signal/15" : chipOff}`}
+        variant="outline"
+        className={cn(chip, duplicatesOnly && chipOn)}
       >
         <Copy aria-hidden className="size-3.5" />
-        <span aria-hidden className="hidden min-[900px]:inline">{t("toolbar.duplicatesShort")}</span>
+        <span aria-hidden className="hidden min-[1100px]:inline">{t("toolbar.duplicatesShort")}</span>
         <span aria-hidden className="tabular-nums text-muted-foreground">{duplicateCount}</span>
       </Toggle>
 
@@ -149,10 +151,11 @@ export default function Toolbar({
         pressed={damagedOnly}
         aria-label={t("toolbar.damagedOnly")}
         onPressedChange={onToggleDamagedOnly}
-        className={`${chipBase} ${damagedOnly ? "border-signal/60 bg-signal/10 text-foreground hover:bg-signal/15" : chipOff}`}
+        variant="outline"
+        className={cn(chip, damagedOnly && chipOn)}
       >
         <OctagonAlert aria-hidden className="size-3.5" />
-        <span aria-hidden className="hidden min-[900px]:inline">{t("toolbar.damagedShort")}</span>
+        <span aria-hidden className="hidden min-[1100px]:inline">{t("toolbar.damagedShort")}</span>
         <span aria-hidden className="tabular-nums text-muted-foreground">{damagedCount}</span>
       </Toggle>
 
@@ -160,9 +163,10 @@ export default function Toolbar({
         <DropdownMenu>
           <DropdownMenuTrigger
             aria-label={t("toolbar.archLabel")}
-            className={`${chipBase} ${archFilter === "all" ? chipOff : "border-signal/60 bg-signal/10 text-foreground hover:bg-signal/15"}`}
+            className={cn(toggleVariants({ variant: "outline" }), chip, archFilter !== "all" && chipOn)}
           >
-            <span>{archFilter === "all" ? t("toolbar.arch") : t(`arch.${archFilter}`)}</span>
+            <Cpu aria-hidden className="size-3.5 min-[1100px]:hidden" />
+            <span className={archFilter === "all" ? "hidden min-[1100px]:inline" : undefined}>{archFilter === "all" ? t("toolbar.arch") : t(`arch.${archFilter}`)}</span>
             <ChevronDown aria-hidden className="size-3.5" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

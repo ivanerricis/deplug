@@ -12,11 +12,14 @@ import Toolbar from "./components/Toolbar"
 import Section from "./components/Section"
 import SelectionBar from "./components/SelectionBar"
 import UninstallDialog from "./components/UninstallDialog"
-import SettingsDialog from "./components/SettingsDialog"
+import SettingsDialog, { type TabId as SettingsTab } from "./components/SettingsDialog"
 import { Button } from "./components/ui/button"
-import { X } from "lucide-react"
+import { PackageOpen, SearchX, X } from "lucide-react"
 import { Alert, AlertDescription } from "./components/ui/alert"
 import BrandMark from "./components/BrandMark"
+import EmptyState from "./components/EmptyState"
+import Welcome from "./components/Welcome"
+import { emptyStateKind } from "./core/emptyState"
 import { exportFileName, exportPlugins, type ExportFormat } from "./core/plugin/Export"
 import { buildPluginPath } from "./core/plugin/Uninstall"
 import { fetchPluginMeta, knownArch, type PluginMeta } from "./core/plugin/Meta"
@@ -46,6 +49,7 @@ export default function App() {
   const [result, setResult] = useState<ScanResult>(EMPTY_RESULT)
   const [appInfo, setAppInfo] = useState<AppInfo | undefined>(undefined)
   const [showSettings, setShowSettings] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>("general")
   const [collapsed, setCollapsed] = useState<Record<SectionType, boolean>>({ VST2: false, VST3: false, AAX: false, AU: false })
   const [tab, setTab] = useState<"all" | SectionType>("all")
   const visible = useMemo(
@@ -99,6 +103,8 @@ export default function App() {
   const scanPlugins = useCallback(async () => {
     const s = settingsRef.current
     lastScanKey.current = scanKey(s)
+    // Any scan (toolbar, shortcut, welcome button) ends the first-run welcome.
+    if (!s.welcomeSeen) update({ welcomeSeen: true })
     setScanning(true)
     try {
       const homePath = await homeDir().then(h => h.replace(/[\\/]+$/, ""), () => "")
@@ -131,7 +137,7 @@ export default function App() {
     } finally {
       setScanning(false)
     }
-  }, [platform, loadSystemPaths])
+  }, [platform, loadSystemPaths, update])
 
   useEffect(() => {
     void loadSystemPaths()
@@ -151,8 +157,9 @@ export default function App() {
     setViewSort(startSort)
     setSorts({ VST2: startSort, VST3: startSort, AAX: startSort, AU: startSort })
     setViewReady(true)
-    if (settings.scanOnStartup) void scanPlugins()
-  }, [loaded, settings.scanOnStartup, scanPlugins])
+    // On the very first run the welcome screen asks first, even when scanning on startup is on.
+    if (settings.scanOnStartup && settings.welcomeSeen) void scanPlugins()
+  }, [loaded, settings.scanOnStartup, settings.welcomeSeen, scanPlugins])
 
   // Remember the last tab and sort (debounced, so quick clicking writes the file once).
   useEffect(() => {
@@ -332,18 +339,24 @@ export default function App() {
 
   const closeSettings = () => {
     setShowSettings(false)
+    setSettingsTab("general")
     if (scanned && lastScanKey.current !== scanKey(settingsRef.current)) void scanPlugins()
   }
 
   if (!loaded || scanning) return <UpdatePage />
 
-  const noResults = result.all.length > 0 && visibleShown.length === 0
+  const openScanSettings = () => {
+    setSettingsTab("scan")
+    setShowSettings(true)
+  }
+  const counts = { VST2: result.vst2.length, VST3: result.vst3.length, AAX: result.aax.length, AU: result.au.length }
+  const emptyKind = emptyStateKind({ welcome: !settings.welcomeSeen && !scanned, scanned, counts, tab, shown: visibleShown.length })
 
   return (
     <div className="flex h-full w-full flex-col">
       <Toolbar
         pluginsCount={result.all.length}
-        counts={{ VST2: result.vst2.length, VST3: result.vst3.length, AAX: result.aax.length, AU: result.au.length }}
+        counts={counts}
         tab={tab}
         onTabChange={setTab}
         onRefresh={() => void scanPlugins()}
@@ -376,33 +389,38 @@ export default function App() {
           appInfo={appInfo}
           formatCounts={{ VST2: result.vst2.length, VST3: result.vst3.length, AAX: result.aax.length, AU: result.au.length }}
           startupUpdate={startupUpdate}
+          initialTab={settingsTab}
           onClose={closeSettings}
         />
       )}
 
-      {result.all.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
-          <BrandMark className="size-20 text-foreground/80" />
-          <div className="max-w-md">
-            <h1 className="text-lg font-semibold">{scanned ? t("empty.none.title") : t("empty.idle.title")}</h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              {scanned ? t("empty.none.body") : t("empty.idle.body")}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => void scanPlugins()}>{t("empty.scan")}</Button>
-            <Button variant="outline" onClick={() => setShowSettings(true)}>{t("empty.openSettings")}</Button>
-          </div>
-        </div>
-      ) : noResults ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
-          <BrandMark className="size-14 text-foreground/60" accent={false} />
-          <div className="max-w-md">
-            <h1 className="text-lg font-semibold">{t("list.noResults.title")}</h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">{t("list.noResults.body")}</p>
-          </div>
+      {emptyKind === "welcome" ? (
+        <Welcome onScan={() => void scanPlugins()} onSettings={openScanSettings} />
+      ) : emptyKind === "idle" || emptyKind === "none" ? (
+        <EmptyState
+          icon={<BrandMark className="size-20 text-foreground/80" />}
+          title={emptyKind === "none" ? t("empty.none.title") : t("empty.idle.title")}
+          body={emptyKind === "none" ? t("empty.none.body") : t("empty.idle.body")}
+        >
+          <Button onClick={() => void scanPlugins()}>{t(emptyKind === "none" ? "empty.again" : "empty.scan")}</Button>
+          <Button variant="outline" onClick={openScanSettings}>{t("empty.openSettings")}</Button>
+        </EmptyState>
+      ) : emptyKind === "tab-empty" ? (
+        <EmptyState
+          icon={<PackageOpen aria-hidden className="size-14 text-foreground/60" strokeWidth={1.25} />}
+          title={t("empty.tab.title", { type: tab })}
+          body={t("empty.tab.body", { type: tab, count: result.all.length })}
+        >
+          <Button variant="outline" onClick={() => setTab("all")}>{t("empty.tab.all")}</Button>
+        </EmptyState>
+      ) : emptyKind === "no-match" ? (
+        <EmptyState
+          icon={<SearchX aria-hidden className="size-14 text-foreground/60" strokeWidth={1.25} />}
+          title={t("list.noResults.title")}
+          body={t("list.noResults.body")}
+        >
           <Button variant="outline" onClick={clearFilters}>{t("list.noResults.clear")}</Button>
-        </div>
+        </EmptyState>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-24 pt-1">
           {SECTION_ORDER.filter(type => visible[type]).map(type => (

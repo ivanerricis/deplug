@@ -53,7 +53,7 @@ export const en = {
   "arch.mixedHint": "The bundle contains binaries of different architectures.",
   "arch.arm64Hint": "Native ARM64 plugin.",
 
-  "list.noResults.title": "No plugins match",
+  "list.noResults.title": "Nothing matches",
   "list.noResults.body": "Try a different search, or turn off the duplicates, damaged, architecture and format filters.",
   "list.noResults.clear": "Clear filters",
 
@@ -371,5 +371,17 @@ export const en = {
   "shortcuts.settings": "Open settings",
   "shortcuts.rescan": "Rescan plugins",
   "shortcuts.help": "Show this list",
+  "empty.again": "Scan again",
+  "empty.tab.title": "No {type} plugins",
+  "empty.tab.body": "Deplug found no {type} plugins. The other {count} found are listed under All.",
+  "empty.tab.all": "Switch to All",
+  "welcome.title": "Welcome to Deplug",
+  "welcome.purpose": "Find the audio plugins installed on this computer and remove the ones you no longer need.",
+  "welcome.item.find": "Finds VST2, VST3, AAX and AU plugins in the standard and custom folders.",
+  "welcome.item.safe": "Safe by default: plugins go to the trash, with an optional Windows restore point.",
+  "welcome.item.choose": "You choose what to remove. Nothing is deleted without your confirmation.",
+  "welcome.scan": "Scan for plugins",
+  "welcome.settings": "Scan settings",
+  "welcome.note": "You can change language, theme and scan folders in Settings.",
 }
 export type MessageKey = keyof typeof en
