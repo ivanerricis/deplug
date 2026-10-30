@@ -28,7 +28,8 @@ import { Button } from "../ui/button"
 import { Progress } from "../ui/progress"
 import { Switch } from "../ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group"
-import { SettingRow } from "./SettingRow"
+import { Separator } from "../ui/separator"
+import { Group, Rows, SettingRow } from "./SettingRow"
 import markLight from "../../../assets/brand/deplug-mark-color.svg"
 import markDark from "../../../assets/brand/deplug-mark-color-on-dark.svg"
 
@@ -126,7 +127,7 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
         <img src={markLight} alt="" className="size-14 dark:hidden" />
         <img src={markDark} alt="" className="hidden size-14 dark:block" />
@@ -136,7 +137,7 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
         </div>
       </div>
 
-      <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+      <dl className="grid grid-cols-[minmax(9rem,auto)_1fr] gap-x-6 gap-y-2 text-sm">
         <dt className="text-muted-foreground">{t("settings.about.version")}</dt>
         <dd className="tabular-nums">{version ?? unknown}</dd>
         <dt className="text-muted-foreground">{t("settings.about.mode")}</dt>
@@ -175,8 +176,10 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
         </Alert>
       )}
 
-      <section aria-label={t("settings.about.updates")} className="flex flex-col gap-3">
-        <div className="flex flex-col">
+      <Separator />
+
+      <Group title={t("settings.about.updates")}>
+        <Rows>
           <SettingRow label={t("settings.about.updatesAtStartup")} hint={t("settings.about.updatesAtStartupHint")} labelId="set-upd" hintId="set-upd-h">
             <Switch
               checked={settings.checkUpdatesOnStartup}
@@ -185,7 +188,7 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
               aria-describedby="set-upd-h"
             />
           </SettingRow>
-          <SettingRow label={t("settings.about.channel")} hint={t("settings.about.channelHint")} labelId="set-chan" hintId="set-chan-h">
+          <SettingRow label={t("settings.about.channel")} hint={t("settings.about.channelHint")} labelId="set-chan" wide hintId="set-chan-h">
             <ToggleGroup
               type="single"
               variant="outline"
@@ -201,8 +204,8 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
               ))}
             </ToggleGroup>
           </SettingRow>
-        </div>
-        <div>
+        </Rows>
+        <div className="mt-1">
           <Button variant="outline" size="sm" onClick={runUpdateCheck} disabled={update === "checking"}>
             <RefreshCw aria-hidden className={update === "checking" ? "animate-spin" : ""} />
             {update === "checking" ? t("settings.about.checking") : t("settings.about.checkUpdates")}
@@ -277,7 +280,9 @@ export default function AboutSection({ platform, appInfo, systemPaths, archSumma
             </AlertDescription>
           </Alert>
         )}
-      </section>
+      </Group>
+
+      <Separator />
 
       <nav aria-label={t("settings.about.links")} className="flex flex-wrap gap-2">
         {links.map(link => (

@@ -10,7 +10,7 @@ import { Checkbox } from "../ui/checkbox"
 import { Input } from "../ui/input"
 import { Separator } from "../ui/separator"
 import { Switch } from "../ui/switch"
-import { Group, SettingRow } from "./SettingRow"
+import { Group, Rows, SettingRow } from "./SettingRow"
 
 export default function ScanSection({ systemPaths }: { systemPaths: string[] }) {
   const { t } = useI18n()
@@ -50,8 +50,9 @@ export default function ScanSection({ systemPaths }: { systemPaths: string[] }) 
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col">
+    <div className="flex flex-col gap-4">
+      <Group title={t("settings.group.scanning")}>
+        <Rows>
         <SettingRow label={t("settings.scan.startup")} hint={t("settings.scan.startupHint")} labelId="set-startup" hintId="set-startup-h">
           <Switch
             checked={settings.scanOnStartup}
@@ -60,7 +61,6 @@ export default function ScanSection({ systemPaths }: { systemPaths: string[] }) 
             aria-describedby="set-startup-h"
           />
         </SettingRow>
-        <Separator />
         <SettingRow label={t("settings.scan.depth")} hint={t("settings.scan.depthHint")} labelId="set-depth" hintId="set-depth-h">
           <div className="inline-flex items-center gap-1">
             <Button variant="outline" size="icon-sm" aria-label="−" onClick={() => step(-1)} disabled={settings.customScanDepth <= MIN_SCAN_DEPTH}>−</Button>
@@ -82,7 +82,10 @@ export default function ScanSection({ systemPaths }: { systemPaths: string[] }) 
             <Button variant="outline" size="icon-sm" aria-label="+" onClick={() => step(1)} disabled={settings.customScanDepth >= MAX_SCAN_DEPTH}>+</Button>
           </div>
         </SettingRow>
-      </div>
+        </Rows>
+      </Group>
+
+      <Separator />
 
       <Group title={t("settings.scan.folders")} hint={t("settings.scan.foldersHint")}>
         <div className="flex flex-col gap-2">
@@ -112,6 +115,8 @@ export default function ScanSection({ systemPaths }: { systemPaths: string[] }) 
           </div>
         </div>
       </Group>
+
+      <Separator />
 
       <Group title={t("settings.scan.exclusions")} hint={t("settings.scan.exclusionsHint")}>
         <div className="flex flex-col gap-2">
@@ -156,6 +161,8 @@ export default function ScanSection({ systemPaths }: { systemPaths: string[] }) 
           <p className="text-xs text-muted-foreground">{t("settings.scan.exclusionLimit", { max: MAX_EXCLUSIONS, length: MAX_EXCLUSION_LENGTH })}</p>
         </div>
       </Group>
+
+      <Separator />
 
       <Group title={t("settings.scan.system")} hint={t("settings.scan.systemHint")}>
         <ul className="flex flex-col">

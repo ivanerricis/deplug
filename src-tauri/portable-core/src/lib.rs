@@ -227,13 +227,16 @@ pub struct Settings {
     pub disabled_system_paths: Vec<String>,
     /// Windows only: relaunch Deplug elevated at startup (default on).
     pub run_as_admin: bool,
-    /// Windows only: also search the registry for leftover keys when uninstalling (default off).
+    /// Windows only: also search the registry for leftover keys when uninstalling (default on).
+    /// The search only offers keys; deleting them still needs the user's action.
+    #[serde(default = "default_true")]
     pub search_registry_leftovers: bool,
     /// "trash" | "permanent": how uninstalled plugins are deleted.
     pub delete_method: String,
     /// Ask for confirmation before uninstalling (default on).
     pub confirm_uninstall: bool,
-    /// Opt-in: look for a newer release shortly after startup (default off).
+    /// Look for a newer release shortly after startup (default on, can be turned off).
+    #[serde(default = "default_true")]
     pub check_updates_on_startup: bool,
     /// "stable" | "prerelease"
     pub update_channel: String,
@@ -271,10 +274,10 @@ impl Default for Settings {
             custom_scan_depth: default_scan_depth(),
             disabled_system_paths: Vec::new(),
             run_as_admin: true,
-            search_registry_leftovers: false,
+            search_registry_leftovers: true,
             delete_method: default_delete_method(),
             confirm_uninstall: default_true(),
-            check_updates_on_startup: false,
+            check_updates_on_startup: true,
             update_channel: default_stable(),
             last_update_check: 0,
             scan_exclusions: Vec::new(),
@@ -507,7 +510,8 @@ mod tests {
         assert_eq!(s.custom_scan_depth, 6);
         assert!(s.disabled_system_paths.is_empty());
         assert!(s.run_as_admin);
-        assert!(!s.search_registry_leftovers);
+        assert!(s.search_registry_leftovers);
+        assert!(s.check_updates_on_startup);
         assert_eq!(s.delete_method, "trash");
         assert!(s.confirm_uninstall);
         assert!(s.scan_exclusions.is_empty());
@@ -683,29 +687,31 @@ mod tests {
     }
 
     #[test]
-    fn settings_search_registry_leftovers_defaults_off_and_serializes_camel_case() {
+    fn settings_search_registry_leftovers_defaults_on_and_serializes_camel_case() {
         let d = tempdir().unwrap();
         let p = d.path().join("s.json");
+        // An old file without the field loads as on; an explicit false stays off.
         fs::write(&p, r#"{"version":1,"runAsAdmin":false}"#).unwrap();
-        assert!(!load(&p).search_registry_leftovers);
-        fs::write(&p, r#"{"searchRegistryLeftovers":true}"#).unwrap();
         assert!(load(&p).search_registry_leftovers);
+        fs::write(&p, r#"{"searchRegistryLeftovers":false}"#).unwrap();
+        assert!(!load(&p).search_registry_leftovers);
         let s = Settings {
-            search_registry_leftovers: true,
+            search_registry_leftovers: false,
             ..Settings::default()
         };
         save(&p, &s).unwrap();
         let raw: serde_json::Value = serde_json::from_slice(&fs::read(&p).unwrap()).unwrap();
-        assert_eq!(raw["searchRegistryLeftovers"], true);
+        assert_eq!(raw["searchRegistryLeftovers"], false);
+        assert!(!load(&p).search_registry_leftovers);
     }
 
     #[test]
-    fn settings_update_fields_default_off_and_sanitize() {
+    fn settings_update_fields_default_on_and_sanitize() {
         let d = tempdir().unwrap();
         let p = d.path().join("s.json");
         fs::write(&p, r#"{"version":1,"scanOnStartup":false}"#).unwrap();
         let s = load(&p);
-        assert!(!s.check_updates_on_startup);
+        assert!(s.check_updates_on_startup);
         assert_eq!(s.update_channel, "stable");
         assert_eq!(s.last_update_check, 0);
         fs::write(
@@ -717,6 +723,8 @@ mod tests {
         assert!(s.check_updates_on_startup);
         assert_eq!(s.update_channel, "stable");
         assert_eq!(s.last_update_check, 42);
+        fs::write(&p, r#"{"checkUpdatesOnStartup":false}"#).unwrap();
+        assert!(!load(&p).check_updates_on_startup);
         fs::write(&p, r#"{"updateChannel":"prerelease"}"#).unwrap();
         assert_eq!(load(&p).update_channel, "prerelease");
     }

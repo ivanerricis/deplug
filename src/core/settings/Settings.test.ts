@@ -9,9 +9,11 @@ describe("normalizeSettings", () => {
     expect(normalizeSettings({ welcomeSeen: "yes" }).welcomeSeen).toBe(false)
   })
 
-  it("defaults the update settings to off / stable / never", () => {
+  it("defaults the update settings to on / stable / never", () => {
     const s = normalizeSettings({ version: 1 })
-    expect(s.checkUpdatesOnStartup).toBe(false)
+    expect(s.checkUpdatesOnStartup).toBe(true)
+    expect(DEFAULT_SETTINGS.checkUpdatesOnStartup).toBe(true)
+    expect(normalizeSettings({ checkUpdatesOnStartup: false }).checkUpdatesOnStartup).toBe(false)
     expect(s.updateChannel).toBe("stable")
     expect(s.lastUpdateCheck).toBe(0)
   })
@@ -23,7 +25,7 @@ describe("normalizeSettings", () => {
       lastUpdateCheck: 1700000000000,
     })
     expect(normalizeSettings({ checkUpdatesOnStartup: "yes", updateChannel: "nightly", lastUpdateCheck: -5 })).toMatchObject({
-      checkUpdatesOnStartup: false,
+      checkUpdatesOnStartup: true,
       updateChannel: "stable",
       lastUpdateCheck: 0,
     })
@@ -48,7 +50,7 @@ describe("normalizeSettings", () => {
       searchRegistryLeftovers: "yes",
     })
     expect(s.runAsAdmin).toBe(true)
-    expect(s.searchRegistryLeftovers).toBe(false)
+    expect(s.searchRegistryLeftovers).toBe(true)
     expect(s.language).toBe("system")
     expect(s.theme).toBe("system")
     expect(s.restorePointDefault).toBe(true)
@@ -56,10 +58,10 @@ describe("normalizeSettings", () => {
     expect(s.disabledSystemPaths).toEqual(["/x"])
   })
 
-  it("keeps the registry search off unless it is explicitly on", () => {
-    expect(DEFAULT_SETTINGS.searchRegistryLeftovers).toBe(false)
-    expect(normalizeSettings({ version: 1, runAsAdmin: false }).searchRegistryLeftovers).toBe(false)
-    expect(normalizeSettings({ searchRegistryLeftovers: true }).searchRegistryLeftovers).toBe(true)
+  it("keeps the registry search on unless it is explicitly off", () => {
+    expect(DEFAULT_SETTINGS.searchRegistryLeftovers).toBe(true)
+    expect(normalizeSettings({ version: 1, runAsAdmin: false }).searchRegistryLeftovers).toBe(true)
+    expect(normalizeSettings({ searchRegistryLeftovers: false }).searchRegistryLeftovers).toBe(false)
   })
 
   it("defaults and validates the uninstall flow settings", () => {

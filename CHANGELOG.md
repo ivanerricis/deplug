@@ -8,6 +8,10 @@ when releasing.
 
 ## [Unreleased]
 
+### Changed
+- The settings dialog is wider and its rows give hints the full width instead of squeezing them next to the controls; related settings are grouped under small headings, and several hints are shorter.
+- **Search the registry for leftovers** (Windows) and **Check for updates at startup** are now on by default; both can be turned off in Settings. The registry search still only offers keys (none selected, backed up to a `.reg` file before deletion), and the update check makes one request to GitHub's public releases list at most every 24 hours.
+
 ## [0.1.0] - 2026-10-30
 
 First public release.
