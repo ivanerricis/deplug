@@ -38,7 +38,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   scanOnStartup: true,
   customScanDepth: DEFAULT_SCAN_DEPTH,
   disabledSystemPaths: [],
-  runAsAdmin: false,
+  runAsAdmin: true,
 }
 
 const onlyStrings = (value: unknown): string[] =>

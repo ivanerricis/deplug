@@ -19,7 +19,7 @@ describe("normalizeSettings", () => {
       disabledSystemPaths: ["/x", 4],
       runAsAdmin: "yes",
     })
-    expect(s.runAsAdmin).toBe(false)
+    expect(s.runAsAdmin).toBe(true)
     expect(s.language).toBe("system")
     expect(s.theme).toBe("system")
     expect(s.restorePointDefault).toBe(true)
