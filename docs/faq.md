@@ -68,7 +68,7 @@ Only one file: `settings.json`. It holds your preferences (language, theme, scan
 
 ## Is anything sent over the network?
 
-Only when you ask for it: **Settings → About → Check for updates** contacts the GitHub releases API (`api.github.com`) to read the list of published versions. If an update exists and you press **Download and install**, Deplug downloads the signed update from GitHub. Nothing else is sent, and nothing runs on its own. Your plugin list, paths and settings stay on your computer. See [Safety and privacy](/safety-and-privacy).
+Only to look for updates: by default shortly after startup (at most once every 24 hours) and when you press **Settings → About → Check for updates**, Deplug contacts the GitHub releases API (`api.github.com`) to read the list of published versions. You can turn the automatic check off in Settings → About. If an update exists and you press **Download and install**, Deplug downloads the signed update from GitHub. Nothing else is sent, and nothing is installed on its own. Your plugin list, paths and settings stay on your computer. See [Safety and privacy](/safety-and-privacy).
 
 ## Where do I report a bug?
 

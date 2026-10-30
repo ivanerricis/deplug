@@ -54,7 +54,7 @@ export default function SettingsDialog({ platform, systemPaths, archSummary, app
       <DialogContent
         showCloseButton={false}
         aria-describedby={undefined}
-        className="flex h-[560px] max-h-[calc(100%-2rem)] flex-col gap-0 overflow-hidden bg-card p-0 text-card-foreground sm:max-w-[680px]"
+        className="flex h-[600px] max-h-[calc(100%-2rem)] flex-col gap-0 overflow-hidden bg-card p-0 text-card-foreground sm:max-w-[60rem]"
         onCloseAutoFocus={e => {
           e.preventDefault()
           if (opener.current?.isConnected) opener.current.focus()
@@ -84,16 +84,16 @@ export default function SettingsDialog({ platform, systemPaths, archSummary, app
           <TabsList
             ref={tabsRef}
             aria-label={t("settings.sections")}
-            className="h-auto w-44 shrink-0 flex-col items-stretch justify-start gap-0.5 rounded-none border-r border-border bg-background/60 p-2"
+            className="h-auto w-44 shrink-0 max-sm:w-14 flex-col items-stretch justify-start gap-0.5 rounded-none border-r border-border bg-background/60 p-2"
           >
             {TABS.map(({ id, label, icon: Icon }) => (
               <TabsTrigger
                 key={id}
                 value={id}
-                className="relative h-9 flex-none cursor-pointer justify-start gap-2.5 px-3 text-left text-muted-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full hover:bg-accent/60 hover:text-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none data-[state=active]:before:bg-signal dark:text-muted-foreground dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-accent dark:data-[state=active]:text-accent-foreground"
+                className="relative h-9 flex-none cursor-pointer justify-start gap-2.5 max-sm:justify-center px-3 text-left text-muted-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full hover:bg-accent/60 hover:text-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none data-[state=active]:before:bg-signal dark:text-muted-foreground dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-accent dark:data-[state=active]:text-accent-foreground"
               >
                 <Icon aria-hidden />
-                <span className="truncate">{t(label)}</span>
+                <span className="truncate max-sm:sr-only">{t(label)}</span>
               </TabsTrigger>
             ))}
           </TabsList>
@@ -110,10 +110,10 @@ export default function SettingsDialog({ platform, systemPaths, archSummary, app
               </Alert>
             )}
             <ScrollArea className="min-h-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block">
-              <TabsContent value="general" className="px-5 py-4"><GeneralSection /></TabsContent>
-              <TabsContent value="scan" className="px-5 py-4"><ScanSection systemPaths={systemPaths} /></TabsContent>
-              <TabsContent value="uninstall" className="px-5 py-4"><UninstallSection platform={platform} /></TabsContent>
-              <TabsContent value="about" className="px-5 py-4"><AboutSection platform={platform} appInfo={appInfo} systemPaths={systemPaths} archSummary={archSummary} formatCounts={formatCounts} startupUpdate={startupUpdate} /></TabsContent>
+              <TabsContent value="general" className="px-6 py-5"><GeneralSection /></TabsContent>
+              <TabsContent value="scan" className="px-6 py-5"><ScanSection systemPaths={systemPaths} /></TabsContent>
+              <TabsContent value="uninstall" className="px-6 py-5"><UninstallSection platform={platform} /></TabsContent>
+              <TabsContent value="about" className="px-6 py-5"><AboutSection platform={platform} appInfo={appInfo} systemPaths={systemPaths} archSummary={archSummary} formatCounts={formatCounts} startupUpdate={startupUpdate} /></TabsContent>
             </ScrollArea>
           </div>
         </Tabs>

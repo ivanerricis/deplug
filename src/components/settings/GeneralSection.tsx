@@ -16,7 +16,7 @@ import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group"
 import { Checkbox } from "../ui/checkbox"
 import { Separator } from "../ui/separator"
 import { Switch } from "../ui/switch"
-import { Group, SettingRow } from "./SettingRow"
+import { Group, Rows, SettingRow } from "./SettingRow"
 
 const THEMES: ThemeSetting[] = ["system", "light", "dark"]
 const LANGUAGES: LanguageSetting[] = ["system", "en", "it"]
@@ -30,8 +30,9 @@ export default function GeneralSection() {
     update({ visibleColumns: COLUMN_KEYS.filter(c => (c === column ? on : settings.visibleColumns.includes(c))) })
   const setSort = (patch: Partial<SortSetting>) => update({ defaultSort: { ...settings.defaultSort, ...patch } })
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col">
+    <div className="flex flex-col gap-4">
+      <Group title={t("settings.group.appearance")}>
+      <Rows>
       <SettingRow label={t("settings.general.language")} hint={t("settings.general.languageHint")} labelId="set-lang" hintId="set-lang-h">
         <Select value={settings.language} onValueChange={v => update({ language: v as LanguageSetting })}>
           <SelectTrigger aria-labelledby="set-lang" aria-describedby="set-lang-h" className="min-w-44">
@@ -44,8 +45,7 @@ export default function GeneralSection() {
           </SelectContent>
         </Select>
       </SettingRow>
-      <Separator />
-      <SettingRow label={t("settings.general.theme")} hint={t("settings.general.themeHint")} labelId="set-theme" hintId="set-theme-h">
+      <SettingRow label={t("settings.general.theme")} hint={t("settings.general.themeHint")} labelId="set-theme" wide hintId="set-theme-h">
         <ToggleGroup
           type="single"
           variant="outline"
@@ -66,7 +66,10 @@ export default function GeneralSection() {
           ))}
         </ToggleGroup>
       </SettingRow>
-      </div>
+      </Rows>
+      </Group>
+
+      <Separator />
 
       <Group title={t("settings.general.list")} hint={t("settings.general.listHint")}>
         <ul className="flex flex-wrap gap-x-6 gap-y-1">
@@ -80,7 +83,8 @@ export default function GeneralSection() {
             )
           })}
         </ul>
-        <SettingRow label={t("settings.general.density")} hint={t("settings.general.densityHint")} labelId="set-density" hintId="set-density-h">
+        <Rows>
+        <SettingRow label={t("settings.general.density")} hint={t("settings.general.densityHint")} labelId="set-density" wide hintId="set-density-h">
           <ToggleGroup
             type="single"
             variant="outline"
@@ -96,7 +100,13 @@ export default function GeneralSection() {
             ))}
           </ToggleGroup>
         </SettingRow>
-        <Separator />
+        </Rows>
+      </Group>
+
+      <Separator />
+
+      <Group title={t("settings.group.view")}>
+        <Rows>
         <SettingRow label={t("settings.general.remember")} hint={t("settings.general.rememberHint")} labelId="set-remember" hintId="set-remember-h">
           <Switch
             checked={settings.rememberView}
@@ -105,7 +115,6 @@ export default function GeneralSection() {
             aria-describedby="set-remember-h"
           />
         </SettingRow>
-        <Separator />
         <SettingRow label={t("settings.general.startTab")} labelId="set-tab">
           <Select value={settings.defaultTab} onValueChange={v => update({ defaultTab: v as TabSetting })}>
             <SelectTrigger aria-labelledby="set-tab" className="min-w-44">
@@ -118,8 +127,7 @@ export default function GeneralSection() {
             </SelectContent>
           </Select>
         </SettingRow>
-        <Separator />
-        <SettingRow label={t("settings.general.defaultSort")} labelId="set-sort">
+        <SettingRow label={t("settings.general.defaultSort")} labelId="set-sort" wide>
           <div className="flex items-center gap-2">
             <Select value={settings.defaultSort.key} onValueChange={v => setSort({ key: v as SortSetting["key"] })}>
               <SelectTrigger aria-label={t("settings.general.sortKey")} className="min-w-32">
@@ -143,6 +151,7 @@ export default function GeneralSection() {
             </Select>
           </div>
         </SettingRow>
+        </Rows>
       </Group>
     </div>
   )

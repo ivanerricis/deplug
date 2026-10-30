@@ -9,9 +9,14 @@ when releasing.
 ## [Unreleased]
 
 ### Added
+- `CLAUDE.md` and project skills for contributors and agents (checks, release, new setting, new format, UI screenshots, sub-agent brief).
 - Group by producer: a Format | Producer switch next to the format tabs lists plugins by producer, with select-all, plugin count, total size, collapsing and sorting of the producers (name, number of plugins, size). The producer comes from the plugin's own metadata (VST3 `moduleinfo.json`, the company name in Windows plugin files, the macOS bundle identifier) and then from the Windows installed-programs list; plugins without one are listed as Unknown.
 - The CSV export has a `vendor` column.
 - The chosen grouping and producer order are remembered with the tab and sort.
+
+### Changed
+- The settings dialog is wider and its rows give hints the full width instead of squeezing them next to the controls; related settings are grouped under small headings, and several hints are shorter.
+- **Search the registry for leftovers** (Windows) and **Check for updates at startup** are now on by default; both can be turned off in Settings. The registry search still only offers keys (none selected, backed up to a `.reg` file before deletion), and the update check makes one request to GitHub's public releases list at most every 24 hours.
 
 ## [0.1.0] - 2026-10-30
 
