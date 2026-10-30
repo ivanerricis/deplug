@@ -19,9 +19,9 @@ permissions:
 
 jobs:
   verify-version:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: ./packaging/check-version.sh "$RELEASE_TAG"
       - name: Check updater signing key
         env:
@@ -46,13 +46,13 @@ jobs:
             args: "--target universal-apple-darwin"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install Linux dependencies
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -133,7 +133,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent Deplug-portable "$OUT"
           bash packaging/upload-asset.sh "$OUT"
           echo "PORTABLE_FILE=$OUT" >> "$GITHUB_ENV"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: portable-${{ runner.os }}
           path: ${{ env.PORTABLE_FILE }}
