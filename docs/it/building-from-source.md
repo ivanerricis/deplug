@@ -47,7 +47,7 @@ cd src-tauri && cargo test && cargo clippy --all-targets -- -D warnings
 
 ## Release
 
-Il push di un tag `vX.Y.Z` avvia `.github/workflows/release.yml`. Per prima cosa verifica che le versioni in `package.json`, `src-tauri/Cargo.toml` e `src-tauri/tauri.conf.json` coincidano con il tag, poi compila gli installer per Windows, macOS (universale) e Linux, prepara le versioni portatili e allega tutto a una release **bozza**. I tag con suffisso come `v0.1.0-rc.1` creano una pre-release. Controlla la bozza e pubblicala a mano.
+Eseguire a mano il workflow **Release** (Actions → Release → Run workflow, con il tag `vX.Y.Z` come input) avvia `.github/workflows/release.yml`; non parte con il push di un tag, perché è la pubblicazione della bozza a creare il tag. Per prima cosa verifica che le versioni in `package.json`, `src-tauri/Cargo.toml` e `src-tauri/tauri.conf.json` coincidano con il tag, poi compila gli installer per Windows, macOS (universale) e Linux, prepara le versioni portatili e allega tutto a una release **bozza**. I tag con suffisso come `v0.1.0-rc.1` creano una pre-release. Le note di rilascio vengono da `CHANGELOG.md` (`packaging/release-notes.sh`): la sezione della versione rilasciata, oppure **Unreleased** per le release candidate. Aggiungi ogni modifica sotto **Unreleased** nella pull request che la introduce e rinomina quel titolo con la versione (e la data) prima di creare il tag. Controlla la bozza e pubblicala a mano.
 
 ### Aggiornamenti nell'app (configurazione una tantum)
 
