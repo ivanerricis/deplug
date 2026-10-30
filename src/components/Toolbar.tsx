@@ -7,7 +7,6 @@ import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group"
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs"
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
-import BrandMark from "./BrandMark"
 import { FormatDot } from "./FormatTag"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/i18n/I18nProvider"
@@ -93,7 +92,6 @@ export default function Toolbar({
   }, [exportOpenSignal])
   return (
     <div className="flex flex-none flex-wrap items-center gap-2 border-b border-border px-3 py-2">
-      <BrandMark className="mr-1 hidden size-6 shrink-0 text-foreground min-[1100px]:block" />
 
       <div className="relative min-w-[9rem] flex-1">
         <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
