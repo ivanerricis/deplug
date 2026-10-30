@@ -38,7 +38,7 @@ export default function App() {
   const [appInfo, setAppInfo] = useState<AppInfo | undefined>(undefined)
   const [showSettings, setShowSettings] = useState(false)
   const [collapsed, setCollapsed] = useState<Record<SectionType, boolean>>({ VST2: false, VST3: false, AAX: false, AU: false })
-  const [tab, setTab] = useState<"all" | SectionType>("VST3")
+  const [tab, setTab] = useState<"all" | SectionType>("all")
   const visible = useMemo(
     () => ({ VST2: tab === "all" || tab === "VST2", VST3: tab === "all" || tab === "VST3", AAX: tab === "all" || tab === "AAX", AU: tab === "all" || tab === "AU" }),
     [tab],
@@ -97,9 +97,6 @@ export default function App() {
       )
       const found = await scanner.search()
       setResult(found)
-      // Land on a format that has plugins instead of an empty tab.
-      const hasPlugins = (type: SectionType) => found[type.toLowerCase() as Lowercase<SectionType>].length > 0
-      setTab(current => (current === "all" || hasPlugins(current) ? current : (SECTION_ORDER.find(hasPlugins) ?? current)))
       setScanned(true)
       // Sizes and dates fill in afterwards; the list is already usable.
       const run = ++metaRun.current
