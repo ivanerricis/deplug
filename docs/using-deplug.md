@@ -51,7 +51,7 @@ The download button in the toolbar saves the plugin list to a file. It exports w
 
 ## Sorting
 
-Each section has **Name** and **Path** column headers. Click one to sort by it, click it again to reverse the order. Sorting is natural, so "Plug 2" comes before "Plug 10", and every format section keeps its own order.
+Each section has column headers (**Name**, plus **Path**, **Size** and **Modified** when those columns are shown; see [Settings](/settings#general)). Click one to sort by it, click it again to reverse the order. The tab and sort you used last are remembered for the next start (or set a fixed start in the settings). Sorting is natural, so "Plug 2" comes before "Plug 10", and every format section keeps its own order.
 
 ## Duplicates
 

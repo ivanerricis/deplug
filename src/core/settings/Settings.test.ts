@@ -57,6 +57,52 @@ describe("normalizeSettings", () => {
   })
 })
 
+describe("normalizeSettings (scan exclusions and view)", () => {
+  it("cleans the exclusion list", () => {
+    expect(normalizeSettings({ scanExclusions: [" Demo ", "demo", "", 4, "old_*"] }).scanExclusions).toEqual(["Demo", "old_*"])
+    expect(normalizeSettings({ scanExclusions: "x" }).scanExclusions).toEqual([])
+    expect(normalizeSettings({ scanExclusions: Array.from({ length: 70 }, (_, i) => `p${i}`) }).scanExclusions).toHaveLength(50)
+  })
+
+  it("keeps known columns in canonical order, allows none, defaults when absent", () => {
+    expect(normalizeSettings({ visibleColumns: ["size", "bogus", "path", "size"] }).visibleColumns).toEqual(["path", "size"])
+    expect(normalizeSettings({ visibleColumns: [] }).visibleColumns).toEqual([])
+    expect(normalizeSettings({}).visibleColumns).toEqual(["path", "size", "modified", "arch"])
+    expect(normalizeSettings({ visibleColumns: "path" }).visibleColumns).toEqual(["path", "size", "modified", "arch"])
+  })
+
+  it("falls back to defaults for invalid view values", () => {
+    const s = normalizeSettings({
+      density: "tiny",
+      defaultTab: "VST9",
+      defaultSort: { key: "color", dir: "up" },
+      rememberView: "no",
+      lastTab: 3,
+      lastSort: "x",
+    })
+    expect(s.density).toBe("comfortable")
+    expect(s.defaultTab).toBe("all")
+    expect(s.defaultSort).toEqual({ key: "name", dir: "asc" })
+    expect(s.rememberView).toBe(true)
+    expect(s.lastTab).toBe("all")
+    expect(s.lastSort).toEqual({ key: "name", dir: "asc" })
+  })
+
+  it("accepts valid view values", () => {
+    const s = normalizeSettings({
+      density: "compact",
+      defaultTab: "AU",
+      defaultSort: { key: "size", dir: "desc" },
+      rememberView: false,
+      lastTab: "VST3",
+      lastSort: { key: "modified", dir: "desc" },
+    })
+    expect([s.density, s.defaultTab, s.rememberView, s.lastTab]).toEqual(["compact", "AU", false, "VST3"])
+    expect(s.defaultSort).toEqual({ key: "size", dir: "desc" })
+    expect(s.lastSort).toEqual({ key: "modified", dir: "desc" })
+  })
+})
+
 function makeStorage(initial?: string) {
   const data = new Map<string, string>()
   if (initial !== undefined) data.set("customScanPaths", initial)

@@ -20,7 +20,7 @@ import BrandMark from "./components/BrandMark"
 import { exportFileName, exportPlugins, type ExportFormat } from "./core/plugin/Export"
 import { buildPluginPath } from "./core/plugin/Uninstall"
 import { fetchPluginMeta, knownArch, type PluginMeta } from "./core/plugin/Meta"
-import { getAppInfo, type AppInfo } from "./core/settings/AppSettings"
+import { getAppInfo, type AppInfo, type SortSetting } from "./core/settings/AppSettings"
 import { useSettings } from "./core/settings/SettingsContext"
 import { useStartupUpdateCheck } from "./core/useStartupUpdateCheck"
 import { pushError } from "./core/errorLog"
@@ -38,7 +38,7 @@ const EMPTY_RESULT: ScanResult = { all: [], vst2: [], vst3: [], aax: [], au: [] 
 
 export default function App() {
   const { t } = useI18n()
-  const { settings, loaded } = useSettings()
+  const { settings, loaded, update } = useSettings()
   const platform = useMemo(() => detectPlatform(), [])
   const [home, setHome] = useState("")
   const [scanning, setScanning] = useState(false)
@@ -59,6 +59,9 @@ export default function App() {
   const [sorts, setSorts] = useState<Record<SectionType, SortState>>({
     VST2: DEFAULT_SORT, VST3: DEFAULT_SORT, AAX: DEFAULT_SORT, AU: DEFAULT_SORT,
   })
+  // Last sort the user picked in any section; saved with the tab when "remember" is on.
+  const [viewSort, setViewSort] = useState<SortSetting>(DEFAULT_SORT)
+  const [viewReady, setViewReady] = useState(false)
   const [damagedOnly, setDamagedOnly] = useState(false)
   const [archFilter, setArchFilter] = useState<ArchFilter>("all")
   const [sysPaths, setSysPaths] = useState<SystemPaths | null>(null)
@@ -78,7 +81,7 @@ export default function App() {
   settingsRef.current = settings
 
   const scanKey = (s: typeof settings) =>
-    JSON.stringify([s.customScanPaths, s.customScanDepth, s.disabledSystemPaths])
+    JSON.stringify([s.customScanPaths, s.customScanDepth, s.disabledSystemPaths, s.scanExclusions])
 
   // Windows known folders from the backend; null (dev mode, other OS) falls back to the C:/ defaults.
   const loadSystemPaths = useCallback(async () => {
@@ -105,7 +108,7 @@ export default function App() {
         getPluginPaths(platform, homePath, await loadSystemPaths()),
         platform,
         s.customScanPaths,
-        { customDepth: s.customScanDepth, disabledPaths: s.disabledSystemPaths },
+        { customDepth: s.customScanDepth, disabledPaths: s.disabledSystemPaths, exclusions: s.scanExclusions },
       )
       const found = await scanner.search()
       setResult(found)
@@ -141,8 +144,26 @@ export default function App() {
   useEffect(() => {
     if (!loaded || started.current) return
     started.current = true
+    // Start on the remembered view, or on the explicit defaults.
+    const startTab = settings.rememberView ? settings.lastTab : settings.defaultTab
+    const startSort = settings.rememberView ? settings.lastSort : settings.defaultSort
+    setTab(startTab)
+    setViewSort(startSort)
+    setSorts({ VST2: startSort, VST3: startSort, AAX: startSort, AU: startSort })
+    setViewReady(true)
     if (settings.scanOnStartup) void scanPlugins()
   }, [loaded, settings.scanOnStartup, scanPlugins])
+
+  // Remember the last tab and sort (debounced, so quick clicking writes the file once).
+  useEffect(() => {
+    if (!viewReady || !settings.rememberView) return
+    const id = window.setTimeout(() => {
+      const cur = settingsRef.current
+      if (cur.lastTab === tab && cur.lastSort.key === viewSort.key && cur.lastSort.dir === viewSort.dir) return
+      update({ lastTab: tab, lastSort: viewSort })
+    }, 800)
+    return () => window.clearTimeout(id)
+  }, [viewReady, settings.rememberView, tab, viewSort, update])
 
   // Debounce the search so typing does not re-filter and re-render the list on every key.
   useEffect(() => {
@@ -234,12 +255,12 @@ export default function App() {
     })
   }, [])
 
-  const toggleSort = (type: SectionType, key: SortKey) =>
-    setSorts(c => {
-      const cur = c[type]
-      const next: SortState = cur.key === key ? { key, dir: cur.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
-      return { ...c, [type]: next }
-    })
+  const toggleSort = (type: SectionType, key: SortKey) => {
+    const cur = sorts[type]
+    const next: SortState = cur.key === key ? { key, dir: cur.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
+    setSorts(c => ({ ...c, [type]: next }))
+    setViewSort(next)
+  }
 
   const clearFilters = () => {
     setQueryInput("")
