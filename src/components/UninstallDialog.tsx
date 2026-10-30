@@ -58,6 +58,7 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
   // Single-plugin extras, discovered in the background; failures just mean "nothing extra".
   const [vendor, setVendor] = useState<VendorUninstaller | null>(null)
   const [leftovers, setLeftovers] = useState<Leftover[]>([])
+  const [leftoversSearched, setLeftoversSearched] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [method, setMethod] = useState<"trash" | "vendor">("trash")
   const [step, setStep] = useState<"restorePoint" | "leftovers" | "plugin" | null>(null)
@@ -84,7 +85,10 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
     let alive = true
     const path = buildPluginPath(plugins[0].installPath, plugins[0].name)
     findVendorUninstaller(path).then(v => { if (alive) setVendor(v ?? null) }).catch(() => {})
-    findLeftovers(path).then(l => { if (alive) setLeftovers(Array.isArray(l) ? l : []) }).catch(() => {})
+    findLeftovers(path)
+      .then(l => { if (alive) setLeftovers(Array.isArray(l) ? l : []) })
+      .catch(() => {})
+      .finally(() => { if (alive) setLeftoversSearched(true) })
     return () => { alive = false }
   }, [])
 
@@ -428,6 +432,15 @@ export default function UninstallDialog({ plugins, meta, onClose, elevated = fal
           </Alert>
         )}
 
+        {!many && phase !== "done" && !leftoversSearched && (
+          <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 aria-hidden className="size-3.5 shrink-0 animate-spin" />
+            {t("uninstall.leftovers.searching")}
+          </p>
+        )}
+        {!many && phase !== "done" && leftoversSearched && leftovers.length === 0 && (
+          <p role="status" className="text-xs text-muted-foreground">{t("uninstall.leftovers.none")}</p>
+        )}
         {!many && phase !== "done" && leftovers.length > 0 && (
           <Collapsible className="rounded-lg border border-border">
             <CollapsibleTrigger className="group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">

@@ -101,6 +101,8 @@ export const it: Record<MessageKey, string> = {
   "uninstall.vendor.command": "Comando che verrà eseguito",
   "uninstall.vendor.warning": "Viene eseguito un programma del produttore. Può chiedere i permessi di amministratore e Deplug ne attende la fine. Non parte nulla finché non premi il pulsante.",
   "uninstall.vendor.pkgInfo": "Questo plugin è stato installato dal pacchetto {id}. Deplug non può eseguire i disinstallatori di pacchetti, quindi i file verranno solo spostati nel cestino.",
+  "uninstall.leftovers.searching": "Ricerca delle cartelle residue…",
+  "uninstall.leftovers.none": "Nessuna cartella residua trovata.",
   "uninstall.leftovers.title": "Cartelle residue ({count})",
   "uninstall.leftovers.hint": "Cartelle che il produttore del plugin potrebbe aver lasciato sul computer. Possono contenere preset, licenze o impostazioni. Quelle selezionate vengono spostate anch'esse nel cestino. Nessuna è selezionata in partenza.",
   "uninstall.leftovers.select": "Sposta {path} nel cestino",
