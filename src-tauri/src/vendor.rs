@@ -27,6 +27,7 @@ const GENERIC_DIR_NAMES: [&str; 24] = [
     "vst3",
     "clap",
     "vst2",
+    "clap",
     "vstplugins",
     "vstplugin",
     "vst",
@@ -395,12 +396,29 @@ fn is_version_token(t: &str) -> bool {
     let core = t
         .trim_matches(|c| c == '(' || c == ')')
         .trim_start_matches('v');
+    let numeric = |s: &str| {
+        !s.is_empty()
+            && s.chars().all(|c| c.is_ascii_digit() || c == '.')
+            && s.chars().any(|c| c.is_ascii_digit())
+    };
     matches!(
         core,
         "x64" | "x86" | "64-bit" | "32-bit" | "64bit" | "32bit"
-    ) || (!core.is_empty()
-        && core.chars().all(|c| c.is_ascii_digit() || c == '.')
-        && core.chars().any(|c| c.is_ascii_digit()))
+    ) || numeric(core)
+        // "0.1.0-rc1", "1.2.3-beta.2", "2.0.0+build5": a numeric version with a pre-release tag.
+        || core.split_once(['-', '+']).is_some_and(|(base, tag)| {
+            numeric(base) && is_prerelease_tag(tag.trim_start_matches(['-', '+']))
+        })
+}
+
+/// `rc1`, `beta.2`, `alpha`, `dev`, `pre3`, `build5`: the tag after the number of a version.
+fn is_prerelease_tag(tag: &str) -> bool {
+    let letters = tag.trim_end_matches(|c: char| c.is_ascii_digit() || c == '.');
+    !tag.is_empty()
+        && matches!(
+            letters,
+            "rc" | "beta" | "alpha" | "b" | "a" | "dev" | "pre" | "preview" | "build"
+        )
 }
 
 /// True when `rest` (the tokens that follow a product name) are all version-like.
@@ -415,6 +433,25 @@ fn name_equals_or_versioned(name: &str, stem: &str) -> bool {
             .strip_prefix(stem)
             .and_then(|r| r.strip_prefix(' '))
             .is_some_and(only_version_tokens)
+}
+
+/// True when the entry's install location or the folder of its uninstaller is named exactly
+/// `stem` (a non-generic product name), for example `C:\Program Files\Pentagrit\unins000.exe`.
+fn entry_folder_named(e: &UninstallEntry, stem: &str) -> bool {
+    let mut dirs: Vec<String> = Vec::new();
+    if let Some(l) = e.install_location.as_deref() {
+        dirs.push(normalize_path(l));
+    }
+    for c in [&e.uninstall_string, &e.quiet_uninstall_string]
+        .into_iter()
+        .flatten()
+    {
+        dirs.extend(command_dir(c));
+    }
+    dirs.iter().any(|d| {
+        let name = last_segment(d);
+        !is_generic_name(name) && name == stem
+    })
 }
 
 /// Entries named "<Publisher> <Product> [version]" (for example "Voxengo SPAN" by "Voxengo")
@@ -448,8 +485,9 @@ fn publisher_product_matches(e: &UninstallEntry, plugin_norm: &str) -> bool {
     };
     let name_variants = [Some(name.clone()), strip_publisher(&name)];
     let stem_variants = [Some(stem.clone()), strip_publisher(&stem)];
-    // Needs evidence of the publisher: in the entry name, or in the plugin name.
-    if name_variants[1].is_none() && stem_variants[1].is_none() {
+    // Needs evidence of the publisher: in the entry name, or in the plugin name, or an installer
+    // folder named exactly like the product ("C:\Program Files\Pentagrit" for "Pentagrit").
+    if name_variants[1].is_none() && stem_variants[1].is_none() && !entry_folder_named(e, &stem) {
         return false;
     }
     let names_match = name_variants.iter().flatten().any(|n| {
@@ -834,6 +872,62 @@ mod tests {
             &e,
             "c:/program files/common files/vst3/span.vst3"
         ));
+    }
+
+    #[test]
+    fn own_product_folder_and_prerelease_versions_match() {
+        // Inno Setup: "Pentagrit 0.1.0-rc1" by "Ivan Erricis", installed in "Program Files\Pentagrit",
+        // while the VST3 and CLAP go to Common Files.
+        let e = UninstallEntry {
+            display_name: "Pentagrit 0.1.0-rc1".into(),
+            publisher: Some("Ivan Erricis".into()),
+            install_location: Some(r"C:\Program Files\Pentagrit\".into()),
+            uninstall_string: Some(r#""C:\Program Files\Pentagrit\unins000.exe""#.into()),
+            ..Default::default()
+        };
+        assert!(publisher_product_matches(
+            &e,
+            "c:/program files/common files/vst3/pentagrit.vst3"
+        ));
+        assert!(publisher_product_matches(
+            &e,
+            "c:/program files/common files/clap/pentagrit.clap"
+        ));
+        // Another product is not matched, and a plugin outside a generic folder is not either.
+        assert!(!publisher_product_matches(
+            &e,
+            "c:/program files/common files/vst3/other.vst3"
+        ));
+        assert!(!publisher_product_matches(
+            &e,
+            "c:/program files/someone else/pentagrit.vst3"
+        ));
+        // Without the matching folder, no publisher evidence means no match (as before).
+        let elsewhere = UninstallEntry {
+            install_location: Some(r"C:\Tools\Suite".into()),
+            uninstall_string: Some(r#""C:\Tools\Suite\unins000.exe""#.into()),
+            ..e.clone()
+        };
+        assert!(!publisher_product_matches(
+            &elsewhere,
+            "c:/program files/common files/vst3/pentagrit.vst3"
+        ));
+    }
+
+    #[test]
+    fn prerelease_version_tokens() {
+        for t in [
+            "0.1.0-rc1",
+            "1.2.3-beta.2",
+            "2.0.0+build5",
+            "v1.0-alpha",
+            "3.0.0-dev",
+        ] {
+            assert!(is_version_token(t), "{t}");
+        }
+        for t in ["pro", "1.0-final-x", "-rc1", "rc1", "0.1.0-banana"] {
+            assert!(!is_version_token(t), "{t}");
+        }
     }
 
     #[test]
