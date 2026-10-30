@@ -45,6 +45,10 @@ Le schede nella barra degli strumenti (Tutti, VST2, VST3, AAX, AU) mostrano tutt
 
 Il campo di ricerca nella barra degli strumenti filtra l'elenco mentre scrivi. Confronta nome e percorso del plugin, senza distinguere maiuscole e accenti. Premi **Ctrl+F** (**Cmd+F** su macOS) per raggiungerlo da qualsiasi punto della finestra. **Esc** cancella la ricerca, come la croce dentro il campo. Se nessun plugin corrisponde, il pulsante **Azzera i filtri** ripristina in un colpo solo la ricerca, i filtri di duplicati, architettura e formato.
 
+## Esportare l'elenco
+
+Il pulsante di download nella barra degli strumenti salva l'elenco dei plugin in un file. Esporta ciò che vedi nella scheda attiva, dopo i filtri di ricerca, duplicati e architettura. Se hai selezionato alcuni plugin, viene esportata solo la selezione; il menu indica quale dei due casi vale e quanti plugin sono. Scegli **CSV** per un foglio di calcolo (colonne: formato, nome, percorso, dimensione in byte, data di modifica in ISO 8601, architettura; UTF-8, si apre correttamente in Excel) oppure **testo semplice** per un percorso completo per riga. Una finestra di salvataggio propone `deplug-plugins-AAAA-MM-GG` e un messaggio conferma dove è finito il file, o perché è fallito. Dimensione, data e architettura restano vuote per i plugin i cui dettagli non sono ancora stati letti.
+
 ## Ordinare
 
 Ogni sezione ha le intestazioni di colonna **Nome** e **Percorso**. Fai clic su una per ordinare, e di nuovo per invertire l'ordine. L'ordinamento è naturale, quindi "Plug 2" viene prima di "Plug 10", e ogni sezione di formato mantiene il proprio.
@@ -88,12 +92,14 @@ Per annullare, apri il cestino e ripristina l'elemento nella posizione originale
 
 ### Il disinstallatore del produttore e le cartelle residue
 
-Quando disinstalli **un solo** plugin, Deplug cerca in background anche due extra facoltativi. Se non trova nulla (o la ricerca fallisce, o sei su Linux) la finestra resta identica a prima. Le disinstallazioni multiple non li mostrano mai.
+Quando disinstalli **un solo** plugin, Deplug cerca in background anche due extra facoltativi. Se non trova nulla (o la ricerca fallisce, o sei su Linux) la finestra resta identica a prima. Le cartelle residue sono proposte solo per un singolo plugin; il disinstallatore del produttore è proposto anche nelle disinstallazioni multiple (vedi sotto).
 
 - **Il disinstallatore del produttore.** Se il plugin è stato installato con un normale installer, la finestra lo segnala e ti lascia scegliere tra **Sposta solo i file nel cestino** (predefinito) ed **Esegui il disinstallatore del produttore**. La seconda scelta mostra prima il comando esatto e il pulsante di conferma diventa **Esegui il disinstallatore**. Avvia un programma del produttore, che può chiedere i permessi di amministratore e rimuovere più del solo plugin; Deplug ne attende la fine. Su macOS, se il plugin viene da un pacchetto di installazione, la finestra mostra solo l'id del pacchetto: Deplug non può eseguirlo, quindi i file vengono spostati nel cestino.
 - **Cartelle residue.** Una sezione compressa **Cartelle residue** elenca le cartelle di dati che il produttore potrebbe aver lasciato (preset, licenze, impostazioni), con la dimensione. **Nessuna è selezionata in partenza.** Spunta quelle che vuoi eliminare: vengono spostate nel cestino prima della rimozione del plugin. Attenzione: possono contenere preset o licenze che ti servono ancora.
 
 Se qualcosa non riesce, la finestra termina con un riepilogo di cosa è stato fatto e cosa no. Se il disinstallatore del produttore termina ma il plugin è ancora presente, Deplug te lo dice e non lo tocca.
+
+**Nelle disinstallazioni multiple.** Deplug cerca il disinstallatore del produttore per ogni plugin selezionato. I plugin che portano allo stesso disinstallatore vengono raggruppati e ogni gruppo è proposto una sola volta, ad esempio **Esegui il disinstallatore del produttore per Voxengo SPAN (3 plugin selezionati)**; il comando esatto compare quando lo selezioni. In partenza nulla è selezionato e tutto viene spostato nel cestino come prima. Per ogni gruppo selezionato Deplug esegue quel disinstallatore una volta, un gruppo dopo l'altro, e ne attende la fine. Poi controlla i plugin del gruppo: un plugin risulta rimosso solo se non c'è più, altrimenti compare come **Ancora presente** e non viene toccato. Se il disinstallatore non riesce, tutti i plugin del suo gruppo risultano non riusciti. I plugin che non hai selezionato vengono spostati nel cestino.
 
 ## Punto di ripristino su Windows
 

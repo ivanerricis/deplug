@@ -75,8 +75,34 @@ export function buildPluginPath(installPath: string, name: string): string {
 
 export interface BatchItemResult {
   plugin: Plugin
-  status: "removed" | "failed"
+  /** "still-present": the publisher's uninstaller finished successfully but the plugin is still on disk. */
+  status: "removed" | "failed" | "still-present"
+  /** How the plugin was handled; absent means moved to the trash. */
+  action?: "trash" | "vendor"
   error?: string
+}
+
+/** Plugins whose publisher's uninstaller resolves to the same command, so it is offered (and run) once. */
+export interface VendorGroup {
+  key: string
+  vendor: VendorUninstaller
+  plugins: Plugin[]
+}
+
+/**
+ * Groups plugins by the uninstall command they resolve to. Plugins without an uninstaller and kinds Deplug
+ * cannot run (macOS "pkg") are left out. Groups and their plugins keep the order of the input.
+ */
+export function groupVendorUninstallers(entries: { plugin: Plugin; vendor: VendorUninstaller | null | undefined }[]): VendorGroup[] {
+  const groups = new Map<string, VendorGroup>()
+  for (const { plugin, vendor } of entries) {
+    if (!vendor || vendor.kind === "pkg") continue
+    const key = `${vendor.kind}\u0000${vendor.commandPreview.trim()}`
+    const group = groups.get(key)
+    if (group) group.plugins.push(plugin)
+    else groups.set(key, { key, vendor, plugins: [plugin] })
+  }
+  return [...groups.values()]
 }
 
 export interface BatchResult {
@@ -87,8 +113,16 @@ export interface BatchResult {
 }
 
 export interface BatchOptions extends UninstallOptions {
-  /** Called before each plugin (current set) and once at the end (current null), with the results so far. */
-  onProgress?: (completed: BatchItemResult[], current: Plugin | null) => void
+  /**
+   * Called before each plugin (current set) and once at the end (current null), with the results so far.
+   * `active` lists every plugin being handled right now (a whole group while its uninstaller runs).
+   */
+  onProgress?: (completed: BatchItemResult[], current: Plugin | null, active: Plugin[]) => void
+  /** Groups the user chose to remove with the publisher's uninstaller instead of the trash. */
+  vendor?: {
+    groups: VendorGroup[]
+    backend: Pick<SingleUninstallBackend, "runVendorUninstaller" | "pathExists">
+  }
 }
 
 /** One restore point for the whole batch, then each plugin is trashed in turn; a failure never stops the rest. */
@@ -114,8 +148,23 @@ export async function uninstallPlugins(plugins: Plugin[], options: BatchOptions)
   }
 
   const results: BatchItemResult[] = []
+  const vendorGroups = new Map<Plugin, VendorGroup>()
+  for (const group of options.vendor?.groups ?? []) {
+    for (const plugin of group.plugins) if (!vendorGroups.has(plugin)) vendorGroups.set(plugin, group)
+  }
+  const handled = new Set<Plugin>()
   for (const plugin of plugins) {
-    onProgress?.([...results], plugin)
+    if (handled.has(plugin)) continue
+    const group = vendorGroups.get(plugin)
+    if (group && options.vendor) {
+      // One run per group, started at its first plugin; the others are settled from the same run.
+      const members = group.plugins.filter(p => plugins.includes(p) && !handled.has(p))
+      members.forEach(p => handled.add(p))
+      onProgress?.([...results], plugin, members)
+      results.push(...(await runVendorGroup(members, options.vendor.backend)))
+      continue
+    }
+    onProgress?.([...results], plugin, [plugin])
     try {
       await backend.trashPlugin(buildPluginPath(plugin.installPath, plugin.name))
       results.push({ plugin, status: "removed" })
@@ -123,8 +172,30 @@ export async function uninstallPlugins(plugins: Plugin[], options: BatchOptions)
       results.push({ plugin, status: "failed", error: errorMessage(e) })
     }
   }
-  onProgress?.([...results], null)
+  onProgress?.([...results], null, [])
+  // Results follow the order of the selection, whatever order the groups ran in.
+  results.sort((a, b) => plugins.indexOf(a.plugin) - plugins.indexOf(b.plugin))
   return { status: "completed", restorePoint: rp, results }
+}
+
+/**
+ * Runs the publisher's uninstaller once (through its first plugin; the backend re-derives the command from that
+ * path) and then checks every plugin of the group, like the single-plugin flow: gone => removed, otherwise warn.
+ */
+async function runVendorGroup(members: Plugin[], backend: NonNullable<BatchOptions["vendor"]>["backend"]): Promise<BatchItemResult[]> {
+  try {
+    await backend.runVendorUninstaller(buildPluginPath(members[0].installPath, members[0].name))
+  } catch (e) {
+    const error = errorMessage(e)
+    return members.map(plugin => ({ plugin, status: "failed", action: "vendor", error }))
+  }
+  return Promise.all(
+    members.map(async (plugin): Promise<BatchItemResult> => {
+      // An unreadable filesystem answer is treated as "still there": better to warn than to claim success.
+      const present = await backend.pathExists(buildPluginPath(plugin.installPath, plugin.name)).catch(() => true)
+      return { plugin, status: present ? "still-present" : "removed", action: "vendor" }
+    }),
+  )
 }
 
 export async function uninstallPlugin(plugin: Plugin, options: UninstallOptions): Promise<UninstallResult> {
