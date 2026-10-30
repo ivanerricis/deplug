@@ -12,8 +12,7 @@ const base = (over: Partial<DiagnosticsInput> = {}): DiagnosticsInput => ({
   portable: false,
   elevated: true,
   settings: DEFAULT_SETTINGS,
-  systemFolderCount: 6,
-  customFolderCount: 2,
+  scanFolders: ["C:\\Program Files\\Common Files\\VST3", "D:\\Plugins"],
   formatCounts: { VST2: 0, VST3: 120, AAX: 3, AU: 0 },
   archCounts: { x64: 100, arm64: 5 },
   errors: [],
@@ -27,7 +26,7 @@ describe("buildDiagnostics", () => {
     expect(text).toContain("OS: Windows x86_64 / windows")
     expect(text).toContain("Mozilla/5.0")
     expect(text).toContain("Language: system")
-    expect(text).toContain("Scan folders: 6 built-in, 2 custom")
+    expect(text).toContain("Scan folders: \n  - C:\\Program Files\\Common Files\\VST3\n  - D:\\Plugins")
     expect(text).toContain("Plugins found: 123 (VST3 120, AAX 3)")
     expect(text).toContain("Recent errors: none")
   })
@@ -45,8 +44,9 @@ describe("buildDiagnostics", () => {
     expect(text).toContain("OS: Windows\n")
   })
 
-  it("never contains paths: only counts", () => {
-    const text = buildDiagnostics(base({ settings: { ...DEFAULT_SETTINGS, customScanPaths: ["C:\\Secret\\Plugins"] } as never }))
-    expect(text).not.toContain("Secret")
+  it("lists the scan folders and the portable data folder but never plugin names", () => {
+    const text = buildDiagnostics(base({ portable: true, dataDir: "E:\\Deplug\\Deplug-data" }))
+    expect(text).toContain("D:\\Plugins")
+    expect(text).toContain("E:\\Deplug\\Deplug-data")
   })
 })

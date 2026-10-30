@@ -25,9 +25,10 @@ export interface DiagnosticsInput {
     | "checkUpdatesOnStartup"
     | "updateChannel"
   >
-  /** Enabled built-in folders and user-added folders: only the counts are reported. */
-  systemFolderCount: number
-  customFolderCount: number
+  /** Portable data folder, when running portable. */
+  dataDir?: string | null
+  /** Enabled built-in folders followed by the user-added ones. */
+  scanFolders: string[]
   /** Plugins per format, e.g. { VST3: 120 }. */
   formatCounts: Record<string, number>
   archCounts?: Partial<Record<"x64" | "x86" | "arm64" | "universal" | "mixed", number>>
@@ -37,7 +38,7 @@ export interface DiagnosticsInput {
 const FORMATS = ["VST2", "VST3", "AAX", "AU"]
 const ARCHS = ["x64", "x86", "arm64", "universal", "mixed"] as const
 
-/** Builds the text behind "Copy diagnostics". It never contains plugin names or paths, only counts. */
+/** Builds the text behind "Copy diagnostics". It lists the scanned folders but never plugin names. */
 export function buildDiagnostics(i: DiagnosticsInput): string {
   const { t, settings: s } = i
   const on = (v: boolean) => (v ? t("diagnostics.on") : t("diagnostics.off"))
@@ -62,7 +63,9 @@ export function buildDiagnostics(i: DiagnosticsInput): string {
     ...(i.elevated === undefined ? [] : [`  ${t("diagnostics.runAsAdmin")}: ${on(s.runAsAdmin)}`]),
     `  ${t("diagnostics.updateCheck")}: ${on(s.checkUpdatesOnStartup)}`,
     `  ${t("diagnostics.updateChannel")}: ${s.updateChannel}`,
-    `${t("diagnostics.scanFolders")}: ${t("diagnostics.folderCounts", { system: i.systemFolderCount, custom: i.customFolderCount })}`,
+    ...(i.portable && i.dataDir ? [`${t("diagnostics.dataDir")}: ${i.dataDir}`] : []),
+    `${t("diagnostics.scanFolders")}: ${i.scanFolders.length === 0 ? t("diagnostics.none") : ""}`,
+    ...i.scanFolders.map(f => `  - ${f}`),
     `${t("diagnostics.plugins")}: ${total}${formats.length ? ` (${formats.join(", ")})` : ""}`,
     ...(archs.length ? [`${t("diagnostics.architectures")}: ${archs.join(", ")}`] : []),
     `${t("diagnostics.recentErrors")}: ${i.errors.length === 0 ? t("diagnostics.none") : ""}`,

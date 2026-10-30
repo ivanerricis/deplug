@@ -35,7 +35,7 @@ In **Aggiornamenti**:
 Contiene inoltre:
 
 - i collegamenti a **Pagina GitHub**, **Documentazione**, **Segnala un problema** e **Note di rilascio**, che si aprono nel browser;
-- **Copia diagnostica**, che mette negli appunti versione dell'app, sistema operativo (nome, architettura e user agent della web view), modalità, diritti di amministratore (solo Windows), un riepilogo delle impostazioni (lingua, tema, opzioni di disinstallazione e aggiornamento), il numero di cartelle di scansione predefinite e personalizzate, il numero di plugin per formato e architettura e gli ultimi 20 errori dell'app (ora, area e messaggio), pronti da incollare in una segnalazione. Non contiene nomi di plugin né percorsi, solo conteggi;
+- **Copia diagnostica**, che mette negli appunti versione dell'app, sistema operativo (nome, architettura e user agent della web view), modalità, diritti di amministratore (solo Windows), un riepilogo delle impostazioni (lingua, tema, opzioni di disinstallazione e aggiornamento), le cartelle analizzate, il numero di plugin per formato e architettura e gli ultimi 20 errori dell'app (ora, area e messaggio), pronti da incollare in una segnalazione. Non contiene nomi di plugin;
 - l'avviso di licenza.
 
 ## Dove vengono salvate le impostazioni

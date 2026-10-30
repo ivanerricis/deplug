@@ -35,7 +35,7 @@ Under **Updates**:
 It also has:
 
 - links to the **GitHub page**, the **Documentation**, **Report an issue** and **Release notes**, which open in your browser;
-- **Copy diagnostics**, which puts the app version, operating system (name, architecture and the web view's user agent), mode, administrator rights (Windows only), a summary of your settings (language, theme, uninstall and update options), the number of built-in and custom scan folders, the plugin counts per format and architecture, and the app's last 20 errors (time, area and message) on the clipboard, ready to paste into a bug report. It contains no plugin names and no paths, only counts;
+- **Copy diagnostics**, which puts the app version, operating system (name, architecture and the web view's user agent), mode, administrator rights (Windows only), a summary of your settings (language, theme, uninstall and update options), the folders being scanned, the plugin counts per format and architecture, and the app's last 20 errors (time, area and message) on the clipboard, ready to paste into a bug report. It contains no plugin names;
 - the license notice.
 
 ## Where settings are stored
