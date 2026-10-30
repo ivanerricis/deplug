@@ -13,6 +13,7 @@ export const it: Record<MessageKey, string> = {
   "empty.openSettings": "Impostazioni di scansione",
 
   "toolbar.count": "Plugin trovati: {count}",
+  "toolbar.tabAll": "Tutti",
   "toolbar.formats": "Formati di plugin da mostrare",
   "toolbar.rescan": "Scansiona di nuovo i plugin",
   "toolbar.settings": "Impostazioni",

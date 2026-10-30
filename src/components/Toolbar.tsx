@@ -16,8 +16,8 @@ type ToolbarProps = {
   pluginsCount: number
   /** Plugins found per format, before filtering. */
   counts: Record<PluginType, number>
-  tab: PluginType
-  onTabChange: (tab: PluginType) => void
+  tab: "all" | PluginType
+  onTabChange: (tab: "all" | PluginType) => void
   onRefresh: () => void
   onSettings?: () => void
   query: string
@@ -94,8 +94,12 @@ export default function Toolbar({
         )}
       </div>
 
-      <Tabs value={tab} onValueChange={v => onTabChange(v as PluginType)} className="shrink-0">
+      <Tabs value={tab} onValueChange={v => onTabChange(v as "all" | PluginType)} className="shrink-0">
         <TabsList aria-label={t("toolbar.formats")} className="h-8">
+          <TabsTrigger value="all" className="h-6 gap-1.5 px-2.5 text-xs">
+            {t("toolbar.tabAll")}
+            <span className="tabular-nums text-muted-foreground">{TYPES.reduce((n, type) => n + counts[type], 0)}</span>
+          </TabsTrigger>
           {TYPES.map(type => (
             <TabsTrigger key={type} value={type} aria-label={t("toolbar.formatChip", { type, count: counts[type] })} className="h-6 gap-1.5 px-2.5 text-xs">
               <FormatDot type={type} />
