@@ -385,6 +385,23 @@ export default function App() {
     if (scanned && lastScanKey.current !== scanKey(settingsRef.current)) void scanPlugins()
   }
 
+  // Folders the first scan will really read: the configured ones that exist on this computer.
+  const [existingFolders, setExistingFolders] = useState<number | null>(null)
+  const welcomeVisible = !settings.welcomeSeen && !scanned
+  const configuredFolders = useMemo(
+    () => [...systemPaths.filter(p => !settings.disabledSystemPaths.includes(p)), ...settings.customScanPaths],
+    [systemPaths, settings.disabledSystemPaths, settings.customScanPaths],
+  )
+  useEffect(() => {
+    if (!welcomeVisible || configuredFolders.length === 0) return
+    let alive = true
+    const os = new TauriOS()
+    void Promise.all(configuredFolders.map(p => os.pathExists(p).catch(() => false))).then(found => {
+      if (alive) setExistingFolders(found.filter(Boolean).length)
+    })
+    return () => { alive = false }
+  }, [welcomeVisible, configuredFolders])
+
   if (!loaded || scanning) return <UpdatePage />
 
   const openScanSettings = () => {
@@ -439,7 +456,11 @@ export default function App() {
       )}
 
       {emptyKind === "welcome" ? (
-        <Welcome onScan={() => void scanPlugins()} onSettings={openScanSettings} />
+        <Welcome
+          onScan={() => void scanPlugins()}
+          onSettings={openScanSettings}
+          folderCount={existingFolders}
+        />
       ) : emptyKind === "idle" || emptyKind === "none" ? (
         <EmptyState
           icon={<BrandMark className="size-20 text-foreground/80" />}
