@@ -20,8 +20,20 @@ function Tooltip({ ...props }: React.ComponentProps<typeof TooltipPrimitive.Root
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />
 }
 
-function TooltipTrigger({ ...props }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
+function TooltipTrigger({ onFocus, ...props }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
+  return (
+    <TooltipPrimitive.Trigger
+      data-slot="tooltip-trigger"
+      onFocus={event => {
+        onFocus?.(event)
+        // A dialog or menu that closes hands focus back to its trigger by script. That is not a
+        // keyboard visit, so the tooltip must not pop up; Radix skips its own handler when the
+        // event is default-prevented. Keyboard focus (:focus-visible) still shows the tooltip.
+        if (!event.defaultPrevented && !event.currentTarget.matches(":focus-visible")) event.preventDefault()
+      }}
+      {...props}
+    />
+  )
 }
 
 function TooltipContent({

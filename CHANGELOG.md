@@ -9,6 +9,7 @@ when releasing.
 ## [Unreleased]
 
 ### Fixed
+- Closing a dialog or menu no longer pops up the tooltip of the button that opened it (all tooltips ignore focus that returns by script; keyboard focus still shows them).
 - The selected option of the **Group by** switch is now clearly highlighted (the tooltip was hiding its selected state).
 
 ### Added
@@ -19,6 +20,7 @@ when releasing.
 
 ### Changed
 - The welcome screen puts the scan first: a large, focused "Scan for plugins" button (Enter starts it), a note that scanning only reads folders, and how many folders will be searched, with a link to choose them.
+- The logo is no longer shown in the toolbar; the window title bar already names the app.
 - The settings dialog is wider and its rows give hints the full width instead of squeezing them next to the controls; related settings are grouped under small headings, and several hints are shorter.
 - **Search the registry for leftovers** (Windows) and **Check for updates at startup** are now on by default; both can be turned off in Settings. The registry search still only offers keys (none selected, backed up to a `.reg` file before deletion), and the update check makes one request to GitHub's public releases list at most every 24 hours.
 - The settings dialog is taller on large windows.
