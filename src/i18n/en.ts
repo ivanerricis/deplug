@@ -15,7 +15,6 @@ export const en = {
   "empty.openSettings": "Scan settings",
 
   "toolbar.count": "Plugins found: {count}",
-  "toolbar.tabAll": "All",
   "toolbar.formats": "Plugin formats to show",
   "toolbar.rescan": "Rescan plugins",
   "toolbar.settings": "Settings",

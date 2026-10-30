@@ -39,7 +39,7 @@ Il menu **Architettura** nella barra degli strumenti (Tutte, 64 bit, 32 bit, ARM
 
 ## Filtrare per formato
 
-Le schede nella barra degli strumenti (Tutti, VST2, VST3, AAX, AU) mostrano tutti i formati insieme oppure uno solo, ognuna con il numero di plugin. Il filtro cambia solo ciò che vedi e non ripete la scansione. Ogni sezione si può anche comprimere da sola, e un formato senza plugin non ha sezione.
+Le schede nella barra degli strumenti (VST2, VST3, AAX, AU) mostrano un solo formato ciascuna, con il numero di plugin. Il filtro cambia solo ciò che vedi e non ripete la scansione. Ogni sezione si può anche comprimere da sola, e un formato senza plugin non ha sezione.
 
 ## Cercare
 
