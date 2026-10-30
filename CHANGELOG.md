@@ -8,6 +8,11 @@ when releasing.
 
 ## [Unreleased]
 
+### Added
+- Group by producer: a Format | Producer switch next to the format tabs lists plugins by producer, with select-all, plugin count, total size, collapsing and sorting of the producers (name, number of plugins, size). The producer comes from the plugin's own metadata (VST3 `moduleinfo.json`, the company name in Windows plugin files, the macOS bundle identifier) and then from the Windows installed-programs list; plugins without one are listed as Unknown.
+- The CSV export has a `vendor` column.
+- The chosen grouping and producer order are remembered with the tab and sort.
+
 ## [0.1.0] - 2026-10-30
 
 First public release.

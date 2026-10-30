@@ -1,6 +1,7 @@
 import { Folder, Trash } from "lucide-react"
 import ArchPill from "./ArchPill"
 import HealthPill from "./HealthPill"
+import { FormatTag } from "./FormatTag"
 import { Button } from "./ui/button"
 import { Checkbox } from "./ui/checkbox"
 import { Badge } from "./ui/badge"
@@ -22,6 +23,8 @@ type RowProps = {
     meta?: PluginMeta
     /** When true, the folder is shown muted under the name (otherwise the section shows it once per group). */
     showPath?: boolean
+    /** Shows the plugin's format next to its name (producer groups mix formats). */
+    showFormat?: boolean
     home?: string
     columns: ListColumns
     density: DensitySetting
@@ -32,7 +35,7 @@ type RowProps = {
 const actionBase =
     "relative text-muted-foreground after:absolute after:-inset-0.5 after:content-[''] hover:text-foreground"
 
-export default function Row({ plugin, selected, duplicates, meta, showPath, home = "", columns, density, onSelect, onUninstall }: RowProps) {
+export default function Row({ plugin, selected, duplicates, meta, showPath, showFormat = false, home = "", columns, density, onSelect, onUninstall }: RowProps) {
     const { t, language } = useI18n()
     const tip = duplicates && duplicates.length > 0
         ? `${t("row.duplicateAlso")}\n${duplicates.map(d => `${d.type} · ${d.installPath}`).join("\n")}`
@@ -61,6 +64,7 @@ export default function Row({ plugin, selected, duplicates, meta, showPath, home
             <div role="cell" className={`min-w-0 pr-2 ${rowPadding(density)}`}>
                 <div className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-sm font-medium" title={plugin.name}>{plugin.name}</span>
+                    {showFormat && <FormatTag type={plugin.type} className="shrink-0" />}
                     {columns.arch && <ArchPill arch={meta?.arch} />}
                     <HealthPill health={meta?.health} />
                     {tip && (

@@ -1,8 +1,9 @@
 import { useEffect, useState, type RefObject } from "react"
-import { ChevronDown, Copy, Cpu, Download, OctagonAlert, RefreshCcw, Search, Settings, X } from "lucide-react"
+import { Building2, ChevronDown, Copy, Cpu, Download, Layers, OctagonAlert, RefreshCcw, Search, Settings, X } from "lucide-react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Toggle, toggleVariants } from "./ui/toggle"
+import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group"
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs"
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
@@ -13,6 +14,7 @@ import { useI18n } from "@/i18n/I18nProvider"
 import type { PluginType } from "@/core/plugin/Plugin"
 import type { ArchFilter } from "@/core/plugin/ListOps"
 import type { ExportFormat } from "@/core/plugin/Export"
+import type { GroupBySetting } from "@/core/settings/AppSettings"
 
 type ToolbarProps = {
   pluginsCount: number
@@ -44,12 +46,15 @@ type ToolbarProps = {
   exportOpenSignal?: number
   /** A newer version was found by the startup check: shows a dot on the settings button. */
   updateAvailable?: boolean
+  /** How the list is grouped; the switch sits next to the format tabs, which filter in producer mode. */
+  groupBy?: GroupBySetting
+  onGroupByChange?: (value: GroupBySetting) => void
 }
 
 const TYPES: PluginType[] = ["VST2", "VST3", "AAX", "AU", "CLAP"]
 
 // Filter toggles share the control height (h-9) and the rounded-md corners of the search field and the format tabs.
-const chip = "shrink-0 cursor-pointer gap-1.5 px-2.5 text-xs font-medium"
+const chip = "shrink-0 cursor-pointer gap-1.5 px-2.5 text-xs font-medium max-[1099px]:px-2"
 const chipOn = "border-signal/60 bg-signal/10 text-foreground hover:bg-signal/15 data-[state=on]:bg-signal/10 data-[state=on]:text-foreground"
 
 /** One calm row: search, format chips, duplicates and damaged toggles, rescan, settings. */
@@ -78,6 +83,8 @@ export default function Toolbar({
   onExport,
   exportOpenSignal = 0,
   updateAvailable = false,
+  groupBy = "format",
+  onGroupByChange,
 }: ToolbarProps) {
   const { t } = useI18n()
   const [exportOpen, setExportOpen] = useState(false)
@@ -86,7 +93,7 @@ export default function Toolbar({
   }, [exportOpenSignal])
   return (
     <div className="flex flex-none flex-wrap items-center gap-2 border-b border-border px-3 py-2">
-      <BrandMark className="mr-1 hidden size-6 shrink-0 text-foreground min-[900px]:block" />
+      <BrandMark className="mr-1 hidden size-6 shrink-0 text-foreground min-[1100px]:block" />
 
       <div className="relative min-w-[9rem] flex-1">
         <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -99,7 +106,7 @@ export default function Toolbar({
           aria-label={t("toolbar.searchLabel")}
           autoComplete="off"
           spellCheck={false}
-          className="rounded-md border-transparent bg-secondary pl-8 pr-9 text-sm shadow-none hover:bg-accent/70 focus-visible:bg-background dark:bg-secondary dark:hover:bg-accent/70 dark:focus-visible:bg-background"
+          className={cn("rounded-md border-transparent bg-secondary pl-8 text-sm shadow-none hover:bg-accent/70 focus-visible:bg-background dark:bg-secondary dark:hover:bg-accent/70 dark:focus-visible:bg-background", query !== "" ? "pr-9" : "pr-3")}
         />
         {query !== "" && (
           <Tooltip>
@@ -121,12 +128,12 @@ export default function Toolbar({
 
       <Tabs value={tab} onValueChange={v => onTabChange(v as "all" | PluginType)} className="shrink-0">
         <TabsList aria-label={t("toolbar.formats")} className="h-9 rounded-md">
-          <TabsTrigger value="all" className="gap-1.5 px-2.5 text-xs">
+          <TabsTrigger value="all" className="gap-1.5 px-2.5 text-xs max-[1099px]:px-2">
             {t("toolbar.tabAll")}
             <span className="tabular-nums text-muted-foreground">{TYPES.reduce((n, type) => n + counts[type], 0)}</span>
           </TabsTrigger>
           {TYPES.map(type => (
-            <TabsTrigger key={type} value={type} aria-label={t("toolbar.formatChip", { type, count: counts[type] })} className="gap-1.5 px-2.5 text-xs">
+            <TabsTrigger key={type} value={type} aria-label={t("toolbar.formatChip", { type, count: counts[type] })} className="gap-1.5 px-2.5 text-xs max-[1099px]:px-2">
               <FormatDot type={type} />
               <span aria-hidden>{type}</span>
               <span aria-hidden className="tabular-nums text-muted-foreground max-[1099px]:hidden">{counts[type]}</span>
@@ -134,6 +141,33 @@ export default function Toolbar({
           ))}
         </TabsList>
       </Tabs>
+
+      {onGroupByChange && (
+        <div className="flex shrink-0 items-center gap-2">
+          <span aria-hidden className="text-xs text-muted-foreground max-[1099px]:hidden">{t("toolbar.groupBy")}</span>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            value={groupBy}
+            // Radix reports "" when the pressed item is clicked again; one mode is always active.
+            onValueChange={v => { if (v === "format" || v === "vendor") onGroupByChange(v) }}
+            aria-label={t("toolbar.groupBy")}
+            className="h-9"
+          >
+            {([["format", Layers, "toolbar.groupFormat", "toolbar.groupFormatTip"], ["vendor", Building2, "toolbar.groupVendor", "toolbar.groupVendorTip"]] as const).map(([value, Icon, label, tip]) => (
+              <Tooltip key={value}>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value={value} aria-label={t(tip)} className="h-9 cursor-pointer gap-1.5 px-2.5 text-xs font-medium data-[state=on]:bg-secondary max-[1099px]:w-8 max-[1099px]:px-0">
+                    <Icon aria-hidden className="size-3.5" />
+                    <span aria-hidden className="max-[1099px]:hidden">{t(label)}</span>
+                  </ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent>{t(tip)}</TooltipContent>
+              </Tooltip>
+            ))}
+          </ToggleGroup>
+        </div>
+      )}
 
       <Toggle
         pressed={duplicatesOnly}

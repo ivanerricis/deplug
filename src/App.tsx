@@ -10,6 +10,7 @@ import { detectPlatform, getPluginPaths, type SystemPaths } from "./core/plugin/
 import UpdatePage from "./LoadingComponent"
 import Toolbar from "./components/Toolbar"
 import Section from "./components/Section"
+import VendorSortBar from "./components/VendorSortBar"
 import SelectionBar from "./components/SelectionBar"
 import UninstallDialog from "./components/UninstallDialog"
 import SettingsDialog, { type TabId as SettingsTab } from "./components/SettingsDialog"
@@ -23,7 +24,7 @@ import { emptyStateKind } from "./core/emptyState"
 import { exportFileName, exportPlugins, type ExportFormat } from "./core/plugin/Export"
 import { buildPluginPath } from "./core/plugin/Uninstall"
 import { fetchPluginMeta, knownArch, type PluginMeta } from "./core/plugin/Meta"
-import { getAppInfo, type AppInfo, type SortSetting } from "./core/settings/AppSettings"
+import { getAppInfo, type AppInfo, type GroupBySetting, type SortSetting, type VendorSortSetting } from "./core/settings/AppSettings"
 import { useSettings } from "./core/settings/SettingsContext"
 import { useStartupUpdateCheck } from "./core/useStartupUpdateCheck"
 import { pushError } from "./core/errorLog"
@@ -32,11 +33,13 @@ import ShortcutsDialog from "./components/ShortcutsDialog"
 import { useI18n } from "./i18n/I18nProvider"
 import type { Plugin } from "@/core/plugin/Plugin"
 import type { ScanResult } from "./core/plugin/PluginScanner"
+import { groupByVendor, UNKNOWN_VENDOR_KEY } from "./core/plugin/Vendor"
 import { countByArch, filterByArch, filterDamaged, filterPlugins, findDuplicates, type ArchFilter, pluginKey, sortPlugins, type SortKey, type SortState } from "./core/plugin/ListOps"
 
 type SectionType = "VST2" | "VST3" | "AAX" | "AU" | "CLAP"
 const SECTION_ORDER: SectionType[] = ["VST2", "VST3", "AAX", "AU", "CLAP"]
 const DEFAULT_SORT: SortState = { key: "name", dir: "asc" }
+const DEFAULT_VENDOR_SORT: VendorSortSetting = { key: "name", dir: "asc" }
 const EMPTY_RESULT: ScanResult = { all: [], vst2: [], vst3: [], aax: [], au: [], clap: [] }
 
 export default function App() {
@@ -72,6 +75,14 @@ export default function App() {
   const sysPathsRef = useRef<SystemPaths | null>(null)
   const [meta, setMeta] = useState<ReadonlyMap<string, PluginMeta>>(new Map())
   const metaRun = useRef(0)
+  // Producer view: grouping switch, order of the groups, collapsed groups and the metadata the grouping reads.
+  const [groupBy, setGroupBy] = useState<GroupBySetting>("format")
+  const [vendorSort, setVendorSort] = useState<VendorSortSetting>(DEFAULT_VENDOR_SORT)
+  const [collapsedVendors, setCollapsedVendors] = useState<Record<string, boolean>>({})
+  const [metaLoading, setMetaLoading] = useState(false)
+  const [groupMeta, setGroupMeta] = useState<ReadonlyMap<string, PluginMeta>>(new Map())
+  const metaRef = useRef(meta)
+  metaRef.current = meta
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [uninstallTargets, setUninstallTargets] = useState<Plugin[] | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -122,6 +133,7 @@ export default function App() {
       // Sizes and dates fill in afterwards; the list is already usable.
       const run = ++metaRun.current
       setMeta(new Map())
+      setMetaLoading(true)
       void fetchPluginMeta(
         found.all.map(p => buildPluginPath(p.installPath, p.name)),
         batch => setMeta(prev => {
@@ -130,7 +142,9 @@ export default function App() {
           return next
         }),
         { cancelled: () => metaRun.current !== run },
-      )
+      ).then(() => {
+        if (metaRun.current === run) setMetaLoading(false)
+      })
     } catch (e) {
       console.error(e)
       pushError("scan", e)
@@ -155,6 +169,8 @@ export default function App() {
     const startSort = settings.rememberView ? settings.lastSort : settings.defaultSort
     setTab(startTab)
     setViewSort(startSort)
+    setGroupBy(settings.rememberView ? settings.groupBy : "format")
+    setVendorSort(settings.rememberView ? settings.vendorSort : DEFAULT_VENDOR_SORT)
     setSorts({ VST2: startSort, VST3: startSort, AAX: startSort, AU: startSort, CLAP: startSort })
     setViewReady(true)
     // On the very first run the welcome screen asks first, even when scanning on startup is on.
@@ -166,11 +182,25 @@ export default function App() {
     if (!viewReady || !settings.rememberView) return
     const id = window.setTimeout(() => {
       const cur = settingsRef.current
-      if (cur.lastTab === tab && cur.lastSort.key === viewSort.key && cur.lastSort.dir === viewSort.dir) return
-      update({ lastTab: tab, lastSort: viewSort })
+      if (
+        cur.lastTab === tab && cur.lastSort.key === viewSort.key && cur.lastSort.dir === viewSort.dir &&
+        cur.groupBy === groupBy && cur.vendorSort.key === vendorSort.key && cur.vendorSort.dir === vendorSort.dir
+      ) return
+      update({ lastTab: tab, lastSort: viewSort, groupBy, vendorSort })
     }, 800)
     return () => window.clearTimeout(id)
-  }, [viewReady, settings.rememberView, tab, viewSort, update])
+  }, [viewReady, settings.rememberView, tab, viewSort, groupBy, vendorSort, update])
+
+  // Producer grouping reads a throttled copy of the metadata: names arrive batch by batch and the
+  // groups must not reshuffle on every one. When loading ends the final state is applied at once.
+  useEffect(() => {
+    if (!metaLoading) {
+      setGroupMeta(meta)
+      return
+    }
+    const id = window.setTimeout(() => setGroupMeta(metaRef.current), 500)
+    return () => window.clearTimeout(id)
+  }, [meta, metaLoading])
 
   // Debounce the search so typing does not re-filter and re-render the list on every key.
   useEffect(() => {
@@ -211,6 +241,11 @@ export default function App() {
   const visibleShown = useMemo(
     () => SECTION_ORDER.filter(type => visible[type]).flatMap(type => view[type].shown),
     [view, visible],
+  )
+
+  const vendorGroups = useMemo(
+    () => (groupBy === "vendor" ? groupByVendor(visibleShown, groupMeta, vendorSort, t("vendor.unknown")) : []),
+    [groupBy, visibleShown, groupMeta, vendorSort, t],
   )
 
   // Only plugins that are on screen can stay selected, so "N selected" is always what Uninstall acts on.
@@ -267,6 +302,13 @@ export default function App() {
     const next: SortState = cur.key === key ? { key, dir: cur.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
     setSorts(c => ({ ...c, [type]: next }))
     setViewSort(next)
+  }
+
+  // Producer mode shares one sort for all groups; the format sections follow it when the user switches back.
+  const toggleVendorGroupSort = (key: SortKey) => {
+    const next: SortState = viewSort.key === key ? { key, dir: viewSort.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
+    setViewSort(next)
+    setSorts({ VST2: next, VST3: next, AAX: next, AU: next, CLAP: next })
   }
 
   const clearFilters = () => {
@@ -379,6 +421,8 @@ export default function App() {
         onExport={format => void runExport(format)}
         exportOpenSignal={exportOpenSignal}
         updateAvailable={startupUpdate !== null}
+        groupBy={groupBy}
+        onGroupByChange={setGroupBy}
       />
 
       {showSettings && (
@@ -421,6 +465,30 @@ export default function App() {
         >
           <Button variant="outline" onClick={clearFilters}>{t("list.noResults.clear")}</Button>
         </EmptyState>
+      ) : groupBy === "vendor" ? (
+        <>
+          <VendorSortBar sort={vendorSort} onChange={setVendorSort} groups={vendorGroups.filter(g => g.key !== UNKNOWN_VENDOR_KEY).length} />
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-24 pt-1">
+            {vendorGroups.map(group => (
+              <Section
+                key={group.key}
+                vendor={{ name: group.name, unknown: group.key === UNKNOWN_VENDOR_KEY, reading: metaLoading && group.key === UNKNOWN_VENDOR_KEY }}
+                items={sortPlugins(group.plugins, viewSort, meta)}
+                total={group.plugins.length}
+                sort={viewSort}
+                onSort={toggleVendorGroupSort}
+                collapsed={!!collapsedVendors[group.key]}
+                onToggle={() => setCollapsedVendors(c => ({ ...c, [group.key]: !c[group.key] }))}
+                selected={selected}
+                onSelectKeys={selectKeys}
+                duplicates={duplicates}
+                meta={meta}
+                home={home}
+                onUninstall={plugin => setUninstallTargets([plugin])}
+              />
+            ))}
+          </div>
+        </>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-24 pt-1">
           {SECTION_ORDER.filter(type => visible[type]).map(type => (

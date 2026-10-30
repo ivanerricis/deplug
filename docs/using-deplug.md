@@ -46,13 +46,27 @@ The **Architecture** menu in the toolbar (All, 64-bit, 32-bit, ARM64) narrows th
 
 The tabs in the toolbar (All, VST2, VST3, AAX, AU, CLAP) show every format together or just one, each with its plugin count. Filtering only changes what you see; it does not rescan. Each section can also be collapsed on its own, and a format with no plugins has no section. If the selected format has no plugins at all, Deplug says so (for example "No AU plugins") and offers **Switch to All**. If your search or filters hide everything, it shows "Nothing matches" with **Clear filters** instead.
 
+## Group by producer {#group-by-producer}
+
+The **Group by** switch next to the format tabs (**Format** | **Producer**; icons only in a narrow window, with tooltips) changes how the list is organised. In **Producer** mode there is one section per producer (FabFilter, Native Instruments, ...) instead of one per format. The format tabs stay and act as a filter: **All** shows everything, **VST3** only the VST3 plugins of each producer. Because formats are mixed, every row shows its format.
+
+Each producer section shows how many plugins it holds and their total size, can be collapsed, and has its own checkbox that selects every plugin of that producer among the ones currently shown (it shows a partial state when only some are selected). The column headers inside a section sort its plugins as usual. A **Sort producers** menu above the list orders the sections by **Name**, **Number of plugins** or **Size**, with a button to reverse the direction.
+
+Where the producer name comes from, in this order:
+
+1. The plugin's own metadata: the vendor in a VST3 bundle's `moduleinfo.json`, or the company name stored in the version information of a Windows plugin file.
+2. On macOS, the identifier of the bundle (for example `com.fabfilter.proq3` gives *fabfilter*), when the bundle has no better information.
+3. On Windows, the publisher of the matching entry in the installed programs list.
+
+Names are compared without regard to case, punctuation and trailing company words, so "FabFilter", "FABFILTER" and "FabFilter Software Instruments" end up in one section, shown with the spelling most plugins use. Plugins for which none of these sources has a name are listed in an **Unknown** section at the end. While Deplug is still reading file details after a scan, plugins appear in **Unknown** (marked *reading...*) and move to their producer once it is known. The producer is also included as a `vendor` column in the CSV export. Deplug only reads these small pieces of information from the files; it never loads or runs a plugin. The grouping and the producer order are remembered with the tab and sort.
+
 ## Search
 
 The search field in the toolbar filters the list as you type. It matches the plugin name or its path, ignoring case and accents. Press **Ctrl+F** (**Cmd+F** on macOS) to jump to it from anywhere in the window. **Esc** clears the search; use the cross inside the field for the same. If nothing matches, a **Clear filters** button resets the search, the duplicates, damaged, architecture and format filters in one go.
 
 ## Export the list
 
-The download button in the toolbar saves the plugin list to a file. It exports what you currently see in the active tab, after search, duplicates and architecture filters. If some plugins are selected, only the selection is exported; the menu says which of the two applies and how many plugins. Choose **CSV** for a spreadsheet (columns: format, name, path, size in bytes, modified date in ISO 8601, architecture; UTF-8, opens correctly in Excel) or **plain text** for one full path per line. A save dialog proposes `deplug-plugins-YYYY-MM-DD` and a message confirms where the file went, or why it failed. Size, date and architecture stay empty for plugins whose details were not read yet.
+The download button in the toolbar saves the plugin list to a file. It exports what you currently see in the active tab, after search, duplicates and architecture filters. If some plugins are selected, only the selection is exported; the menu says which of the two applies and how many plugins. Choose **CSV** for a spreadsheet (columns: format, name, path, size in bytes, modified date in ISO 8601, architecture, vendor; UTF-8, opens correctly in Excel) or **plain text** for one full path per line. A save dialog proposes `deplug-plugins-YYYY-MM-DD` and a message confirms where the file went, or why it failed. Size, date, architecture and vendor stay empty for plugins whose details were not read yet.
 
 ## Sorting
 

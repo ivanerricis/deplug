@@ -189,6 +189,41 @@ impl SortSetting {
     }
 }
 
+/// Sort of the producer groups in "Group by producer" mode.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct VendorSortSetting {
+    /// "name" | "count" | "size"
+    pub key: String,
+    /// "asc" | "desc"
+    pub dir: String,
+}
+
+impl Default for VendorSortSetting {
+    fn default() -> Self {
+        VendorSortSetting {
+            key: "name".to_string(),
+            dir: "asc".to_string(),
+        }
+    }
+}
+
+impl VendorSortSetting {
+    fn sanitized(mut self) -> Self {
+        if !matches!(self.key.as_str(), "name" | "count" | "size") {
+            self.key = "name".to_string();
+        }
+        if !matches!(self.dir.as_str(), "asc" | "desc") {
+            self.dir = "asc".to_string();
+        }
+        self
+    }
+}
+
+fn default_group_by() -> String {
+    "format".to_string()
+}
+
 /// Trims, drops empty and duplicate (case-insensitive) entries and caps the count and length.
 fn sanitize_exclusions(list: Vec<String>) -> Vec<String> {
     let mut seen = std::collections::HashSet::new();
@@ -257,6 +292,10 @@ pub struct Settings {
     /// "seen" so upgrading users are not welcomed again.
     #[serde(default = "default_true")]
     pub welcome_seen: bool,
+    /// "format" | "vendor": how the list is grouped. Remembered with the view.
+    pub group_by: String,
+    /// Order of the producer groups. Remembered with the view.
+    pub vendor_sort: VendorSortSetting,
 }
 
 impl Default for Settings {
@@ -286,6 +325,8 @@ impl Default for Settings {
             last_tab: default_tab(),
             last_sort: SortSetting::default(),
             welcome_seen: false,
+            group_by: default_group_by(),
+            vendor_sort: VendorSortSetting::default(),
         }
     }
 }
@@ -327,6 +368,10 @@ impl Settings {
         }
         self.default_sort = std::mem::take(&mut self.default_sort).sanitized();
         self.last_sort = std::mem::take(&mut self.last_sort).sanitized();
+        if !matches!(self.group_by.as_str(), "format" | "vendor") {
+            self.group_by = default_group_by();
+        }
+        self.vendor_sort = std::mem::take(&mut self.vendor_sort).sanitized();
         self
     }
 }
@@ -549,6 +594,34 @@ mod tests {
         assert_eq!(s.last_tab, "CLAP");
         assert_eq!(s.default_sort, SortSetting::default());
         assert_eq!(s.last_sort.key, "size");
+    }
+
+    #[test]
+    fn settings_group_by_defaults_and_sanitizing() {
+        let d = tempdir().unwrap();
+        let p = d.path().join("s.json");
+        // A file written before the fields existed loads with the defaults.
+        fs::write(&p, r#"{"version":1,"lastTab":"VST3"}"#).unwrap();
+        let s = load(&p);
+        assert_eq!(s.group_by, "format");
+        assert_eq!(s.vendor_sort, VendorSortSetting::default());
+        fs::write(
+            &p,
+            r#"{"groupBy":"vendor","vendorSort":{"key":"size","dir":"desc"}}"#,
+        )
+        .unwrap();
+        let s = load(&p);
+        assert_eq!(s.group_by, "vendor");
+        assert_eq!(s.vendor_sort.key, "size");
+        assert_eq!(s.vendor_sort.dir, "desc");
+        fs::write(
+            &p,
+            r#"{"groupBy":"color","vendorSort":{"key":"path","dir":"up"}}"#,
+        )
+        .unwrap();
+        let s = load(&p);
+        assert_eq!(s.group_by, "format");
+        assert_eq!(s.vendor_sort, VendorSortSetting::default());
     }
 
     #[test]

@@ -1,5 +1,6 @@
 //! Plugin file metadata (size and modification time) for the list view.
 
+use crate::producer::{find_vendor, Programs};
 use serde::Serialize;
 use std::fs;
 use std::path::Path;
@@ -24,6 +25,8 @@ pub struct PluginMeta {
     pub arch: Option<String>,
     /// "ok", "empty" or "missing-binary"; `None` when the path is missing.
     pub health: Option<String>,
+    /// Producer name from the plugin's own metadata or the installed-program entry; `None` when unknown.
+    pub vendor: Option<String>,
 }
 
 fn unix_secs(md: &fs::Metadata) -> Option<u64> {
@@ -312,7 +315,7 @@ fn detect_health(p: &Path, is_dir: bool, file_len: u64) -> &'static str {
     }
 }
 
-fn meta_for(path: &str) -> PluginMeta {
+fn meta_for(path: &str, programs: &Programs) -> PluginMeta {
     let p = Path::new(path);
     let mut out = PluginMeta {
         path: path.to_string(),
@@ -320,6 +323,7 @@ fn meta_for(path: &str) -> PluginMeta {
         modified: None,
         arch: None,
         health: None,
+        vendor: None,
     };
     let Ok(md) = fs::symlink_metadata(p) else {
         return out;
@@ -335,6 +339,7 @@ fn meta_for(path: &str) -> PluginMeta {
     if ft.is_file() || ft.is_dir() {
         out.arch = Some(detect_arch(p, ft.is_dir()).to_string());
         out.health = Some(detect_health(p, ft.is_dir(), md.len()).to_string());
+        out.vendor = find_vendor(p, ft.is_dir(), programs);
     }
     out
 }
@@ -343,10 +348,12 @@ fn meta_for(path: &str) -> PluginMeta {
 #[tauri::command]
 pub async fn plugin_meta(paths: Vec<String>) -> Vec<PluginMeta> {
     tauri::async_runtime::spawn_blocking(move || {
+        // The installed-program list is read at most once per call, and only if a plugin needs it.
+        let programs = Programs::system();
         paths
             .iter()
             .take(MAX_PATHS)
-            .map(|p| meta_for(p))
+            .map(|p| meta_for(p, &programs))
             .collect::<Vec<_>>()
     })
     .await
@@ -357,6 +364,10 @@ pub async fn plugin_meta(paths: Vec<String>) -> Vec<PluginMeta> {
 mod tests {
     use super::*;
     use std::io::Write;
+
+    fn meta_for(path: &str) -> PluginMeta {
+        super::meta_for(path, &Programs::new(Vec::new))
+    }
 
     fn tmp(name: &str) -> std::path::PathBuf {
         let d = std::env::temp_dir().join(format!("deplug-meta-{}-{}", name, std::process::id()));
@@ -447,10 +458,11 @@ mod tests {
             modified: None,
             arch: Some("x64".into()),
             health: Some("ok".into()),
+            vendor: Some("Acme".into()),
         };
         assert_eq!(
             serde_json::to_string(&m).unwrap(),
-            r#"{"path":"p","size":1,"modified":null,"arch":"x64","health":"ok"}"#
+            r#"{"path":"p","size":1,"modified":null,"arch":"x64","health":"ok","vendor":"Acme"}"#
         );
     }
 

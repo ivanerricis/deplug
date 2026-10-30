@@ -16,6 +16,7 @@
 ## Features
 
 - Finds VST2, VST3, AAX, AU and CLAP plugins in the standard folders on Windows, macOS and Linux, grouped by format, with per-format filters.
+- Optional grouping by producer (read from the plugins' own metadata or the Windows program list), with producer sorting.
 - Search by name or path (Ctrl/Cmd+F) and sortable columns.
 - Flags duplicates (the same plugin in several formats or folders) and can show only those.
 - Opens a plugin's folder in your file manager.

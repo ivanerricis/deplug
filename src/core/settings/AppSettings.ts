@@ -13,6 +13,10 @@ export type SortSetting = { key: "name" | "path" | "size" | "modified"; dir: "as
 
 export const COLUMN_KEYS: readonly ColumnKey[] = ["path", "size", "modified", "arch"]
 export const TAB_SETTINGS: readonly TabSetting[] = ["all", "VST2", "VST3", "AAX", "AU", "CLAP"]
+export type GroupBySetting = "format" | "vendor"
+export const GROUP_BY_SETTINGS: readonly GroupBySetting[] = ["format", "vendor"]
+export type VendorSortSetting = { key: "name" | "count" | "size"; dir: "asc" | "desc" }
+export const VENDOR_SORT_KEYS: readonly VendorSortSetting["key"][] = ["name", "count", "size"]
 export const SORT_KEYS: readonly SortSetting["key"][] = ["name", "path", "size", "modified"]
 
 export type AppSettings = {
@@ -51,6 +55,10 @@ export type AppSettings = {
   lastSort: SortSetting
   /** The first-run welcome screen was dismissed (an existing settings file counts as seen, see portable-core). */
   welcomeSeen: boolean
+  /** How the list is grouped: by format (sections VST2, VST3, ...) or by producer. Remembered with the view. */
+  groupBy: GroupBySetting
+  /** Order of the producer groups. Remembered with the view. */
+  vendorSort: VendorSortSetting
 }
 
 export type AppInfo = {
@@ -93,6 +101,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   lastTab: "all",
   lastSort: { key: "name", dir: "asc" },
   welcomeSeen: false,
+  groupBy: "format",
+  vendorSort: { key: "name", dir: "asc" },
 }
 
 const onlyStrings = (value: unknown): string[] =>
@@ -104,6 +114,11 @@ const oneOf = <T extends string>(value: unknown, allowed: readonly T[], fallback
 function normalizeSort(value: unknown): SortSetting {
   const r = (value && typeof value === "object" ? value : {}) as Record<string, unknown>
   return { key: oneOf(r.key, SORT_KEYS, "name"), dir: oneOf(r.dir, ["asc", "desc"], "asc") }
+}
+
+function normalizeVendorSort(value: unknown): VendorSortSetting {
+  const r = (value && typeof value === "object" ? value : {}) as Record<string, unknown>
+  return { key: oneOf(r.key, VENDOR_SORT_KEYS, "name"), dir: oneOf(r.dir, ["asc", "desc"], "asc") }
 }
 
 function normalizeColumns(value: unknown): ColumnKey[] {
@@ -149,6 +164,8 @@ export function normalizeSettings(raw: unknown): AppSettings {
     lastTab: oneOf(r.lastTab, TAB_SETTINGS, d.lastTab),
     lastSort: normalizeSort(r.lastSort),
     welcomeSeen: typeof r.welcomeSeen === "boolean" ? r.welcomeSeen : d.welcomeSeen,
+    groupBy: oneOf(r.groupBy, GROUP_BY_SETTINGS, d.groupBy),
+    vendorSort: normalizeVendorSort(r.vendorSort),
   }
 }
 

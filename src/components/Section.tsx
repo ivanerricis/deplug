@@ -13,7 +13,10 @@ import { shortenPath } from "@/core/format"
 type SectionType = "VST2" | "VST3" | "AAX" | "AU" | "CLAP"
 
 type SectionProps = {
-    type: SectionType
+    /** The format of the section; omitted in producer mode (see `vendor`). */
+    type?: SectionType
+    /** Producer mode: the section is one producer's group (formats are mixed, so rows show their format). */
+    vendor?: { name: string; unknown: boolean; reading: boolean }
     /** Plugins to display, already filtered and sorted. */
     items: Plugin[]
     /** How many plugins of this format exist before filtering. */
@@ -32,7 +35,7 @@ type SectionProps = {
     onUninstall: (plugin: Plugin) => void
 }
 
-export default function Section({ type, items, total, sort, onSort, collapsed, onToggle, selected, onSelectKeys, duplicates, meta, home, onUninstall }: SectionProps) {
+export default function Section({ type, vendor, items, total, sort, onSort, collapsed, onToggle, selected, onSelectKeys, duplicates, meta, home, onUninstall }: SectionProps) {
     // Last row clicked, so Shift+click can select the range between it and the next click.
     const { settings } = useSettings()
     const columns = useMemo(() => listColumns(settings.visibleColumns), [settings.visibleColumns])
@@ -61,10 +64,11 @@ export default function Section({ type, items, total, sort, onSort, collapsed, o
     }
 
     return (
-        <div role="table" aria-label={type} className="mb-5 flex flex-col">
+        <div role="table" aria-label={vendor?.name ?? type} className="mb-5 flex flex-col">
             <div role="rowgroup">
                 <HeaderRow
                     type={type}
+                    vendor={vendor}
                     expanded={!collapsed}
                     onToggle={onToggle}
                     sort={sort}
@@ -102,6 +106,7 @@ export default function Section({ type, items, total, sort, onSort, collapsed, o
                                     duplicates={duplicates.get(key)}
                                     meta={meta.get(buildPluginPath(plugin.installPath, plugin.name))}
                                     showPath={!grouped}
+                                    showFormat={vendor !== undefined}
                                     home={home}
                                     columns={columns}
                                     density={settings.density}

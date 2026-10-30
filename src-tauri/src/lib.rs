@@ -2,6 +2,7 @@ mod elevation;
 mod leftovers;
 mod meta;
 mod portable;
+mod producer;
 mod registry_leftovers;
 mod settings;
 mod syspaths;

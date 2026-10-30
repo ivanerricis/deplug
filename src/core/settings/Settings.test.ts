@@ -150,6 +150,26 @@ function makeBackend(paths: string[]) {
   }
 }
 
+describe("normalizeSettings (group by producer)", () => {
+  it("defaults to grouping by format with the producers sorted by name", () => {
+    const s = normalizeSettings({ version: 1 })
+    expect(s.groupBy).toBe("format")
+    expect(s.vendorSort).toEqual({ key: "name", dir: "asc" })
+  })
+  it("keeps valid values", () => {
+    const s = normalizeSettings({ groupBy: "vendor", vendorSort: { key: "size", dir: "desc" } })
+    expect(s.groupBy).toBe("vendor")
+    expect(s.vendorSort).toEqual({ key: "size", dir: "desc" })
+  })
+  it("sanitizes invalid values", () => {
+    expect(normalizeSettings({ groupBy: "color", vendorSort: { key: "path", dir: "up" } })).toMatchObject({
+      groupBy: "format",
+      vendorSort: { key: "name", dir: "asc" },
+    })
+    expect(normalizeSettings({ groupBy: 3, vendorSort: "x" })).toMatchObject({ groupBy: "format", vendorSort: { key: "name", dir: "asc" } })
+  })
+})
+
 describe("loadSettings (legacy migration)", () => {
   it("migrates localStorage paths when the backend has none", async () => {
     const storage = makeStorage(JSON.stringify(["/a", 3, "/b"]))

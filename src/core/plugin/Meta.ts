@@ -16,6 +16,8 @@ export interface PluginMeta {
   arch?: PluginArch | null
   /** Detected integrity; null/undefined when unknown (or the backend is older). */
   health?: PluginHealth | null
+  /** Producer name from the plugin's metadata or the installed-program entry; null/undefined when unknown. */
+  vendor?: string | null
 }
 
 export type MetaMap = ReadonlyMap<string, PluginMeta>

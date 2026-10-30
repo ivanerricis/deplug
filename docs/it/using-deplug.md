@@ -46,13 +46,27 @@ Il menu **Architettura** nella barra degli strumenti (Tutte, 64 bit, 32 bit, ARM
 
 Le schede nella barra degli strumenti (Tutti, VST2, VST3, AAX, AU, CLAP) mostrano tutti i formati insieme oppure uno solo, ognuna con il numero di plugin. Il filtro cambia solo ciò che vedi e non ripete la scansione. Ogni sezione si può anche comprimere da sola, e un formato senza plugin non ha sezione. Se il formato selezionato non ha alcun plugin, Deplug lo dice (per esempio "Nessun plugin AU") e propone **Passa a Tutti**. Se ricerca o filtri nascondono tutto, mostra invece "Nessun risultato" con **Azzera i filtri**.
 
+## Raggruppare per produttore {#group-by-producer}
+
+L'interruttore **Raggruppa per** accanto alle schede dei formati (**Formato** | **Produttore**; solo icone in una finestra stretta, con suggerimenti) cambia l'organizzazione dell'elenco. In modalità **Produttore** c'è una sezione per produttore (FabFilter, Native Instruments, ...) invece di una per formato. Le schede dei formati restano e fanno da filtro: **Tutti** mostra tutto, **VST3** solo i plugin VST3 di ciascun produttore. Poiché i formati sono mescolati, ogni riga mostra il proprio formato.
+
+Ogni sezione mostra quanti plugin contiene e la dimensione totale, si può comprimere e ha una propria casella che seleziona tutti i plugin di quel produttore tra quelli mostrati (con stato parziale se ne è selezionata solo una parte). Le intestazioni di colonna dentro la sezione ordinano i suoi plugin come al solito. Il menu **Ordina i produttori** sopra l'elenco ordina le sezioni per **Nome**, **Numero di plugin** o **Dimensione**, con un pulsante per invertire la direzione.
+
+Da dove arriva il nome del produttore, in quest'ordine:
+
+1. I metadati del plugin: il produttore indicato nel `moduleinfo.json` di un bundle VST3, oppure il nome dell'azienda nelle informazioni di versione di un file plugin di Windows.
+2. Su macOS, l'identificatore del bundle (per esempio `com.fabfilter.proq3` dà *fabfilter*), quando il bundle non offre di meglio.
+3. Su Windows, l'editore della voce corrispondente nell'elenco dei programmi installati.
+
+I nomi vengono confrontati senza distinguere maiuscole, punteggiatura e parole finali come "Inc." o "Software", quindi "FabFilter", "FABFILTER" e "FabFilter Software Instruments" finiscono in una sola sezione, mostrata con la grafia più usata. I plugin per cui nessuna fonte ha un nome stanno in una sezione **Sconosciuto** in fondo. Finché Deplug legge i dettagli dei file dopo una scansione, i plugin compaiono in **Sconosciuto** (con la dicitura *lettura...*) e passano al loro produttore appena è noto. Il produttore è incluso anche come colonna `vendor` nell'esportazione CSV. Deplug legge solo queste piccole informazioni dai file; non carica né esegue mai un plugin. Il raggruppamento e l'ordine dei produttori vengono ricordati insieme a scheda e ordinamento.
+
 ## Cercare
 
 Il campo di ricerca nella barra degli strumenti filtra l'elenco mentre scrivi. Confronta nome e percorso del plugin, senza distinguere maiuscole e accenti. Premi **Ctrl+F** (**Cmd+F** su macOS) per raggiungerlo da qualsiasi punto della finestra. **Esc** cancella la ricerca, come la croce dentro il campo. Se nessun plugin corrisponde, il pulsante **Azzera i filtri** ripristina in un colpo solo la ricerca, i filtri di duplicati, architettura e formato.
 
 ## Esportare l'elenco
 
-Il pulsante di download nella barra degli strumenti salva l'elenco dei plugin in un file. Esporta ciò che vedi nella scheda attiva, dopo i filtri di ricerca, duplicati e architettura. Se hai selezionato alcuni plugin, viene esportata solo la selezione; il menu indica quale dei due casi vale e quanti plugin sono. Scegli **CSV** per un foglio di calcolo (colonne: formato, nome, percorso, dimensione in byte, data di modifica in ISO 8601, architettura; UTF-8, si apre correttamente in Excel) oppure **testo semplice** per un percorso completo per riga. Una finestra di salvataggio propone `deplug-plugins-AAAA-MM-GG` e un messaggio conferma dove è finito il file, o perché è fallito. Dimensione, data e architettura restano vuote per i plugin i cui dettagli non sono ancora stati letti.
+Il pulsante di download nella barra degli strumenti salva l'elenco dei plugin in un file. Esporta ciò che vedi nella scheda attiva, dopo i filtri di ricerca, duplicati e architettura. Se hai selezionato alcuni plugin, viene esportata solo la selezione; il menu indica quale dei due casi vale e quanti plugin sono. Scegli **CSV** per un foglio di calcolo (colonne: formato, nome, percorso, dimensione in byte, data di modifica in ISO 8601, architettura, vendor; UTF-8, si apre correttamente in Excel) oppure **testo semplice** per un percorso completo per riga. Una finestra di salvataggio propone `deplug-plugins-AAAA-MM-GG` e un messaggio conferma dove è finito il file, o perché è fallito. Dimensione, data, architettura e vendor restano vuoti per i plugin i cui dettagli non sono ancora stati letti.
 
 ## Ordinare
 

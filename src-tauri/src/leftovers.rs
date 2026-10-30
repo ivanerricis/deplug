@@ -137,14 +137,7 @@ pub fn candidate_names(plugin: &Path, vendor: Option<&str>) -> Vec<String> {
 
 /// Vendor from a VST3 bundle's `Contents/moduleinfo.json` (`Factory Info` -> `Vendor`).
 pub fn vendor_from_moduleinfo(plugin: &Path) -> Option<String> {
-    let file = plugin.join("Contents").join("moduleinfo.json");
-    let meta = std::fs::symlink_metadata(&file).ok()?;
-    if !meta.is_file() || meta.len() > 1_000_000 {
-        return None;
-    }
-    let json: serde_json::Value = serde_json::from_slice(&std::fs::read(&file).ok()?).ok()?;
-    let v = json.get("Factory Info")?.get("Vendor")?.as_str()?.trim();
-    (!v.is_empty()).then(|| v.to_string())
+    crate::producer::vendor_from_moduleinfo(plugin)
 }
 
 /// Searches `roots` (direct children only) for directories whose normalized name equals one of
