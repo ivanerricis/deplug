@@ -284,6 +284,26 @@ pub async fn trash_leftovers(
     .map_err(|e| format!("ERR_INTERNAL:{e}"))?
 }
 
+/// Deletes leftovers of `plugin_path` for good (no trash), under the same checks as
+/// `trash_leftovers`: only paths the backend itself derives for the plugin, inside the allow-list.
+#[tauri::command]
+pub async fn delete_leftovers(
+    plugin_path: String,
+    paths: Vec<String>,
+) -> Result<Vec<String>, String> {
+    if paths.len() > MAX_TRASH_BATCH {
+        return Err("ERR_INVALID_PATH".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let found = find_paths(&PathBuf::from(plugin_path))?;
+        Ok(trash_checked(&paths, &allowed_roots(), &found, &|p| {
+            crate::uninstall::remove_permanently(p).map_err(|e| format!("ERR_DELETE_FAILED({e})"))
+        }))
+    })
+    .await
+    .map_err(|e| format!("ERR_INTERNAL:{e}"))?
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

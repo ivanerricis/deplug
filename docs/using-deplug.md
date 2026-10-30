@@ -86,7 +86,7 @@ Every row starts with a folder button. It opens the folder that contains the plu
 2. On Windows, decide whether to create a restore point (next section).
 3. Press **Move to trash**. The plugins go to the system trash (Recycle Bin, Trash) and the list refreshes.
 
-Nothing happens until you confirm, and **Cancel** (or Esc) closes the dialog without touching anything.
+Nothing happens until you confirm, and **Cancel** (or Esc) closes the dialog without touching anything. If you turned off **Ask for confirmation before uninstalling** in [Settings](/settings#uninstall), choosing Uninstall runs right away with your saved defaults (restore point, delete method) and goes straight to the result dialog; the publisher's uninstaller and leftover folders are never chosen automatically. Deplug always asks first when the delete method is **Delete permanently**.
 
 Deplug removes the plugin file or bundle only. It does not clean up presets, license files, samples or settings that the plugin's own installer put elsewhere. That is deliberate: those are often shared with other products or needed if you reinstall later.
 
@@ -95,6 +95,18 @@ Deplug removes the plugin file or bundle only. It does not clean up presets, lic
 With several plugins, Deplug creates **one** restore point for the whole batch, then moves the plugins to the trash one after another. A failure on one plugin does not stop the others. When it finishes, the dialog lists the result for each plugin (**Moved to the trash** or **Failed**, with the reason), failed ones first. Close it and the list refreshes.
 
 To undo, open the trash and restore the item to its original location, then press refresh in Deplug.
+
+### Delete permanently
+
+By default plugins go to the trash. If you set **Delete method** to **Delete permanently** in [Settings](/settings#uninstall), the files skip the trash and are removed for good. The confirmation text says so: they cannot be recovered, and a system restore point does not cover them. Leftover folders you tick follow the same choice. On Windows, if a protected folder denies the deletion, the same **Retry with administrator permission** button appears and the deletion is retried from an elevated process.
+
+### Space freed and sizes per format
+
+After an uninstall, the result dialog shows **Space freed**: the total size of the plugins that were removed, using the sizes already shown in the list. If some sizes are unknown it says "at least"; if none is known the line is not shown. Next to the count in each format's header the list shows the total size of the plugins displayed in that format.
+
+### Force removal
+
+If a plugin could not be removed, or the publisher's uninstaller finished but left it in place, the result dialog offers a **Force removal** button for that plugin. It opens an extra confirmation that shows the exact path, because it deletes the plugin permanently (no trash, no restore point coverage). On Windows, if the deletion is denied, Deplug retries it once from an elevated process after a single permission prompt. If the file is locked or in use, the error from the system is shown in the result.
 
 ### The publisher's uninstaller and leftover folders
 

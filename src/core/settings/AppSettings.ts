@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core"
 
 export type LanguageSetting = "system" | "en" | "it"
 export type ThemeSetting = "system" | "light" | "dark"
+export type DeleteMethodSetting = "trash" | "permanent"
 
 export type AppSettings = {
   version: number
@@ -14,6 +15,10 @@ export type AppSettings = {
   disabledSystemPaths: string[]
   /** Windows only: relaunch elevated at startup. Takes effect on the next start. */
   runAsAdmin: boolean
+  /** How uninstalled plugins are deleted: moved to the trash (default) or deleted for good. */
+  deleteMethod: DeleteMethodSetting
+  /** Ask for confirmation before uninstalling (default on; always asked when the delete method is "permanent"). */
+  confirmUninstall: boolean
 }
 
 export type AppInfo = {
@@ -39,6 +44,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customScanDepth: DEFAULT_SCAN_DEPTH,
   disabledSystemPaths: [],
   runAsAdmin: true,
+  deleteMethod: "trash",
+  confirmUninstall: true,
 }
 
 const onlyStrings = (value: unknown): string[] =>
@@ -67,6 +74,8 @@ export function normalizeSettings(raw: unknown): AppSettings {
     customScanDepth: r.customScanDepth === undefined ? d.customScanDepth : clampDepth(r.customScanDepth),
     disabledSystemPaths: onlyStrings(r.disabledSystemPaths),
     runAsAdmin: typeof r.runAsAdmin === "boolean" ? r.runAsAdmin : d.runAsAdmin,
+    deleteMethod: oneOf(r.deleteMethod, ["trash", "permanent"], d.deleteMethod),
+    confirmUninstall: typeof r.confirmUninstall === "boolean" ? r.confirmUninstall : d.confirmUninstall,
   }
 }
 

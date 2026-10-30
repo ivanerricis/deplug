@@ -123,6 +123,41 @@ pub async fn trash_plugin(path: String, mode: State<'_, AppMode>) -> Result<(), 
     .map_err(|e| format!("ERR_INTERNAL:{e}"))?
 }
 
+/// Maps a permanent-delete failure to a stable code, like `map_trash_error` (access-denied on
+/// Windows becomes `ERR_DELETE_ACCESS_DENIED`, which an elevated retry can fix).
+pub fn map_delete_error(detail: &str, windows: bool) -> String {
+    if windows && is_access_denied(detail) {
+        "ERR_DELETE_ACCESS_DENIED".into()
+    } else {
+        format!("ERR_DELETE_FAILED:{detail}")
+    }
+}
+
+/// Deletes a file or folder for good. A symlink is removed itself, never followed.
+pub(crate) fn remove_permanently(path: &Path) -> std::io::Result<()> {
+    let meta = std::fs::symlink_metadata(path)?;
+    if meta.is_dir() {
+        std::fs::remove_dir_all(path)
+    } else if meta.file_type().is_symlink() {
+        // A directory symlink on Windows must be removed with remove_dir.
+        std::fs::remove_file(path).or_else(|_| std::fs::remove_dir(path))
+    } else {
+        std::fs::remove_file(path)
+    }
+}
+
+/// Deletes a plugin for good (no Recycle Bin), under exactly the same path rules as `trash_plugin`.
+#[tauri::command]
+pub async fn delete_plugin_permanently(path: String) -> Result<(), String> {
+    let p = std::path::PathBuf::from(path);
+    tauri::async_runtime::spawn_blocking(move || {
+        validate_plugin_path(&p)?;
+        remove_permanently(&p).map_err(|e| map_delete_error(&e.to_string(), cfg!(windows)))
+    })
+    .await
+    .map_err(|e| format!("ERR_INTERNAL:{e}"))?
+}
+
 /// Keeps only safe characters and limits the length to 100 chars.
 #[cfg_attr(not(windows), allow(dead_code))]
 pub fn sanitize_description(desc: &str) -> String {
@@ -302,10 +337,41 @@ Add-Content -LiteralPath $log -Value \"ERR|$i|$m\" -Encoding UTF8 \
     )
 }
 
+/// Builds the PowerShell script that deletes every path for good (`Remove-Item -Recurse -Force`),
+/// logging like `build_trash_script`. Paths are embedded as quoted literals, never read from a file.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub fn build_delete_script(paths: &[String], log_path: &str) -> String {
+    let list = paths
+        .iter()
+        .map(|p| ps_quote(p))
+        .collect::<Vec<_>>()
+        .join(",");
+    let log = ps_quote(log_path);
+    format!(
+        "$ErrorActionPreference='Stop'; \
+$log={log}; $paths=@({list}); \
+for($i=0; $i -lt $paths.Count; $i++) {{ $p=$paths[$i]; \
+try {{ \
+if(Test-Path -LiteralPath $p) {{ Remove-Item -LiteralPath $p -Recurse -Force }} \
+else {{ throw 'Path not found' }}; \
+Add-Content -LiteralPath $log -Value \"OK|$i\" -Encoding UTF8 \
+}} catch {{ \
+$m=($_.Exception.Message -replace '[\\r\\n|]+',' '); \
+Add-Content -LiteralPath $log -Value \"ERR|$i|$m\" -Encoding UTF8 \
+}} }}; exit 0"
+    )
+}
+
 /// Reads the log written by the elevated script. Returns one `ERR_TRASH_FAILED(<message>):<path>`
 /// entry per failed path; a path with no `OK` line (missing or garbled log) counts as failed.
 #[cfg_attr(not(windows), allow(dead_code))]
 pub fn parse_trash_log(log: &str, paths: &[String]) -> Vec<String> {
+    parse_op_log(log, paths, "ERR_TRASH_FAILED")
+}
+
+/// Same as `parse_trash_log` with the failure code of the operation (`ERR_TRASH_FAILED` or `ERR_DELETE_FAILED`).
+#[cfg_attr(not(windows), allow(dead_code))]
+pub fn parse_op_log(log: &str, paths: &[String], code: &str) -> Vec<String> {
     let mut status: Vec<Option<Result<(), String>>> = vec![None; paths.len()];
     for line in log.lines() {
         let line = line.trim().trim_start_matches('\u{feff}');
@@ -344,8 +410,8 @@ pub fn parse_trash_log(log: &str, paths: &[String]) -> Vec<String> {
         .zip(status)
         .filter_map(|(path, st)| match st {
             Some(Ok(())) => None,
-            Some(Err(msg)) => Some(format!("ERR_TRASH_FAILED({msg}):{path}")),
-            None => Some(format!("ERR_TRASH_FAILED(no result):{path}")),
+            Some(Err(msg)) => Some(format!("{code}({msg}):{path}")),
+            None => Some(format!("{code}(no result):{path}")),
         })
         .collect()
 }
@@ -359,9 +425,17 @@ fn check_script_safe(paths: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// What the elevated script does with each path.
+#[cfg_attr(not(windows), allow(dead_code))]
+#[derive(Clone, Copy)]
+enum ElevatedOp {
+    Trash,
+    Delete,
+}
+
 /// Elevated UTF-16LE base64 launch shared by the Windows helpers.
 #[cfg(windows)]
-fn trash_elevated_blocking(paths: Vec<String>) -> Result<Vec<String>, String> {
+fn elevated_blocking(paths: Vec<String>, op: ElevatedOp) -> Result<Vec<String>, String> {
     use std::hash::{BuildHasher, Hasher};
     use std::os::windows::process::CommandExt;
     use std::process::Command;
@@ -392,7 +466,10 @@ fn trash_elevated_blocking(paths: Vec<String>) -> Result<Vec<String>, String> {
         .map_err(|e| format!("ERR_INTERNAL:{e}"))?;
     let log_str = log.to_string_lossy().to_string();
 
-    let inner = build_trash_script(&paths, &log_str);
+    let inner = match op {
+        ElevatedOp::Trash => build_trash_script(&paths, &log_str),
+        ElevatedOp::Delete => build_delete_script(&paths, &log_str),
+    };
     let utf16: Vec<u8> = inner.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
     let encoded = base64_encode(&utf16);
     // The whole command line is limited to about 32,000 characters on Windows, and `encoded` appears in it.
@@ -427,7 +504,10 @@ fn trash_elevated_blocking(paths: Vec<String>) -> Result<Vec<String>, String> {
             )
         });
     }
-    Ok(parse_trash_log(&content, &paths))
+    Ok(match op {
+        ElevatedOp::Trash => parse_trash_log(&content, &paths),
+        ElevatedOp::Delete => parse_op_log(&content, &paths, "ERR_DELETE_FAILED"),
+    })
 }
 
 /// Sends the given plugins to the Recycle Bin from an elevated PowerShell (one UAC prompt).
@@ -436,7 +516,24 @@ fn trash_elevated_blocking(paths: Vec<String>) -> Result<Vec<String>, String> {
 pub async fn trash_plugins_elevated(paths: Vec<String>) -> Result<Vec<String>, String> {
     #[cfg(windows)]
     {
-        tauri::async_runtime::spawn_blocking(move || trash_elevated_blocking(paths))
+        tauri::async_runtime::spawn_blocking(move || elevated_blocking(paths, ElevatedOp::Trash))
+            .await
+            .map_err(|e| format!("ERR_INTERNAL:{e}"))?
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = paths;
+        Err("ERR_ELEVATION_UNSUPPORTED".into())
+    }
+}
+
+/// Deletes the given plugins for good from an elevated PowerShell (one UAC prompt), under the
+/// same rules as `trash_plugins_elevated`. Returns one `<code>:<path>` entry per failed path.
+#[tauri::command]
+pub async fn delete_plugins_elevated(paths: Vec<String>) -> Result<Vec<String>, String> {
+    #[cfg(windows)]
+    {
+        tauri::async_runtime::spawn_blocking(move || elevated_blocking(paths, ElevatedOp::Delete))
             .await
             .map_err(|e| format!("ERR_INTERNAL:{e}"))?
     }
@@ -587,6 +684,74 @@ mod tests {
         assert!(s.contains("Test-Path -LiteralPath"));
         assert!(s.contains("$log='C:\\Temp\\l.log'"));
         assert!(s.contains("OK|$i") && s.contains("ERR|$i|"));
+    }
+
+    #[test]
+    fn maps_delete_errors() {
+        assert_eq!(
+            map_delete_error("Access is denied. (os error 5)", true),
+            "ERR_DELETE_ACCESS_DENIED"
+        );
+        assert_eq!(
+            map_delete_error("Access is denied. (os error 5)", false),
+            "ERR_DELETE_FAILED:Access is denied. (os error 5)"
+        );
+        assert_eq!(map_delete_error("in use", true), "ERR_DELETE_FAILED:in use");
+    }
+
+    #[test]
+    fn builds_delete_script() {
+        let paths = vec![
+            "C:\\Program Files\\VST3\\O'Neil [x].vst3".to_string(),
+            "C:\\Plug\\a.dll".to_string(),
+        ];
+        let s = build_delete_script(&paths, "C:\\Temp\\l.log");
+        assert!(s.contains("'C:\\Program Files\\VST3\\O''Neil [x].vst3','C:\\Plug\\a.dll'"));
+        assert!(s.contains("Remove-Item -LiteralPath $p -Recurse -Force"));
+        assert!(s.contains("Test-Path -LiteralPath"));
+        assert!(s.contains("$log='C:\\Temp\\l.log'"));
+        assert!(s.contains("OK|$i") && s.contains("ERR|$i|"));
+        assert!(!s.contains("SendToRecycleBin"));
+    }
+
+    #[test]
+    fn parses_delete_log_with_its_own_code() {
+        let paths: Vec<String> = ["C:\\a.dll", "C:\\b.vst3"].map(String::from).to_vec();
+        assert_eq!(
+            parse_op_log("OK|0\nERR|1|In use", &paths, "ERR_DELETE_FAILED"),
+            vec!["ERR_DELETE_FAILED(In use):C:\\b.vst3".to_string()]
+        );
+    }
+
+    #[test]
+    fn deletes_files_and_folders_permanently() {
+        let dir = std::env::temp_dir().join(format!("pu-del-{}", std::process::id()));
+        let bundle = dir.join("B.vst3");
+        std::fs::create_dir_all(bundle.join("Contents/x64")).unwrap();
+        std::fs::write(bundle.join("Contents/x64/B.vst3"), b"x").unwrap();
+        let file = dir.join("a.dll");
+        std::fs::write(&file, b"x").unwrap();
+        assert!(validate_plugin_path(&bundle).is_ok());
+        remove_permanently(&bundle).unwrap();
+        remove_permanently(&file).unwrap();
+        assert!(!bundle.exists() && !file.exists());
+        assert!(remove_permanently(&file).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn deleting_a_symlink_keeps_its_target() {
+        let dir = std::env::temp_dir().join(format!("pu-del-link-{}", std::process::id()));
+        let target = dir.join("target");
+        std::fs::create_dir_all(&target).unwrap();
+        std::fs::write(target.join("keep.txt"), b"x").unwrap();
+        let link = dir.join("L.vst3");
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+        remove_permanently(&link).unwrap();
+        assert!(!link.exists());
+        assert!(target.join("keep.txt").exists());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

@@ -19,6 +19,8 @@ The plugin list refreshes when you close the settings, if anything here changed.
 ## Uninstall {#uninstall}
 
 - **Create a restore point by default**: sets whether the restore point checkbox starts ticked in the uninstall dialog. You can still change it for each uninstall. Restore points only exist on Windows; on macOS and Linux the setting has no effect and the dialog says so.
+- **Delete method**: **Move to trash** (default) keeps removed plugins recoverable. **Delete permanently** removes the files for good: they skip the trash and a system restore point does not cover them. Leftover folders you choose to remove follow the same setting.
+- **Ask for confirmation before uninstalling** (on by default): when off, Uninstall runs right away with your saved defaults (restore point, delete method) and shows the result dialog. The publisher's uninstaller and leftover folders are never chosen automatically. Deplug always asks for confirmation when the delete method is **Delete permanently**, whatever this setting says.
 - **Always run Deplug as administrator** (Windows only, on by default): Windows asks for permission each time Deplug starts. Plugins in protected folders can then be removed without extra prompts, and programs Deplug starts (such as a publisher's uninstaller) also run with administrator rights. It takes effect the next time Deplug starts. Turn it off if you would rather not see the Windows prompt at every start; if you decline the prompt, Deplug starts normally without administrator rights. The About section shows whether the current session has them.
 
 ## About {#about}

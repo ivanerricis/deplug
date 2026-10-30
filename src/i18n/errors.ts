@@ -4,6 +4,7 @@ const SIMPLE: Record<string, MessageKey> = {
   ERR_INVALID_PATH: "error.invalidPath",
   ERR_NOT_FOUND: "error.notFound",
   ERR_TRASH_ACCESS_DENIED: "error.trashAccessDenied",
+  ERR_DELETE_ACCESS_DENIED: "error.deleteAccessDenied",
   ERR_ELEVATION_CANCELLED: "error.elevationCancelled",
   ERR_ELEVATION_UNSUPPORTED: "error.elevationUnsupported",
   ERR_RESTORE_UNSUPPORTED: "error.restoreUnsupported",
@@ -23,6 +24,8 @@ const SIMPLE: Record<string, MessageKey> = {
 /** Codes that carry a detail after a colon, e.g. `ERR_TRASH_FAILED:permission denied` or `ERR_INTERNAL:<detail>`. */
 const WITH_DETAIL: Record<string, MessageKey> = {
   ERR_TRASH_FAILED: "error.trashFailed",
+  ERR_DELETE_FAILED: "error.deleteFailed",
+  ERR_LEFTOVER_DELETE_FAILED: "error.leftoverDeleteFailed",
   ERR_RESTORE_FAILED: "error.restoreFailed",
   ERR_INTERNAL: "error.internal",
   ERR_LEFTOVER_TRASH_FAILED: "error.leftoverTrashFailed",
