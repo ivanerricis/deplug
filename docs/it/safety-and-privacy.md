@@ -2,7 +2,7 @@
 
 ## Niente lascia il tuo computer da solo
 
-Deplug non ha account, né analisi d'uso, né telemetria, né controllo automatico degli aggiornamenti. Analizza cartelle locali e te ne mostra il risultato. L'unica richiesta di rete che può fare è il pulsante **Controlla aggiornamenti** in Impostazioni → Informazioni, che parte solo quando lo premi e legge soltanto l'elenco pubblico delle release su GitHub; non viene inviato nulla sul tuo computer o sui tuoi plugin. L'unica cosa che scrive è un piccolo `settings.json` ([dove](/it/faq#where-does-deplug-store-its-data)).
+Deplug non ha account, né analisi d'uso, né telemetria, né controllo automatico degli aggiornamenti. Analizza cartelle locali e te ne mostra il risultato. L'unica richiesta di rete che può fare è il pulsante **Controlla aggiornamenti** in Impostazioni → Informazioni, che parte solo quando lo premi e legge soltanto l'elenco pubblico delle release su GitHub; non viene inviato nulla sul tuo computer o sui tuoi plugin. Le uniche cose che scrive sono un piccolo `settings.json` ([dove](/it/faq#where-does-deplug-store-its-data)) e, se usi **Esporta elenco**, il solo file che scegli nella finestra di salvataggio.
 
 ## I file vanno nel cestino
 
